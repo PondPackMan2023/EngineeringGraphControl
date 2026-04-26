@@ -1,0 +1,37 @@
+using UnitRegistry;
+using UnitRegistry.Formatting;
+
+namespace Graphing.Controls.Models
+{
+    public class AxisModel : IAxisModel
+    {
+        public AxisModel(
+                string id,
+                AxisOrientation orientation,
+                AxisSide side,
+                Unit unit,
+                string unitLabel,
+                NumericFormatter numericFormatter)
+        {
+            Id = id;
+            Orientation = orientation;
+            Side = side;
+            Unit = unit;
+            UnitLabel = unitLabel;
+            NumericFormatter = numericFormatter;
+            ScaleType = AxisScaleType.Linear;
+            IsAutoRange = true;
+        }
+
+        public string Id { get; }
+        public AxisOrientation Orientation { get; }
+        public AxisSide Side { get; }
+        public Unit Unit { get; }
+        public string UnitLabel { get; }
+        public NumericFormatter NumericFormatter { get; }
+        public AxisScaleType ScaleType { get; }
+        public bool IsAutoRange { get; }
+        public double? MinimumValue => null;
+        public double? MaximumValue => null;
+    }
+}

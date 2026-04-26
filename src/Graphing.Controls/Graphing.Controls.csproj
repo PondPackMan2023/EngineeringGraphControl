@@ -3,7 +3,14 @@
   <PropertyGroup>
     <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
+    <Usewindowsforms>true</Usewindowsforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
+    <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
+  </ItemGroup>
 
 </Project>

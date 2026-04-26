@@ -1,6 +1,21 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Graphing.Controls/Graphing.Controls.csproj" />
-    <Project Path="src/Graphing.Tests/Graphing.Tests.csproj" />
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Tests/">
+    <Project Path="src/Graphing.Tests/Graphing.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
   </Folder>
+  <Folder Name="/UnitRegistry/">
+    <Project Path="submodules/UnitRegistry/src/UnitRegistry.Core/UnitRegistry.Core.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="submodules/UnitRegistry/src/UnitRegistry.Formatting/UnitRegistry.Formatting.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+  <Project Path="src/Graphing.Controls/Graphing.Controls.csproj">
+    <Platform Project="x64" />
+  </Project>
 </Solution>
