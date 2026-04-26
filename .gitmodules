@@ -1,0 +1,3 @@
+[submodule "submodules/UnitRegistry"]
+	path = submodules/UnitRegistry
+	url = https://github.com/PondPackMan2023/UnitRegistry
