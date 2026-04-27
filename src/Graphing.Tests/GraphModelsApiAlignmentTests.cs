@@ -1,4 +1,5 @@
 using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -56,7 +57,7 @@ namespace Graphing.Tests
 
             Assert.That(
                 propertyNames,
-                Is.EqualTo(new[] { "ChartType", "Label", "SeriesId", "XAxis", "XField", "YAxis", "YField" }));
+                Is.EqualTo(new[] { "Label", "SeriesId", "SeriesType", "XAxis", "XField", "YAxis", "YField" }));
         }
 
         [Test]
@@ -97,7 +98,7 @@ namespace Graphing.Tests
             var xAxis = new TestAxisModel(new AxisId("x"), AxisOrientation.X, AxisSide.Bottom, unitNone, "", null, AxisScaleType.Linear, true, null, null);
             var yAxis = new TestAxisModel(new AxisId("y"), AxisOrientation.Y, AxisSide.Left, unitUnitless, "ratio", formatter, AxisScaleType.Linear, true, null, null);
 
-            var series = new TestSeriesModel(1, "series", ChartType.Line, noneField, unitlessField, xAxis, yAxis);
+            var series = new TestSeriesModel(1, "series", SeriesType.Line, noneField, unitlessField, xAxis, yAxis);
             var graph = new TestGraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             Assert.That(graph.Axes.Count, Is.EqualTo(2));
@@ -299,7 +300,7 @@ namespace Graphing.Tests
             public TestSeriesModel(
                 int id,
                 string label,
-                ChartType chartType,
+                SeriesType seriesType,
                 IGraphFieldDefinition xField,
                 IGraphFieldDefinition yField,
                 IAxisModel xAxis,
@@ -307,7 +308,7 @@ namespace Graphing.Tests
             {
                 SeriesId = new SeriesId($"{id}");
                 Label = label;
-                ChartType = chartType;
+                SeriesType = seriesType;
                 XField = xField;
                 YField = yField;
                 XAxis = xAxis;
@@ -318,7 +319,7 @@ namespace Graphing.Tests
 
             public string Label { get; }
 
-            public ChartType ChartType { get; }
+            public SeriesType SeriesType { get; }
 
             public IGraphFieldDefinition XField { get; }
 

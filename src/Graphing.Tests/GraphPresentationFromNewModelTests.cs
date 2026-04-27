@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
 using Graphing.Controls.Snapshot;
 using NUnit.Framework;
@@ -21,7 +22,7 @@ namespace Graphing.Tests
         [Test]
         public void Presentation_UsesExplicitAxisIdentityOrientationAndSide()
         {
-            var model = CreateModel(chartType: ChartType.Line);
+            var model = CreateModel(seriesType: SeriesType.Line);
 
             var snapshot = new GraphSnapshotBuilder().Build(model);
             var presentation = new GraphPresentationModel(snapshot);
@@ -37,16 +38,16 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void ChartType_ActsAsRenderingIntent_AndDoesNotAffectAxisSelection()
+        public void SeriesType_ActsAsRenderingIntent_AndDoesNotAffectAxisSelection()
         {
-            var lineModel = CreateModel(chartType: ChartType.Line);
-            var barModel = CreateModel(chartType: ChartType.Bar);
+            var lineModel = CreateModel(seriesType: SeriesType.Line);
+            var barModel = CreateModel(seriesType: SeriesType.Bar);
 
             var linePresentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(lineModel));
             var barPresentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(barModel));
 
-            Assert.That(linePresentation.Series[0].ChartType, Is.EqualTo(ChartType.Line));
-            Assert.That(barPresentation.Series[0].ChartType, Is.EqualTo(ChartType.Bar));
+            Assert.That(linePresentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Line));
+            Assert.That(barPresentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Bar));
 
             Assert.That(linePresentation.Axes[0].AxisId, Is.EqualTo(barPresentation.Axes[0].AxisId));
             Assert.That(linePresentation.Axes[1].AxisId, Is.EqualTo(barPresentation.Axes[1].AxisId));
@@ -57,7 +58,7 @@ namespace Graphing.Tests
         [Test]
         public void AxisFormatter_IsExplicitlySupplied_ByAxisModel()
         {
-            var model = CreateModel(chartType: ChartType.Line);
+            var model = CreateModel(seriesType: SeriesType.Line);
 
             var snapshot = new GraphSnapshotBuilder().Build(model);
 
@@ -82,7 +83,7 @@ namespace Graphing.Tests
             var timeField = new TestFieldDefinition("Time", "time", hoursUnit, new[] { 1d, 2d, 3d });
             var valueField = new TestFieldDefinition("Value", "value", hoursUnit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(1, "series-1", ChartType.Line, timeField, valueField, timeAxis, valueAxis);
+            var series = new GraphSeriesModel(1, "series-1", SeriesType.Line, timeField, valueField, timeAxis, valueAxis);
             var model = new GraphModel(new[] { timeAxis, valueAxis }, new[] { series });
 
             var builder = new GraphSnapshotBuilder();
@@ -101,7 +102,7 @@ namespace Graphing.Tests
         [Test]
         public void AxisFormatter_UpdatesWhenAxisFormatChanges_AndUnitRemainsUnchanged()
         {
-            var model = CreateModel(chartType: ChartType.Line);
+            var model = CreateModel(seriesType: SeriesType.Line);
             var xAxisId = new AxisId("x-axis");
             var yAxisId = new AxisId("y-axis");
             var formatterX = new NumericFormatter("formatter-x", UnitsRegistry.Default, "F1");
@@ -142,7 +143,7 @@ namespace Graphing.Tests
             var timeField = new TestFieldDefinition("Time", "time", hoursUnit, new[] { 1d, 2d, 3d });
             var valueField = new TestFieldDefinition("Value", "value", hoursUnit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(1, "series-1", ChartType.Line, timeField, valueField, timeAxis, valueAxis);
+            var series = new GraphSeriesModel(1, "series-1", SeriesType.Line, timeField, valueField, timeAxis, valueAxis);
             var model = new GraphModel(new[] { timeAxis, valueAxis }, new[] { series });
 
             var updatedModel = model.ChangeAxisUnitAndFormat(timeAxisId, secondsUnit, formatter);
@@ -177,7 +178,7 @@ namespace Graphing.Tests
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 0d, 1d });
 
-            var series = new GraphSeriesModel(1, "s", ChartType.Line, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxis);
             var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -212,12 +213,12 @@ namespace Graphing.Tests
 
             var builder = new GraphSnapshotBuilder();
 
-            var seriesF2 = new GraphSeriesModel(1, "s", ChartType.Line, xField, yField, xAxis, yAxisF2);
+            var seriesF2 = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisF2);
             var modelF2 = new GraphModel(new[] { xAxis, yAxisF2 }, new[] { seriesF2 });
             var presentationF2 = new GraphPresentationModel(builder.Build(modelF2));
             var labelsF2 = presentationF2.Axes.First(a => a.AxisId == "y-axis").Ticks.Select(t => t.Label).ToArray();
 
-            var seriesF6 = new GraphSeriesModel(1, "s", ChartType.Line, xField, yField, xAxis, yAxisF6);
+            var seriesF6 = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisF6);
             var modelF6 = new GraphModel(new[] { xAxis, yAxisF6 }, new[] { seriesF6 });
             var presentationF6 = new GraphPresentationModel(builder.Build(modelF6));
             var labelsF6 = presentationF6.Axes.First(a => a.AxisId == "y-axis").Ticks.Select(t => t.Label).ToArray();
@@ -247,12 +248,12 @@ namespace Graphing.Tests
             var builder = new GraphSnapshotBuilder();
 
             var yAxisInv = new AxisModel(yAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatterInvariant);
-            var seriesInv = new GraphSeriesModel(1, "s", ChartType.Line, xField, yField, xAxis, yAxisInv);
+            var seriesInv = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisInv);
             var modelInv = new GraphModel(new[] { xAxis, yAxisInv }, new[] { seriesInv });
             var presentationInv = new GraphPresentationModel(builder.Build(modelInv));
 
             var yAxisDe = new AxisModel(yAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatterGerman);
-            var seriesDe = new GraphSeriesModel(1, "s", ChartType.Line, xField, yField, xAxis, yAxisDe);
+            var seriesDe = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisDe);
             var modelDe = new GraphModel(new[] { xAxis, yAxisDe }, new[] { seriesDe });
             var presentationDe = new GraphPresentationModel(builder.Build(modelDe));
 
@@ -282,7 +283,7 @@ namespace Graphing.Tests
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 0d, 1d });
-            var series = new GraphSeriesModel(1, "s", ChartType.Line, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxis);
             var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -332,7 +333,7 @@ namespace Graphing.Tests
             Assert.That(leftAxis.NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12));
         }
 
-        private static IGraphModel CreateModel(ChartType chartType)
+        private static IGraphModel CreateModel(SeriesType seriesType)
         {
             var registry = UnitsRegistry.Default;
             var unit = Units.Length.Meter;
@@ -344,7 +345,7 @@ namespace Graphing.Tests
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(1, "series-1", chartType, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(1, "series-1", seriesType, xField, yField, xAxis, yAxis);
 
             return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
         }
@@ -367,7 +368,7 @@ namespace Graphing.Tests
                 var yField = new TestFieldDefinition("Y" + index, "y" + index, unit, yValues);
 
                 axes.Add(yAxis);
-                series.Add(new GraphSeriesModel(index + 1, "series-" + index, ChartType.Line, xField, yField, xAxis, yAxis));
+                series.Add(new GraphSeriesModel(index + 1, "series-" + index, SeriesType.Line, xField, yField, xAxis, yAxis));
             }
 
             var model = new GraphModel(axes, series);

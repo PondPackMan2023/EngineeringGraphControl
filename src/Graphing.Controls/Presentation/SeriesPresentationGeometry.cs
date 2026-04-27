@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 using Graphing.Controls.Rendering.Geometry;
 
 namespace Graphing.Controls.Presentation
@@ -9,20 +10,20 @@ namespace Graphing.Controls.Presentation
         public SeriesPresentationGeometry(
             SeriesId seriesId,
             string label,
-            ChartType chartType,
+            SeriesType seriesType,
             SeriesConnectivityIntent connectivityIntent,
             IReadOnlyList<GeometryPoint3D> points)
         {
             SeriesId = seriesId;
             Label = label;
-            ChartType = chartType;
+            SeriesType = seriesType;
             ConnectivityIntent = connectivityIntent;
             Points = points;
         }
 
         public SeriesId SeriesId { get; }
         public string Label { get; }
-        public ChartType ChartType { get; }
+        public SeriesType SeriesType { get; }
         public SeriesConnectivityIntent ConnectivityIntent { get; }
         public IReadOnlyList<GeometryPoint3D> Points { get; }
     }

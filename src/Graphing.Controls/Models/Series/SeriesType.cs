@@ -1,6 +1,6 @@
-namespace Graphing.Controls.Models
+namespace Graphing.Controls.Models.Series
 {
-    public enum ChartType
+    public enum SeriesType
     {
         Line,
         Bar,

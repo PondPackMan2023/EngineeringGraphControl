@@ -1,3 +1,5 @@
+using Graphing.Controls.Models.Series;
+
 namespace Graphing.Controls.Models
 {
     public interface IGraphSeriesModel
@@ -6,7 +8,7 @@ namespace Graphing.Controls.Models
 
         string Label { get; }
 
-        ChartType ChartType { get; }
+        SeriesType SeriesType { get; }
 
         IGraphFieldDefinition XField { get; }
 
