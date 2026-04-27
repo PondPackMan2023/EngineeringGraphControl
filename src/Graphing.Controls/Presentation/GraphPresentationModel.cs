@@ -16,6 +16,9 @@ namespace Graphing.Controls.Presentation
         private const int MaxLeftAxisCount = 6;
         private const double AxisSlotSize = 0.1;
         private const double AxisStackGap = 0.025;
+    private const double TitleHeight = 0.06;
+    private const double SubtitleHeight = 0.04;
+    private const double TitleSubtitleGap = 0.01;
 
         private readonly IReadOnlyList<SeriesPresentationGeometry> _series;
         private readonly IReadOnlyList<AxisPresentationGeometry> _axes;
@@ -28,7 +31,7 @@ namespace Graphing.Controls.Presentation
             var seriesContexts = BuildSeriesGeometry(snapshot, options);
             _series = BuildSeriesList(seriesContexts);
             _axes = BuildAxisGeometry(snapshot, seriesContexts, options);
-            _layout = BuildLayoutGeometry(_axes, _series);
+            _layout = BuildLayoutGeometry(_axes, _series, options);
             _semantics = BuildSemanticModel(snapshot, seriesContexts, _axes, options);
         }
 
@@ -125,7 +128,7 @@ namespace Graphing.Controls.Presentation
                 }
 
                 var identity = BuildAxisIdentity(axisSnapshot);
-                if (!options.IsAxisVisible(axisSnapshot, identity))
+                if (!options.IsAxisVisible(axisSnapshot))
                 {
                     continue;
                 }
@@ -376,8 +379,11 @@ namespace Graphing.Controls.Presentation
 
         private static GraphLayoutModel BuildLayoutGeometry(
             IReadOnlyList<AxisPresentationGeometry> axes,
-            IReadOnlyList<SeriesPresentationGeometry> series)
+            IReadOnlyList<SeriesPresentationGeometry> series,
+            GraphPresentationOptions options = null)
         {
+            options = options ?? new GraphPresentationOptions();
+
             var entries = new List<AxisLayoutEntry>();
             var leftAxes = new List<AxisPresentationGeometry>();
             var rightAxes = new List<AxisPresentationGeometry>();
@@ -450,17 +456,76 @@ namespace Graphing.Controls.Presentation
             var bottomCount = bottomAxes.Count;
             var topCount = topAxes.Count;
 
+            // Calculate space reserved for title and subtitle above plot area
+            var titleExists = !string.IsNullOrEmpty(options.GraphTitle);
+            var subtitleExists = !string.IsNullOrEmpty(options.GraphSubtitle);
+            var titleSpaceReserved = 0d;
+
+            if (titleExists)
+            {
+                titleSpaceReserved += TitleHeight;
+            }
+
+            if (subtitleExists)
+            {
+                titleSpaceReserved += SubtitleHeight;
+            }
+
+            if (titleExists || subtitleExists)
+            {
+                titleSpaceReserved += TitleSubtitleGap;
+            }
+
             // AxisSlotSize represents a fixed outer margin per side, not per axis.
             // Stacked axes affect internal layout only; plot area margins remain constant
             // regardless of how many axes are present on a given side.
             var plotArea = new PlotAreaLayout(
                 new GeometryPoint3D(leftCount > 0 ? AxisSlotSize : 0d, bottomCount > 0 ? AxisSlotSize : 0d, 0d),
-                new GeometryPoint3D(1.0 - (rightCount > 0 ? AxisSlotSize : 0d), 1.0 - (topCount > 0 ? AxisSlotSize : 0d), 0d));
+                new GeometryPoint3D(1.0 - (rightCount > 0 ? AxisSlotSize : 0d), 1.0 - (topCount > 0 ? AxisSlotSize : 0d) - titleSpaceReserved, 0d));
+
+            // Create title and subtitle geometries
+            var titleGeometry = titleExists
+                ? BuildTitleGeometry(options.GraphTitle, plotArea.TopRight.Y + titleSpaceReserved)
+                : null;
+
+            var subtitleGeometry = subtitleExists
+                ? BuildSubtitleGeometry(options.GraphSubtitle, titleGeometry, plotArea)
+                : null;
 
             return new GraphLayoutModel(
                 plotArea,
                 new ReadOnlyCollection<AxisLayoutEntry>(entries),
-                series);
+                series,
+                titleGeometry,
+                subtitleGeometry);
+        }
+
+        private static TitlePresentationGeometry BuildTitleGeometry(string titleText, double topY)
+        {
+            var titleBottom = topY - TitleHeight;
+            var titleTop = topY;
+
+            return new TitlePresentationGeometry(
+                titleText,
+                new GeometryPoint3D(0d, titleBottom, 0d),
+                new GeometryPoint3D(1d, titleTop, 0d));
+        }
+
+        private static SubtitlePresentationGeometry BuildSubtitleGeometry(
+            string subtitleText,
+            TitlePresentationGeometry titleGeometry,
+            PlotAreaLayout plotArea)
+        {
+            var subtitleTop = titleGeometry != null
+                ? titleGeometry.BottomLeft.Y - TitleSubtitleGap
+                : plotArea.TopRight.Y + SubtitleHeight + TitleSubtitleGap;
+
+            var subtitleBottom = subtitleTop - SubtitleHeight;
+
+            return new SubtitlePresentationGeometry(
+                subtitleText,
+                new GeometryPoint3D(0d, subtitleBottom, 0d),
+                new GeometryPoint3D(1d, subtitleTop, 0d));
         }
 
         private static GraphSemanticModel BuildSemanticModel(

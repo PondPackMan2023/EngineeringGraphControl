@@ -83,7 +83,7 @@ namespace Graphing.Tests
             var timeField = new TestFieldDefinition("Time", "time", hoursUnit, new[] { 1d, 2d, 3d });
             var valueField = new TestFieldDefinition("Value", "value", hoursUnit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(1, "series-1", SeriesType.Line, timeField, valueField, timeAxis, valueAxis);
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, timeField, valueField, timeAxis, valueAxis);
             var model = new GraphModel(new[] { timeAxis, valueAxis }, new[] { series });
 
             var builder = new GraphSnapshotBuilder();
@@ -143,7 +143,7 @@ namespace Graphing.Tests
             var timeField = new TestFieldDefinition("Time", "time", hoursUnit, new[] { 1d, 2d, 3d });
             var valueField = new TestFieldDefinition("Value", "value", hoursUnit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(1, "series-1", SeriesType.Line, timeField, valueField, timeAxis, valueAxis);
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, timeField, valueField, timeAxis, valueAxis);
             var model = new GraphModel(new[] { timeAxis, valueAxis }, new[] { series });
 
             var updatedModel = model.ChangeAxisUnitAndFormat(timeAxisId, secondsUnit, formatter);
@@ -178,7 +178,7 @@ namespace Graphing.Tests
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 0d, 1d });
 
-            var series = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
             var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -213,12 +213,12 @@ namespace Graphing.Tests
 
             var builder = new GraphSnapshotBuilder();
 
-            var seriesF2 = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisF2);
+            var seriesF2 = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxisF2);
             var modelF2 = new GraphModel(new[] { xAxis, yAxisF2 }, new[] { seriesF2 });
             var presentationF2 = new GraphPresentationModel(builder.Build(modelF2));
             var labelsF2 = presentationF2.Axes.First(a => a.AxisId == "y-axis").Ticks.Select(t => t.Label).ToArray();
 
-            var seriesF6 = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisF6);
+            var seriesF6 = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxisF6);
             var modelF6 = new GraphModel(new[] { xAxis, yAxisF6 }, new[] { seriesF6 });
             var presentationF6 = new GraphPresentationModel(builder.Build(modelF6));
             var labelsF6 = presentationF6.Axes.First(a => a.AxisId == "y-axis").Ticks.Select(t => t.Label).ToArray();
@@ -248,12 +248,12 @@ namespace Graphing.Tests
             var builder = new GraphSnapshotBuilder();
 
             var yAxisInv = new AxisModel(yAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatterInvariant);
-            var seriesInv = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisInv);
+            var seriesInv = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxisInv);
             var modelInv = new GraphModel(new[] { xAxis, yAxisInv }, new[] { seriesInv });
             var presentationInv = new GraphPresentationModel(builder.Build(modelInv));
 
             var yAxisDe = new AxisModel(yAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatterGerman);
-            var seriesDe = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxisDe);
+            var seriesDe = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxisDe);
             var modelDe = new GraphModel(new[] { xAxis, yAxisDe }, new[] { seriesDe });
             var presentationDe = new GraphPresentationModel(builder.Build(modelDe));
 
@@ -283,7 +283,7 @@ namespace Graphing.Tests
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 0d, 1d });
-            var series = new GraphSeriesModel(1, "s", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
             var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -292,6 +292,19 @@ namespace Graphing.Tests
             var yAxisPresentation = presentation.Axes.First(a => a.AxisId == "y-axis");
             Assert.That(yAxisPresentation.Ticks.Count, Is.GreaterThan(0));
             Assert.That(yAxisPresentation.Ticks.All(t => t.Label != null), Is.True);
+        }
+
+        [Test]
+        public void Presentation_HidesAxis_ByAxisIdOptions()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(hiddenAxisIds: new[] { new AxisId("y-axis") });
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Axes.Count, Is.EqualTo(1));
+            Assert.That(presentation.Axes.Single().AxisId, Is.EqualTo("x-axis"));
         }
 
         [Test]
@@ -333,6 +346,129 @@ namespace Graphing.Tests
             Assert.That(leftAxis.NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12));
         }
 
+        [Test]
+        public void Layout_Title_CreatesGeometryWhenPresent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Test Title");
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Layout.Title, Is.Not.Null);
+            Assert.That(presentation.Layout.Title.Text, Is.EqualTo("Test Title"));
+        }
+
+        [Test]
+        public void Layout_Title_IsNullWhenAbsent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions();
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Layout.Title, Is.Null);
+        }
+
+        [Test]
+        public void Layout_Subtitle_CreatesGeometryWhenPresent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphSubtitle: "Test Subtitle");
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Layout.Subtitle, Is.Not.Null);
+            Assert.That(presentation.Layout.Subtitle.Text, Is.EqualTo("Test Subtitle"));
+        }
+
+        [Test]
+        public void Layout_Subtitle_IsNullWhenAbsent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions();
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Layout.Subtitle, Is.Null);
+        }
+
+        [Test]
+        public void Layout_TitleAndSubtitle_BothCreatedWhenPresent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Title", graphSubtitle: "Subtitle");
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Layout.Title, Is.Not.Null);
+            Assert.That(presentation.Layout.Title.Text, Is.EqualTo("Title"));
+            Assert.That(presentation.Layout.Subtitle, Is.Not.Null);
+            Assert.That(presentation.Layout.Subtitle.Text, Is.EqualTo("Subtitle"));
+        }
+
+        [Test]
+        public void Layout_PlotArea_ShiftsDownWhenTitleExists()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentationWithoutTitle = new GraphPresentationModel(snapshot);
+            var presentationWithTitle = new GraphPresentationModel(snapshot, new GraphPresentationOptions(graphTitle: "Test Title"));
+
+            Assert.That(presentationWithTitle.Layout.PlotArea.TopRight.Y, Is.LessThan(presentationWithoutTitle.Layout.PlotArea.TopRight.Y));
+        }
+
+        [Test]
+        public void Layout_PlotArea_ShiftsDownMoreWhenBothTitleAndSubtitleExist()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentationWithoutTitle = new GraphPresentationModel(snapshot);
+            var presentationWithTitle = new GraphPresentationModel(snapshot, new GraphPresentationOptions(graphTitle: "Test Title"));
+            var presentationWithBoth = new GraphPresentationModel(snapshot, new GraphPresentationOptions(graphTitle: "Test Title", graphSubtitle: "Test Subtitle"));
+
+            Assert.That(presentationWithBoth.Layout.PlotArea.TopRight.Y, Is.LessThan(presentationWithTitle.Layout.PlotArea.TopRight.Y));
+            Assert.That(presentationWithTitle.Layout.PlotArea.TopRight.Y, Is.LessThan(presentationWithoutTitle.Layout.PlotArea.TopRight.Y));
+        }
+
+        [Test]
+        public void Layout_TitleBounds_SpanFullWidthAndLocateAbovePlotArea()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Test Title");
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var title = presentation.Layout.Title;
+
+            Assert.That(title.BottomLeft.X, Is.EqualTo(0d).Within(1e-12));
+            Assert.That(title.TopRight.X, Is.EqualTo(1d).Within(1e-12));
+            Assert.That(title.BottomLeft.Y, Is.GreaterThan(presentation.Layout.PlotArea.TopRight.Y));
+            Assert.That(title.TopRight.Y, Is.GreaterThan(title.BottomLeft.Y));
+        }
+
+        [Test]
+        public void Layout_SubtitleBounds_LocateBetweenTitleAndPlotArea()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Test Title", graphSubtitle: "Test Subtitle");
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var title = presentation.Layout.Title;
+            var subtitle = presentation.Layout.Subtitle;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(subtitle.TopRight.Y, Is.LessThan(title.BottomLeft.Y), "Subtitle should be below title");
+            Assert.That(subtitle.BottomLeft.Y, Is.EqualTo(plotArea.TopRight.Y).Within(1e-12).Or.GreaterThan(plotArea.TopRight.Y), "Subtitle should align with or be above plot area");
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             var registry = UnitsRegistry.Default;
@@ -345,7 +481,7 @@ namespace Graphing.Tests
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(1, "series-1", seriesType, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", seriesType, xField, yField, xAxis, yAxis);
 
             return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
         }
@@ -368,7 +504,7 @@ namespace Graphing.Tests
                 var yField = new TestFieldDefinition("Y" + index, "y" + index, unit, yValues);
 
                 axes.Add(yAxis);
-                series.Add(new GraphSeriesModel(index + 1, "series-" + index, SeriesType.Line, xField, yField, xAxis, yAxis));
+                series.Add(new GraphSeriesModel(new SeriesId($"{index + 1}"), "series-" + index, SeriesType.Line, xField, yField, xAxis, yAxis));
             }
 
             var model = new GraphModel(axes, series);

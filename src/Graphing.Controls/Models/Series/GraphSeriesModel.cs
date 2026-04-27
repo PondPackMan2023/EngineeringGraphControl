@@ -5,7 +5,7 @@ namespace Graphing.Controls.Models
     public class GraphSeriesModel : IGraphSeriesModel
     {
         public GraphSeriesModel(
-                int id,
+                SeriesId seriesId,
                 string label,
                 SeriesType seriesType,
                 IGraphFieldDefinition xField,
@@ -13,7 +13,7 @@ namespace Graphing.Controls.Models
                 IAxisModel xAxis,
                 IAxisModel yAxis)
         {
-            SeriesId = new SeriesId($"{id}");
+            SeriesId = seriesId;
             Label = label;
             SeriesType = seriesType;
             XField = xField;

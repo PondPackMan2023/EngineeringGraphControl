@@ -38,7 +38,7 @@ namespace Graphing.TestHarness.Scenarios
             var yAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
                 NumericFormatterLibrary.DefaultElevationFormatter);
 
-            var series = new GraphSeriesModel(126, "J-1", SeriesType.Line, timeField, hglField, xAxis, yAxis);
+            var series = new GraphSeriesModel(new SeriesId("hgl-126"), "J-1", SeriesType.Line, timeField, hglField, xAxis, yAxis);
             var graph = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             return graph;
@@ -84,8 +84,8 @@ namespace Graphing.TestHarness.Scenarios
                 NumericFormatterLibrary.DefaultElevationFormatter);
             var pressureYAxis = new AxisModel(new AxisId("pressure"), AxisOrientation.Y, AxisSide.Left, Units.Pressure.Psi, "psi",
                 NumericFormatterLibrary.DefaultPressureFormatter);
-            var hglSeries = new GraphSeriesModel(126, "J-1", SeriesType.Line, timeField, hglField, xAxis, lengthYAxis);
-            var psiSeries = new GraphSeriesModel(126, "J-1", SeriesType.Line, timeField, pressureField, xAxis, pressureYAxis);
+            var hglSeries = new GraphSeriesModel(new SeriesId("hgl-126"), "J-1", SeriesType.Line, timeField, hglField, xAxis, lengthYAxis);
+            var psiSeries = new GraphSeriesModel(new SeriesId("pressure-126"), "J-1", SeriesType.Line, timeField, pressureField, xAxis, pressureYAxis);
 
             var graph = new GraphModel(new[] { xAxis, lengthYAxis, pressureYAxis }, new[] { hglSeries, psiSeries });
 

@@ -3,7 +3,6 @@ using Graphing.Controls.Presentation;
 using Graphing.Controls.Rendering;
 using Graphing.Controls.Snapshot;
 using System;
-using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace Graphing.Controls
@@ -46,7 +45,7 @@ namespace Graphing.Controls
 
         public IGraphModel GraphModel => _graphModel;
 
-        public void SetGraphSource(IGraphModel graphModel)
+        public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)
         {
             lock (_snapshotSync)
             {
@@ -56,52 +55,7 @@ namespace Graphing.Controls
                     ? null
                     : snapshotBuilder.Build(graphModel);
 
-                TryInstallSnapshotAndPresentation(nextSnapshot);
-            }
-        }
-
-        public void NotifyDomainChanged(int elementTypeId, int[] elementIds, int[] attributeIds)
-        {
-            if (attributeIds == null || attributeIds.Length == 0)
-            {
-                return;
-            }
-
-            lock (_snapshotSync)
-            {
-                if (GraphModel == null || _activeSnapshot == null)
-                {
-                    return;
-                }
-
-                var snapshotBuilder = new GraphSnapshotBuilder();
-                var nextSnapshot = snapshotBuilder.Build(GraphModel);
-                TryInstallSnapshotAndPresentation(nextSnapshot);
-            }
-        }
-
-        public void NotifyFormattersChanged(IReadOnlyCollection<string> changedFormatterNames)
-        {
-            if (changedFormatterNames == null || changedFormatterNames.Count == 0)
-            {
-                return;
-            }
-
-            lock (_snapshotSync)
-            {
-                if (GraphModel == null || _activeSnapshot == null)
-                {
-                    return;
-                }
-
-                if (!SnapshotUsesFormatter(_activeSnapshot, changedFormatterNames))
-                {
-                    return;
-                }
-
-                var snapshotBuilder = new GraphSnapshotBuilder();
-                var nextSnapshot = snapshotBuilder.Build(GraphModel);
-                TryInstallSnapshotAndPresentation(nextSnapshot);
+                TryInstallSnapshotAndPresentation(nextSnapshot, options);
             }
         }
 
@@ -127,12 +81,14 @@ namespace Graphing.Controls
             Invalidate();
         }
 
-        protected virtual GraphPresentationModel CreatePresentationModel(IGraphSnapshot snapshot)
+        protected virtual GraphPresentationModel CreatePresentationModel(IGraphSnapshot snapshot,
+            GraphPresentationOptions options = null)
         {
-            return new GraphPresentationModel(snapshot);
+            return new GraphPresentationModel(snapshot, options);
         }
 
-        private void TryInstallSnapshotAndPresentation(IGraphSnapshot nextSnapshot)
+        private void TryInstallSnapshotAndPresentation(IGraphSnapshot nextSnapshot,
+            GraphPresentationOptions options = null)
         {
             if (ReferenceEquals(_activeSnapshot, nextSnapshot))
             {
@@ -149,7 +105,7 @@ namespace Graphing.Controls
             GraphPresentationModel nextPresentation;
             try
             {
-                nextPresentation = CreatePresentationModel(nextSnapshot);
+                nextPresentation = CreatePresentationModel(nextSnapshot, options);
             }
             catch
             {
@@ -159,24 +115,6 @@ namespace Graphing.Controls
             _activeSnapshot = nextSnapshot;
             _activePresentation = nextPresentation;
             Invalidate();
-        }
-
-        private static bool SnapshotUsesFormatter(
-            IGraphSnapshot snapshot,
-            IReadOnlyCollection<string> changedFormatterNames)
-        {
-            var formatterNameSet = new HashSet<string>(changedFormatterNames);
-
-            for (var axisIndex = 0; axisIndex < snapshot.Axes.Count; axisIndex++)
-            {
-                var formatterName = snapshot.Axes[axisIndex].FormatterName;
-                if (formatterName != null && formatterNameSet.Contains(formatterName))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }
