@@ -44,6 +44,8 @@ namespace Graphing.Controls
             }
         }
 
+        public IGraphModel GraphModel => _graphModel;
+
         public void SetGraphSource(IGraphModel graphModel)
         {
             lock (_snapshotSync)
@@ -67,13 +69,13 @@ namespace Graphing.Controls
 
             lock (_snapshotSync)
             {
-                if (_graphModel == null || _activeSnapshot == null)
+                if (GraphModel == null || _activeSnapshot == null)
                 {
                     return;
                 }
 
                 var snapshotBuilder = new GraphSnapshotBuilder();
-                var nextSnapshot = snapshotBuilder.Build(_graphModel);
+                var nextSnapshot = snapshotBuilder.Build(GraphModel);
                 TryInstallSnapshotAndPresentation(nextSnapshot);
             }
         }
@@ -87,7 +89,7 @@ namespace Graphing.Controls
 
             lock (_snapshotSync)
             {
-                if (_graphModel == null || _activeSnapshot == null)
+                if (GraphModel == null || _activeSnapshot == null)
                 {
                     return;
                 }
@@ -98,7 +100,7 @@ namespace Graphing.Controls
                 }
 
                 var snapshotBuilder = new GraphSnapshotBuilder();
-                var nextSnapshot = snapshotBuilder.Build(_graphModel);
+                var nextSnapshot = snapshotBuilder.Build(GraphModel);
                 TryInstallSnapshotAndPresentation(nextSnapshot);
             }
         }

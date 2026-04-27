@@ -132,7 +132,7 @@ namespace Graphing.Controls.Presentation
 
                 var orientation = ResolveAxisOrientation(axisSnapshot.Orientation);
                 var side = ResolveAxisSide(axisSnapshot.Side);
-                var title = BuildAxisTitle(axisSnapshot);
+                var title = axisSnapshot.Title;
                 var formatter = ResolveAxisFormatter(axisSnapshot);
                 var linePoints = BuildAxisLine(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation);
                 var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation, formatter);
@@ -231,63 +231,7 @@ namespace Graphing.Controls.Presentation
                 axisSnapshot.DisplayUnitLabel ?? string.Empty);
         }
 
-        private static string BuildAxisTitle(IAxisSnapshot axisSnapshot)
-        {
-            var titleField = ResolveAxisTitleField(axisSnapshot);
-            if (titleField == null)
-            {
-                return string.Empty;
-            }
 
-            var label = !string.IsNullOrWhiteSpace(titleField.Label)
-                ? titleField.Label
-                : titleField.Name;
-
-            if (string.IsNullOrWhiteSpace(label))
-            {
-                return string.Empty;
-            }
-
-            if (!string.IsNullOrWhiteSpace(titleField.DisplayUnitLabel))
-            {
-                return string.Format(CultureInfo.InvariantCulture, "{0} ({1})", label, titleField.DisplayUnitLabel);
-            }
-
-            return label;
-        }
-
-        private static IFieldSnapshot ResolveAxisTitleField(IAxisSnapshot axisSnapshot)
-        {
-            var fields = axisSnapshot.Fields;
-            if (fields == null)
-            {
-                return null;
-            }
-
-            for (var index = 0; index < fields.Count; index++)
-            {
-                var field = fields[index];
-                if (field == null)
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(field.Label))
-                {
-                    return field;
-                }
-            }
-
-            for (var index = 0; index < fields.Count; index++)
-            {
-                if (fields[index] != null)
-                {
-                    return fields[index];
-                }
-            }
-
-            return null;
-        }
 
         private static NumericFormatter ResolveAxisFormatter(IAxisSnapshot axisSnapshot)
         {

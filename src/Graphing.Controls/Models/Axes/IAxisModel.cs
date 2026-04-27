@@ -5,7 +5,7 @@ namespace Graphing.Controls.Models
 {
     public interface IAxisModel
     {
-        string Id { get; }
+        AxisId Id { get; }
 
         AxisOrientation Orientation { get; }
 
@@ -24,5 +24,7 @@ namespace Graphing.Controls.Models
         double? MinimumValue { get; }
 
         double? MaximumValue { get; }
+
+        IAxisModel ChangeUnit(Unit newUnit);
     }
 }

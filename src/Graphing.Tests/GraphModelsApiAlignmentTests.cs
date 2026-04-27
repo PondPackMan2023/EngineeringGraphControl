@@ -84,7 +84,7 @@ namespace Graphing.Tests
             var unitNone = new Unit("none", noneDimension, 1.0);
             var unitUnitless = new Unit("unitless", unitlessDimension, 1.0);
 
-            var registry = new UnitRegistry.UnitRegistry();
+            var registry = new UnitsRegistry();
             registry.RegisterBaseUnit(unitNone);
             registry.RegisterBaseUnit(unitUnitless);
             registry.Freeze();
@@ -94,8 +94,8 @@ namespace Graphing.Tests
             var noneField = new TestFieldDefinition("Point Count", "pointCount", unitNone, new[] { 1d, 2d, 3d });
             var unitlessField = new TestFieldDefinition("Efficiency", "efficiency", unitUnitless, new[] { 0.12, 0.34, 0.56 });
 
-            var xAxis = new TestAxisModel("x", AxisOrientation.X, AxisSide.Bottom, unitNone, "", null, AxisScaleType.Linear, true, null, null);
-            var yAxis = new TestAxisModel("y", AxisOrientation.Y, AxisSide.Left, unitUnitless, "ratio", formatter, AxisScaleType.Linear, true, null, null);
+            var xAxis = new TestAxisModel(new AxisId("x"), AxisOrientation.X, AxisSide.Bottom, unitNone, "", null, AxisScaleType.Linear, true, null, null);
+            var yAxis = new TestAxisModel(new AxisId("y"), AxisOrientation.Y, AxisSide.Left, unitUnitless, "ratio", formatter, AxisScaleType.Linear, true, null, null);
 
             var series = new TestSeriesModel(1, "series", ChartType.Line, noneField, unitlessField, xAxis, yAxis);
             var graph = new TestGraphModel(new[] { xAxis, yAxis }, new[] { series });
@@ -119,6 +119,53 @@ namespace Graphing.Tests
             public IReadOnlyList<IAxisModel> Axes { get; }
 
             public IReadOnlyList<IGraphSeriesModel> Series { get; }
+
+            public IGraphModel ChangeAxisUnit(AxisId axisId, Unit unit)
+            {
+                var changes = new Dictionary<AxisId, Unit>();
+                changes[axisId] = unit;
+                return ChangeAxisUnits(changes);
+            }
+
+            public IGraphModel ChangeAxisUnits(IReadOnlyDictionary<AxisId, Unit> unitChanges)
+            {
+                var updatedAxes = new List<IAxisModel>(Axes.Count);
+
+                for (var axisIndex = 0; axisIndex < Axes.Count; axisIndex++)
+                {
+                    var axis = Axes[axisIndex];
+                    if (axis == null)
+                    {
+                        updatedAxes.Add(null);
+                        continue;
+                    }
+
+                    var replacementUnit = default(Unit);
+                    var hasReplacement = unitChanges != null
+                        && unitChanges.TryGetValue(axis.Id, out replacementUnit);
+
+                    if (!hasReplacement)
+                    {
+                        updatedAxes.Add(axis);
+                        continue;
+                    }
+
+                    updatedAxes.Add(
+                        new TestAxisModel(
+                            axis.Id,
+                            axis.Orientation,
+                            axis.Side,
+                            replacementUnit,
+                            axis.UnitLabel,
+                            axis.NumericFormatter,
+                            axis.ScaleType,
+                            axis.IsAutoRange,
+                            axis.MinimumValue,
+                            axis.MaximumValue));
+                }
+
+                return new TestGraphModel(updatedAxes, Series);
+            }
         }
 
         private sealed class TestSeriesModel : IGraphSeriesModel
@@ -186,7 +233,7 @@ namespace Graphing.Tests
         private sealed class TestAxisModel : IAxisModel
         {
             public TestAxisModel(
-                string id,
+                AxisId id,
                 AxisOrientation orientation,
                 AxisSide side,
                 Unit unit,
@@ -209,7 +256,7 @@ namespace Graphing.Tests
                 MaximumValue = maximumValue;
             }
 
-            public string Id { get; }
+            public AxisId Id { get; }
 
             public AxisOrientation Orientation { get; }
 
@@ -228,6 +275,21 @@ namespace Graphing.Tests
             public double? MinimumValue { get; }
 
             public double? MaximumValue { get; }
+
+            public IAxisModel ChangeUnit(Unit newUnit)
+            {
+                return new TestAxisModel(
+                    Id,
+                    Orientation,
+                    Side,
+                    newUnit,
+                    UnitLabel,
+                    NumericFormatter,
+                    ScaleType,
+                    IsAutoRange,
+                    MinimumValue,
+                    MaximumValue);
+            }
         }
     }
 }
