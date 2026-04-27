@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 
 namespace Graphing.Controls.Snapshot
 {
@@ -19,9 +20,9 @@ namespace Graphing.Controls.Snapshot
         string Label { get; }
 
         /// <summary>
-        /// The chart type used to render this series.
+        /// The series type used to render this series.
         /// </summary>
-        ChartType ChartType { get; }
+        SeriesType SeriesType { get; }
 
         /// <summary>
         /// X field snapshot used by this series.

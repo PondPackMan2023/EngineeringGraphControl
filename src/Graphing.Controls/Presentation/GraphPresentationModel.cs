@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 using UnitRegistry.Formatting;
@@ -81,8 +81,8 @@ namespace Graphing.Controls.Presentation
                 var geometry = new SeriesPresentationGeometry(
                     seriesSnapshot.SeriesId,
                     seriesSnapshot.Label,
-                    seriesSnapshot.ChartType,
-                    ResolveConnectivity(seriesSnapshot.ChartType),
+                    seriesSnapshot.SeriesType,
+                    ResolveConnectivity(seriesSnapshot.SeriesType),
                     points);
 
                 result.Add(new SeriesGeometryContext(seriesSnapshot, geometry));
@@ -352,23 +352,23 @@ namespace Graphing.Controls.Presentation
             }
         }
 
-        private static SeriesConnectivityIntent ResolveConnectivity(ChartType chartType)
+        private static SeriesConnectivityIntent ResolveConnectivity(SeriesType seriesType)
         {
-            switch (chartType)
+            switch (seriesType)
             {
-                case ChartType.Line:
-                case ChartType.Profile:
-                case ChartType.Contour:
+                case SeriesType.Line:
+                case SeriesType.Profile:
+                case SeriesType.Contour:
                     return SeriesConnectivityIntent.Continuous;
 
-                case ChartType.Bar:
+                case SeriesType.Bar:
                     return SeriesConnectivityIntent.Step;
 
-                case ChartType.Scatter:
-                case ChartType.Shape:
+                case SeriesType.Scatter:
+                case SeriesType.Shape:
                     return SeriesConnectivityIntent.Discrete;
 
-                case ChartType.Auto:
+                case SeriesType.Auto:
                 default:
                     return SeriesConnectivityIntent.Unspecified;
             }

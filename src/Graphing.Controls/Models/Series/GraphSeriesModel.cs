@@ -1,3 +1,5 @@
+using Graphing.Controls.Models.Series;
+
 namespace Graphing.Controls.Models
 {
     public class GraphSeriesModel : IGraphSeriesModel
@@ -5,7 +7,7 @@ namespace Graphing.Controls.Models
         public GraphSeriesModel(
                 int id,
                 string label,
-                ChartType chartType,
+                SeriesType seriesType,
                 IGraphFieldDefinition xField,
                 IGraphFieldDefinition yField,
                 IAxisModel xAxis,
@@ -13,7 +15,7 @@ namespace Graphing.Controls.Models
         {
             SeriesId = new SeriesId($"{id}");
             Label = label;
-            ChartType = chartType;
+            SeriesType = seriesType;
             XField = xField;
             YField = yField;
             XAxis = xAxis;
@@ -22,7 +24,7 @@ namespace Graphing.Controls.Models
 
         public SeriesId SeriesId { get; }
         public string Label { get; }
-        public ChartType ChartType { get; }
+        public SeriesType SeriesType { get; }
         public IGraphFieldDefinition XField { get; }
         public IGraphFieldDefinition YField { get; }
         public IAxisModel XAxis { get; }

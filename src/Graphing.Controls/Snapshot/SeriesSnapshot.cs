@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 
 namespace Graphing.Controls.Snapshot
 {
@@ -13,7 +14,7 @@ namespace Graphing.Controls.Snapshot
     {
         private readonly SeriesId _seriesId;
         private readonly string _label;
-        private readonly ChartType _chartType;
+        private readonly SeriesType _seriesType;
         private readonly string _xAxisId;
         private readonly string _yAxisId;
         private readonly IFieldSnapshot _xField;
@@ -37,11 +38,11 @@ namespace Graphing.Controls.Snapshot
         }
 
         /// <summary>
-        /// The chart type used to render this series (e.g., Line, Bar, etc.).
+        /// The series type used to render this series (e.g., Line, Bar, etc.).
         /// </summary>
-        public ChartType ChartType
+        public SeriesType SeriesType
         {
-            get { return _chartType; }
+            get { return _seriesType; }
         }
 
         public IFieldSnapshot XField
@@ -77,7 +78,7 @@ namespace Graphing.Controls.Snapshot
         /// </summary>
         /// <param name="seriesId">Stable identity for the series.</param>
         /// <param name="label">Display label for the series.</param>
-        /// <param name="chartType">The chart type for rendering.</param>
+        /// <param name="seriesType">The series type for rendering.</param>
         /// <param name="xAxisId">Axis identity for the X field.</param>
         /// <param name="yAxisId">Axis identity for the Y field.</param>
         /// <param name="xField">X field snapshot.</param>
@@ -85,7 +86,7 @@ namespace Graphing.Controls.Snapshot
         public SeriesSnapshot(
             SeriesId seriesId,
             string label,
-            ChartType chartType,
+            SeriesType seriesType,
             string xAxisId,
             string yAxisId,
             FieldSnapshot xField,
@@ -93,7 +94,7 @@ namespace Graphing.Controls.Snapshot
         {
             _seriesId = seriesId;
             _label = label;
-            _chartType = chartType;
+            _seriesType = seriesType;
             _xAxisId = xAxisId;
             _yAxisId = yAxisId;
             _xField = xField;

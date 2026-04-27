@@ -44,7 +44,7 @@ namespace Graphing.Controls.Snapshot
                         new SeriesSnapshot(
                             graphSeriesModel.SeriesId,
                             graphSeriesModel.Label,
-                            graphSeriesModel.ChartType,
+                            graphSeriesModel.SeriesType,
                             xAxisId,
                             yAxisId,
                             xFieldSnapshot,
