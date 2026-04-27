@@ -15,6 +15,7 @@ namespace Graphing.Controls.Presentation
     {
         private const int MaxLeftAxisCount = 6;
         private const double AxisSlotSize = 0.1;
+        private const double AxisStackGap = 0.025;
 
         private readonly IReadOnlyList<SeriesPresentationGeometry> _series;
         private readonly IReadOnlyList<AxisPresentationGeometry> _axes;
@@ -414,13 +415,14 @@ namespace Graphing.Controls.Presentation
             }
 
             var leftCount = Math.Min(leftAxes.Count, MaxLeftAxisCount);
+            var totalLeftGap = leftCount > 1 ? (leftCount - 1) * AxisStackGap : 0d;
+            var leftSpanHeight = leftCount > 0 ? (1.0 - totalLeftGap) / leftCount : 0d;
 
             for (var leftIndex = 0; leftIndex < leftCount; leftIndex++)
             {
                 var axis = leftAxes[leftIndex];
-                var spanHeight = 1.0 / leftCount;
-                var normalizedSpanStart = (leftCount - leftIndex - 1) * spanHeight;
-                var normalizedSpanEnd = (leftCount - leftIndex) * spanHeight;
+                var normalizedSpanStart = (leftCount - leftIndex - 1) * (leftSpanHeight + AxisStackGap);
+                var normalizedSpanEnd = normalizedSpanStart + leftSpanHeight;
 
                 entries.Add(new AxisLayoutEntry(axis, AxisSide.Left, leftIndex, normalizedSpanStart, normalizedSpanEnd));
             }
