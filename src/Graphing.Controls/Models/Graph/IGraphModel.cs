@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnitRegistry;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Controls.Models
 {
@@ -10,6 +11,10 @@ namespace Graphing.Controls.Models
         IReadOnlyList<IGraphSeriesModel> Series { get; }
 
         IGraphModel ChangeAxisUnit(AxisId axisId, Unit unit);
+
+        IGraphModel ChangeAxisFormat(AxisId axisId, NumericFormatter formatter);
+
+        IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, NumericFormatter formatter);
 
         IGraphModel ChangeAxisUnits(IReadOnlyDictionary<AxisId, Unit> unitChanges);
     }

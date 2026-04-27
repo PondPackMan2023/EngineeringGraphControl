@@ -1,5 +1,6 @@
 using Graphing.Controls.Models;
 using Graphing.TestHarness.Fields;
+using Graphing.TestHarness.Libraries;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
@@ -32,9 +33,9 @@ namespace Graphing.TestHarness.Scenarios
             var hglField = new GraphFieldDefinition("HGL", "Hydraulic Grade Line", Units.Length.Meter, hgl);
 
             var xAxis = new AxisModel(new AxisId("time"), AxisOrientation.X, AxisSide.Bottom, Units.Time.Second, "sec",
-                new NumericFormatter(new NumericFormatterId("time"), UnitsRegistry.Default));
+                NumericFormatterLibrary.DefaultTimeFormatter);
             var yAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
-                new NumericFormatter(new NumericFormatterId("elevation"), UnitsRegistry.Default));
+                NumericFormatterLibrary.DefaultElevationFormatter);
 
             var series = new GraphSeriesModel(126, "J-1", ChartType.Line, timeField, hglField, xAxis, yAxis);
             var graph = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
@@ -77,12 +78,11 @@ namespace Graphing.TestHarness.Scenarios
             var pressureField = new GraphFieldDefinition("Pressure", "Pressure", Units.Pressure.Psi, pressures);
 
             var xAxis = new AxisModel(new AxisId("time"), AxisOrientation.X, AxisSide.Bottom, Units.Time.Second, "sec",
-                new NumericFormatter(new NumericFormatterId("time"), UnitsRegistry.Default));
+                NumericFormatterLibrary.DefaultTimeFormatter);
             var lengthYAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
-                new NumericFormatter(new NumericFormatterId("elevation"), UnitsRegistry.Default));
+                NumericFormatterLibrary.DefaultElevationFormatter);
             var pressureYAxis = new AxisModel(new AxisId("pressure"), AxisOrientation.Y, AxisSide.Left, Units.Pressure.Psi, "psi",
-                new NumericFormatter(new NumericFormatterId("pressure"), UnitsRegistry.Default));
-
+                NumericFormatterLibrary.DefaultPressureFormatter);
             var hglSeries = new GraphSeriesModel(126, "J-1", ChartType.Line, timeField, hglField, xAxis, lengthYAxis);
             var psiSeries = new GraphSeriesModel(126, "J-1", ChartType.Line, timeField, pressureField, xAxis, pressureYAxis);
 

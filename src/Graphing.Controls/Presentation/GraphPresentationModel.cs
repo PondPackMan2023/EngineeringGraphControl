@@ -135,7 +135,7 @@ namespace Graphing.Controls.Presentation
                 var title = axisSnapshot.Title;
                 var formatter = ResolveAxisFormatter(axisSnapshot);
                 var linePoints = BuildAxisLine(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation);
-                var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation, formatter);
+                var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation, formatter, axisSnapshot.Unit);
 
                 result.Add(
                     new AxisPresentationGeometry(
@@ -282,7 +282,8 @@ namespace Graphing.Controls.Presentation
             double? minimumValue,
             double? maximumValue,
             AxisOrientation orientation,
-            NumericFormatter formatter)
+            NumericFormatter formatter,
+            UnitRegistry.Unit unit)
         {
             var ticks = new List<AxisTickPresentation>();
 
@@ -326,6 +327,11 @@ namespace Graphing.Controls.Presentation
 
         private static string FormatAxisLabel(NumericFormatter formatter, double value)
         {
+            if (formatter != null)
+            {
+                return formatter.Format(value);
+            }
+
             return value.ToString(CultureInfo.InvariantCulture);
         }
 

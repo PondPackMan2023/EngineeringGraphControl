@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnitRegistry;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Controls.Models
 {
@@ -19,6 +20,66 @@ namespace Graphing.Controls.Models
             var unitChanges = new Dictionary<AxisId, Unit>();
             unitChanges[axisId] = unit;
             return ChangeAxisUnits(unitChanges);
+        }
+
+        public IGraphModel ChangeAxisFormat(AxisId axisId, NumericFormatter formatter)
+        {
+            var updatedAxes = new List<IAxisModel>(Axes.Count);
+
+            for (var axisIndex = 0; axisIndex < Axes.Count; axisIndex++)
+            {
+                var axis = Axes[axisIndex];
+                if (axis == null)
+                {
+                    updatedAxes.Add(null);
+                    continue;
+                }
+
+                if (!axis.Id.Equals(axisId))
+                {
+                    updatedAxes.Add(axis);
+                    continue;
+                }
+
+                updatedAxes.Add(axis.ChangeFormat(formatter));
+            }
+
+            return new GraphModel(updatedAxes, Series);
+        }
+
+        public IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, NumericFormatter formatter)
+        {
+            var updatedAxes = new List<IAxisModel>(Axes.Count);
+
+            for (var axisIndex = 0; axisIndex < Axes.Count; axisIndex++)
+            {
+                var axis = Axes[axisIndex];
+                if (axis == null)
+                {
+                    updatedAxes.Add(null);
+                    continue;
+                }
+
+                if (!axis.Id.Equals(axisId))
+                {
+                    updatedAxes.Add(axis);
+                    continue;
+                }
+
+                var newUnitLabel = unit != null && unit.Id != null
+                    ? unit.Id.Value
+                    : null;
+
+                updatedAxes.Add(new AxisModel(
+                    axis.Id,
+                    axis.Orientation,
+                    axis.Side,
+                    unit,
+                    newUnitLabel,
+                    formatter));
+            }
+
+            return new GraphModel(updatedAxes, Series);
         }
 
         public IGraphModel ChangeAxisUnits(IReadOnlyDictionary<AxisId, Unit> unitChanges)

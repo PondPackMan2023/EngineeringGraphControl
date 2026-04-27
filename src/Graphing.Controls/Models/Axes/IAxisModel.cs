@@ -26,5 +26,7 @@ namespace Graphing.Controls.Models
         double? MaximumValue { get; }
 
         IAxisModel ChangeUnit(Unit newUnit);
+
+        IAxisModel ChangeFormat(NumericFormatter newFormatter);
     }
 }

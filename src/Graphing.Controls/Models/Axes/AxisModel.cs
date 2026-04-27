@@ -39,5 +39,10 @@ namespace Graphing.Controls.Models
             var newUnitLabel = newUnit != null && newUnit.Id != null ? newUnit.Id.Value : null;
             return new AxisModel(Id, Orientation, Side, newUnit, newUnitLabel, NumericFormatter);
         }
+
+        public IAxisModel ChangeFormat(NumericFormatter newFormatter)
+        {
+            return new AxisModel(Id, Orientation, Side, Unit, UnitLabel, newFormatter);
+        }
     }
 }
