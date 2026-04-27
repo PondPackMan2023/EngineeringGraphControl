@@ -451,9 +451,12 @@ namespace Graphing.Controls.Presentation
             var bottomCount = bottomAxes.Count;
             var topCount = topAxes.Count;
 
+            // AxisSlotSize represents a fixed outer margin per side, not per axis.
+            // Stacked axes affect internal layout only; plot area margins remain constant
+            // regardless of how many axes are present on a given side.
             var plotArea = new PlotAreaLayout(
-                new GeometryPoint3D(leftCount * AxisSlotSize, bottomCount * AxisSlotSize, 0d),
-                new GeometryPoint3D(1.0 - (rightCount * AxisSlotSize), 1.0 - (topCount * AxisSlotSize), 0d));
+                new GeometryPoint3D(leftCount > 0 ? AxisSlotSize : 0d, bottomCount > 0 ? AxisSlotSize : 0d, 0d),
+                new GeometryPoint3D(1.0 - (rightCount > 0 ? AxisSlotSize : 0d), 1.0 - (topCount > 0 ? AxisSlotSize : 0d), 0d));
 
             return new GraphLayoutModel(
                 plotArea,
