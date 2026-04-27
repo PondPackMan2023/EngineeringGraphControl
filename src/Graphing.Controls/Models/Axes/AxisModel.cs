@@ -6,7 +6,7 @@ namespace Graphing.Controls.Models
     public class AxisModel : IAxisModel
     {
         public AxisModel(
-                string id,
+                AxisId id,
                 AxisOrientation orientation,
                 AxisSide side,
                 Unit unit,
@@ -23,7 +23,7 @@ namespace Graphing.Controls.Models
             IsAutoRange = true;
         }
 
-        public string Id { get; }
+        public AxisId Id { get; }
         public AxisOrientation Orientation { get; }
         public AxisSide Side { get; }
         public Unit Unit { get; }
@@ -33,5 +33,11 @@ namespace Graphing.Controls.Models
         public bool IsAutoRange { get; }
         public double? MinimumValue => null;
         public double? MaximumValue => null;
+
+        public IAxisModel ChangeUnit(Unit newUnit)
+        {
+            var newUnitLabel = newUnit != null && newUnit.Id != null ? newUnit.Id.Value : null;
+            return new AxisModel(Id, Orientation, Side, newUnit, newUnitLabel, NumericFormatter);
+        }
     }
 }

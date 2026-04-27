@@ -23,6 +23,7 @@ namespace Graphing.Controls.Snapshot
         private readonly IReadOnlyList<IFieldSnapshot> _fields;
         private readonly double? _minimumValue;
         private readonly double? _maximumValue;
+        private readonly string _title;
 
         /// <summary>
         /// Stable identity of the axis.
@@ -101,6 +102,14 @@ namespace Graphing.Controls.Snapshot
         }
 
         /// <summary>
+        /// Display title for the axis, combining contributing field label with the axis display unit.
+        /// </summary>
+        public string Title
+        {
+            get { return _title; }
+        }
+
+        /// <summary>
         /// Creates an immutable snapshot of an axis.
         /// </summary>
         /// <param name="axisId">Stable identity of the axis.</param>
@@ -140,6 +149,49 @@ namespace Graphing.Controls.Snapshot
             );
             _minimumValue = minimumValue;
             _maximumValue = maximumValue;
+            _title = BuildTitle(_fields, displayUnitLabel);
+        }
+
+        private static string BuildTitle(IReadOnlyList<IFieldSnapshot> fields, string displayUnitLabel)
+        {
+            string baseLabel = null;
+            if (fields != null)
+            {
+                for (var i = 0; i < fields.Count; i++)
+                {
+                    var field = fields[i];
+                    if (field == null) continue;
+                    if (!string.IsNullOrWhiteSpace(field.Label))
+                    {
+                        baseLabel = field.Label;
+                        break;
+                    }
+                }
+                if (baseLabel == null)
+                {
+                    for (var i = 0; i < fields.Count; i++)
+                    {
+                        var field = fields[i];
+                        if (field != null && !string.IsNullOrWhiteSpace(field.Name))
+                        {
+                            baseLabel = field.Name;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(baseLabel))
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(displayUnitLabel))
+            {
+                return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} ({1})", baseLabel, displayUnitLabel);
+            }
+
+            return baseLabel;
         }
     }
 }

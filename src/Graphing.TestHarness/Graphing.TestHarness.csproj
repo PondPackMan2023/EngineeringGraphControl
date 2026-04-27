@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
+    <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
+    <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnitRegistry;
 
 namespace Graphing.Controls.Models
 {
@@ -7,5 +8,9 @@ namespace Graphing.Controls.Models
         IReadOnlyList<IAxisModel> Axes { get; }
 
         IReadOnlyList<IGraphSeriesModel> Series { get; }
+
+        IGraphModel ChangeAxisUnit(AxisId axisId, Unit unit);
+
+        IGraphModel ChangeAxisUnits(IReadOnlyDictionary<AxisId, Unit> unitChanges);
     }
 }

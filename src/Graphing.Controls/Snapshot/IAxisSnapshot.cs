@@ -63,5 +63,10 @@ namespace Graphing.Controls.Snapshot
         /// Maximum numeric value across contributing fields, if present.
         /// </summary>
         double? MaximumValue { get; }
+
+        /// <summary>
+        /// Display title for the axis, combining contributing field label with the axis display unit.
+        /// </summary>
+        string Title { get; }
     }
 }
