@@ -11,8 +11,7 @@ namespace Graphing.Controls.Models
                 IAxisModel xAxis,
                 IAxisModel yAxis)
         {
-            Identifier = "series-" + id;
-            Id = id;
+            SeriesId = new SeriesId($"{id}");
             Label = label;
             ChartType = chartType;
             XField = xField;
@@ -21,8 +20,7 @@ namespace Graphing.Controls.Models
             YAxis = yAxis;
         }
 
-        public object Identifier { get; }
-        public int Id { get; }
+        public SeriesId SeriesId { get; }
         public string Label { get; }
         public ChartType ChartType { get; }
         public IGraphFieldDefinition XField { get; }

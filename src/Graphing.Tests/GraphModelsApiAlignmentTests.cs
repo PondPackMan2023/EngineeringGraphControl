@@ -56,7 +56,7 @@ namespace Graphing.Tests
 
             Assert.That(
                 propertyNames,
-                Is.EqualTo(new[] { "ChartType", "Id", "Identifier", "Label", "XAxis", "XField", "YAxis", "YField" }));
+                Is.EqualTo(new[] { "ChartType", "Label", "SeriesId", "XAxis", "XField", "YAxis", "YField" }));
         }
 
         [Test]
@@ -305,8 +305,7 @@ namespace Graphing.Tests
                 IAxisModel xAxis,
                 IAxisModel yAxis)
             {
-                Identifier = "series-" + id;
-                Id = id;
+                SeriesId = new SeriesId($"{id}");
                 Label = label;
                 ChartType = chartType;
                 XField = xField;
@@ -315,9 +314,7 @@ namespace Graphing.Tests
                 YAxis = yAxis;
             }
 
-            public object Identifier { get; }
-
-            public int Id { get; }
+            public SeriesId SeriesId { get; }
 
             public string Label { get; }
 

@@ -1,3 +1,5 @@
+using Graphing.Controls.Models;
+
 namespace Graphing.Controls.Presentation
 {
     /// <summary>
@@ -6,15 +8,13 @@ namespace Graphing.Controls.Presentation
     /// </summary>
     public sealed class LegendEntrySemantic
     {
-        public LegendEntrySemantic(object seriesIdentifier, int seriesId, string displayText)
+        public LegendEntrySemantic(SeriesId seriesId, string displayText)
         {
-            SeriesIdentifier = seriesIdentifier;
             SeriesId = seriesId;
             DisplayText = displayText;
         }
 
-        public object SeriesIdentifier { get; }
-        public int SeriesId { get; }
+        public SeriesId SeriesId { get; }
         public string DisplayText { get; }
     }
 }

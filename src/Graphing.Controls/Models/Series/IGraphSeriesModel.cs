@@ -2,9 +2,7 @@ namespace Graphing.Controls.Models
 {
     public interface IGraphSeriesModel
     {
-        object Identifier { get; }
-
-        int Id { get; }
+        SeriesId SeriesId { get; }
 
         string Label { get; }
 
