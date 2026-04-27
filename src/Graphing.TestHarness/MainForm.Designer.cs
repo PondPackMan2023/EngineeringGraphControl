@@ -35,6 +35,8 @@ namespace Graphing.TestHarness
             this.buttonTime = new System.Windows.Forms.Button();
             this.buttonScenarioA = new System.Windows.Forms.Button();
             this.buttonScenarioB = new System.Windows.Forms.Button();
+            this.buttonElevation = new System.Windows.Forms.Button();
+            this.buttonPressure = new System.Windows.Forms.Button();
             this.groupBoxUnits.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -52,6 +54,8 @@ namespace Graphing.TestHarness
             // groupBoxUnits
             // 
             this.groupBoxUnits.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.groupBoxUnits.Controls.Add(this.buttonPressure);
+            this.groupBoxUnits.Controls.Add(this.buttonElevation);
             this.groupBoxUnits.Controls.Add(this.buttonTime);
             this.groupBoxUnits.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.groupBoxUnits.Location = new System.Drawing.Point(12, 389);
@@ -96,6 +100,28 @@ namespace Graphing.TestHarness
             this.buttonScenarioB.UseVisualStyleBackColor = true;
             this.buttonScenarioB.Click += new System.EventHandler(this.buttonScenarioB_Click);
             // 
+            // buttonElevation
+            // 
+            this.buttonElevation.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonElevation.Location = new System.Drawing.Point(79, 20);
+            this.buttonElevation.Name = "buttonElevation";
+            this.buttonElevation.Size = new System.Drawing.Size(67, 25);
+            this.buttonElevation.TabIndex = 1;
+            this.buttonElevation.Text = "Elevation";
+            this.buttonElevation.UseVisualStyleBackColor = true;
+            this.buttonElevation.Click += new System.EventHandler(this.buttonElevation_Click);
+            // 
+            // buttonPressure
+            // 
+            this.buttonPressure.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonPressure.Location = new System.Drawing.Point(152, 20);
+            this.buttonPressure.Name = "buttonPressure";
+            this.buttonPressure.Size = new System.Drawing.Size(67, 25);
+            this.buttonPressure.TabIndex = 2;
+            this.buttonPressure.Text = "Pressure";
+            this.buttonPressure.UseVisualStyleBackColor = true;
+            this.buttonPressure.Click += new System.EventHandler(this.buttonPressure_Click);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(800, 450);
@@ -117,5 +143,7 @@ namespace Graphing.TestHarness
         private System.Windows.Forms.Button buttonTime;
         private System.Windows.Forms.Button buttonScenarioA;
         private System.Windows.Forms.Button buttonScenarioB;
+        private System.Windows.Forms.Button buttonElevation;
+        private System.Windows.Forms.Button buttonPressure;
     }
 }

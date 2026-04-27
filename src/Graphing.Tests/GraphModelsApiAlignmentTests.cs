@@ -108,6 +108,58 @@ namespace Graphing.Tests
             Assert.That(graph.Series[0].XAxis.NumericFormatter, Is.Null);
         }
 
+        [Test]
+        public void ChangeAxisFormat_ReplacesFormatter_AndPreservesUnit_ForBothAxes()
+        {
+            var registry = UnitsRegistry.Default;
+            var unit = Units.Length.Meter;
+            var xAxisId = new AxisId("x");
+            var yAxisId = new AxisId("y");
+            var xFormatter = new NumericFormatter("x-fmt", registry, "F1");
+            var yFormatter = new NumericFormatter("y-fmt", registry, "F2");
+
+            var xAxis = new AxisModel(xAxisId, AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(yAxisId, AxisOrientation.Y, AxisSide.Left, unit, "m", null);
+            var graph = new GraphModel(new[] { xAxis, yAxis }, new IGraphSeriesModel[0]);
+
+            var withXFormat = graph.ChangeAxisFormat(xAxisId, xFormatter);
+            var withYFormat = withXFormat.ChangeAxisFormat(yAxisId, yFormatter);
+
+            var resultingXAxis = withYFormat.Axes.Single(a => a.Id.Equals(xAxisId));
+            var resultingYAxis = withYFormat.Axes.Single(a => a.Id.Equals(yAxisId));
+
+            Assert.That(resultingXAxis.NumericFormatter, Is.SameAs(xFormatter));
+            Assert.That(resultingYAxis.NumericFormatter, Is.SameAs(yFormatter));
+            Assert.That(resultingXAxis.Unit, Is.SameAs(unit));
+            Assert.That(resultingYAxis.Unit, Is.SameAs(unit));
+        }
+
+        [Test]
+        public void ChangeAxisUnitAndFormat_UpdatesBothAtomically_WithoutIntermediateStateExposure()
+        {
+            var registry = UnitsRegistry.Default;
+            var timeDimension = new Dimension("time");
+            var hoursUnit = new Unit("hr", timeDimension, 3600.0);
+            var secondsUnit = new Unit("s", timeDimension, 1.0);
+            var formatter = new NumericFormatter("seconds-fmt", registry, "F3");
+
+            var xAxisId = new AxisId("x");
+            var xAxis = new AxisModel(xAxisId, AxisOrientation.X, AxisSide.Bottom, hoursUnit, "hr", null);
+            var yAxis = new AxisModel(new AxisId("y"), AxisOrientation.Y, AxisSide.Left, hoursUnit, "hr", null);
+            var graph = new GraphModel(new[] { xAxis, yAxis }, new IGraphSeriesModel[0]);
+
+            var updatedGraph = graph.ChangeAxisUnitAndFormat(xAxisId, secondsUnit, formatter);
+
+            var originalXAxis = graph.Axes.Single(a => a.Id.Equals(xAxisId));
+            var updatedXAxis = updatedGraph.Axes.Single(a => a.Id.Equals(xAxisId));
+
+            Assert.That(originalXAxis.Unit, Is.SameAs(hoursUnit));
+            Assert.That(originalXAxis.NumericFormatter, Is.Null);
+            Assert.That(updatedXAxis.Unit, Is.SameAs(secondsUnit));
+            Assert.That(updatedXAxis.NumericFormatter, Is.SameAs(formatter));
+            Assert.That(updatedXAxis.UnitLabel, Is.EqualTo("s"));
+        }
+
         private sealed class TestGraphModel : IGraphModel
         {
             public TestGraphModel(IReadOnlyList<IAxisModel> axes, IReadOnlyList<IGraphSeriesModel> series)
@@ -125,6 +177,80 @@ namespace Graphing.Tests
                 var changes = new Dictionary<AxisId, Unit>();
                 changes[axisId] = unit;
                 return ChangeAxisUnits(changes);
+            }
+
+            public IGraphModel ChangeAxisFormat(AxisId axisId, NumericFormatter formatter)
+            {
+                var updatedAxes = new List<IAxisModel>(Axes.Count);
+
+                for (var axisIndex = 0; axisIndex < Axes.Count; axisIndex++)
+                {
+                    var axis = Axes[axisIndex];
+                    if (axis == null)
+                    {
+                        updatedAxes.Add(null);
+                        continue;
+                    }
+
+                    if (!axis.Id.Equals(axisId))
+                    {
+                        updatedAxes.Add(axis);
+                        continue;
+                    }
+
+                    updatedAxes.Add(
+                        new TestAxisModel(
+                            axis.Id,
+                            axis.Orientation,
+                            axis.Side,
+                            axis.Unit,
+                            axis.UnitLabel,
+                            formatter,
+                            axis.ScaleType,
+                            axis.IsAutoRange,
+                            axis.MinimumValue,
+                            axis.MaximumValue));
+                }
+
+                return new TestGraphModel(updatedAxes, Series);
+            }
+
+            public IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, NumericFormatter formatter)
+            {
+                var updatedAxes = new List<IAxisModel>(Axes.Count);
+
+                for (var axisIndex = 0; axisIndex < Axes.Count; axisIndex++)
+                {
+                    var axis = Axes[axisIndex];
+                    if (axis == null)
+                    {
+                        updatedAxes.Add(null);
+                        continue;
+                    }
+
+                    if (!axis.Id.Equals(axisId))
+                    {
+                        updatedAxes.Add(axis);
+                        continue;
+                    }
+
+                    var newUnitLabel = unit != null && unit.Id != null ? unit.Id.Value : null;
+
+                    updatedAxes.Add(
+                        new TestAxisModel(
+                            axis.Id,
+                            axis.Orientation,
+                            axis.Side,
+                            unit,
+                            newUnitLabel,
+                            formatter,
+                            axis.ScaleType,
+                            axis.IsAutoRange,
+                            axis.MinimumValue,
+                            axis.MaximumValue));
+                }
+
+                return new TestGraphModel(updatedAxes, Series);
             }
 
             public IGraphModel ChangeAxisUnits(IReadOnlyDictionary<AxisId, Unit> unitChanges)
@@ -285,6 +411,21 @@ namespace Graphing.Tests
                     newUnit,
                     UnitLabel,
                     NumericFormatter,
+                    ScaleType,
+                    IsAutoRange,
+                    MinimumValue,
+                    MaximumValue);
+            }
+
+            public IAxisModel ChangeFormat(NumericFormatter newFormatter)
+            {
+                return new TestAxisModel(
+                    Id,
+                    Orientation,
+                    Side,
+                    Unit,
+                    UnitLabel,
+                    newFormatter,
                     ScaleType,
                     IsAutoRange,
                     MinimumValue,
