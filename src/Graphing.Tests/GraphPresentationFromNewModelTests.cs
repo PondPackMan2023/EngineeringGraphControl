@@ -16,6 +16,8 @@ namespace Graphing.Tests
     [TestFixture]
     public class GraphPresentationFromNewModelTests
     {
+        private const double AxisStackGap = 0.025;
+
         [Test]
         public void Presentation_UsesExplicitAxisIdentityOrientationAndSide()
         {
@@ -291,6 +293,45 @@ namespace Graphing.Tests
             Assert.That(yAxisPresentation.Ticks.All(t => t.Label != null), Is.True);
         }
 
+        [Test]
+        public void Layout_StackedLeftAxes_IncludeNormalizedGapBetweenAdjacentSpans()
+        {
+            var presentation = CreatePresentationWithLeftAxisCount(3);
+            var leftAxes = presentation.Layout.Axes
+                .Where(a => a.Side == PresentationAxisSide.Left)
+                .OrderBy(a => a.SideIndex)
+                .ToArray();
+
+            Assert.That(leftAxes.Length, Is.EqualTo(3));
+
+            var firstSpan = leftAxes[0].NormalizedSpanEnd - leftAxes[0].NormalizedSpanStart;
+            Assert.That(firstSpan, Is.GreaterThan(0d));
+
+            for (var index = 0; index < leftAxes.Length - 1; index++)
+            {
+                var upper = leftAxes[index];
+                var lower = leftAxes[index + 1];
+                var gap = upper.NormalizedSpanStart - lower.NormalizedSpanEnd;
+                var span = lower.NormalizedSpanEnd - lower.NormalizedSpanStart;
+
+                Assert.That(gap, Is.EqualTo(AxisStackGap).Within(1e-12));
+                Assert.That(span, Is.EqualTo(firstSpan).Within(1e-12));
+            }
+
+            Assert.That(leftAxes[0].NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12));
+            Assert.That(leftAxes[leftAxes.Length - 1].NormalizedSpanStart, Is.EqualTo(0d).Within(1e-12));
+        }
+
+        [Test]
+        public void Layout_SingleLeftAxis_RemainsFullHeightWithoutGap()
+        {
+            var presentation = CreatePresentationWithLeftAxisCount(1);
+            var leftAxis = presentation.Layout.Axes.Single(a => a.Side == PresentationAxisSide.Left);
+
+            Assert.That(leftAxis.NormalizedSpanStart, Is.EqualTo(0d).Within(1e-12));
+            Assert.That(leftAxis.NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12));
+        }
+
         private static IGraphModel CreateModel(ChartType chartType)
         {
             var registry = UnitsRegistry.Default;
@@ -306,6 +347,32 @@ namespace Graphing.Tests
             var series = new GraphSeriesModel(1, "series-1", chartType, xField, yField, xAxis, yAxis);
 
             return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+        }
+
+        private static GraphPresentationModel CreatePresentationWithLeftAxisCount(int leftAxisCount)
+        {
+            var unit = Units.Length.Meter;
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+
+            var axes = new System.Collections.Generic.List<IAxisModel> { xAxis };
+            var series = new System.Collections.Generic.List<IGraphSeriesModel>();
+
+            for (var index = 0; index < leftAxisCount; index++)
+            {
+                var axisId = "y-axis-" + index;
+                var yAxis = new AxisModel(new AxisId(axisId), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+                var yValues = new[] { 10d + index, 20d + index, 30d + index };
+                var yField = new TestFieldDefinition("Y" + index, "y" + index, unit, yValues);
+
+                axes.Add(yAxis);
+                series.Add(new GraphSeriesModel(index + 1, "series-" + index, ChartType.Line, xField, yField, xAxis, yAxis));
+            }
+
+            var model = new GraphModel(axes, series);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            return new GraphPresentationModel(snapshot);
         }
 
         private sealed class TestFieldDefinition : GraphFieldDefinitionBase
