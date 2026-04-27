@@ -1,7 +1,10 @@
 using Graphing.Controls.Models;
+using Graphing.Controls.Presentation;
 using Graphing.TestHarness.Libraries;
 using Graphing.TestHarness.Scenarios;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 using UnitRegistry;
 
@@ -16,14 +19,26 @@ namespace Graphing.TestHarness
 
         private void buttonScenarioA_Click(object sender, System.EventArgs e)
         {
+            checkBoxPressureYAxis.Checked = true;
+            checkBoxPressure.Checked = true;
+
+            checkBoxPressureYAxis.Visible = false;
+            checkBoxPressure.Visible = false;
+
             var graph = ScenarioDefinitions.BuildScenarioA();
-            graphControl.SetGraphSource(graph);
+            graphControl.SetGraphSource(graph, CreateOptions());
         }
 
         private void buttonScenarioB_Click(object sender, System.EventArgs e)
         {
+            checkBoxPressureYAxis.Checked = true;
+            checkBoxPressure.Checked = true;
+
+            checkBoxPressureYAxis.Visible = true;
+            checkBoxPressure.Visible = true;
+
             var graph = ScenarioDefinitions.BuildScenarioB();
-            graphControl.SetGraphSource(graph);
+            graphControl.SetGraphSource(graph, CreateOptions());
         }
 
         private void buttonTime_Click(object sender, System.EventArgs e)
@@ -36,7 +51,7 @@ namespace Graphing.TestHarness
 
             var newTimeUnit = allTimeUnits[timeIndex];
             var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("time"), newTimeUnit, formatter);
-            graphControl.SetGraphSource(graph);
+            graphControl.SetGraphSource(graph, CreateOptions());
         }
 
         private void buttonElevation_Click(object sender, EventArgs e)
@@ -47,7 +62,7 @@ namespace Graphing.TestHarness
             var newLengthUnit = allLengthUnits[elevationIndex];
             var formatter = NumericFormatterLibrary.GetElevationFormatter($"F{elevationIndex + 1}");
             var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("elevation"), newLengthUnit, formatter);
-            graphControl.SetGraphSource(graph);
+            graphControl.SetGraphSource(graph, CreateOptions());
         }
 
         private void buttonPressure_Click(object sender, EventArgs e)
@@ -58,7 +73,95 @@ namespace Graphing.TestHarness
             var newPressureUnit = allPressureUnits[pressureIndex];
             var formatter = NumericFormatterLibrary.GetPressureFormatter($"F{pressureIndex + 1}");
             var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("pressure"), newPressureUnit, formatter);
-            graphControl.SetGraphSource(graph);
+            graphControl.SetGraphSource(graph, CreateOptions());
+        }
+
+        private HashSet<AxisId> hiddenAxes = new HashSet<AxisId>();
+        private HashSet<SeriesId> hiddenSeries = new HashSet<SeriesId>();
+
+        private void ShowHideAxis(AxisId axisId, bool hide)
+        {
+            if (hide)
+            {
+                hiddenAxes.Add(axisId);
+            }
+            else
+            {
+                hiddenAxes.Remove(axisId);
+            }
+        }
+
+        private void ShowHideSeries(SeriesId seriesId, bool hide)
+        {
+            if (hide)
+            {
+                hiddenSeries.Add(seriesId);
+            }
+            else
+            {
+                hiddenSeries.Remove(seriesId);
+            }
+        }
+
+        private GraphPresentationOptions CreateOptions()
+        {
+            ShowHideAxis(new AxisId("time"), !checkBoxXAxis.Checked);
+            ShowHideAxis(new AxisId("elevation"), !checkBoxElevationYAxis.Checked);
+            ShowHideAxis(new AxisId("pressure"), !checkBoxPressureYAxis.Checked);
+
+            ShowHideSeries(new SeriesId("pressure-126"), !checkBoxPressure.Checked);
+            ShowHideSeries(new SeriesId("hgl-126"), !checkBoxHGL.Checked);
+
+            return new GraphPresentationOptions(hiddenAxisIds: hiddenAxes.ToArray(),
+                hiddenSeriesIds: hiddenSeries.ToArray(), graphTitle: textBoxTitle.Text, graphSubtitle: textBoxSubTitle.Text);
+        }
+
+        private void ApplyOptions()
+        {
+            ShowHideAxis(new AxisId("time"), !checkBoxXAxis.Checked);
+            ShowHideAxis(new AxisId("elevation"), !checkBoxElevationYAxis.Checked);
+            ShowHideAxis(new AxisId("pressure"), !checkBoxPressureYAxis.Checked);
+
+            ShowHideSeries(new SeriesId("pressure-126"), !checkBoxPressure.Checked);
+            ShowHideSeries(new SeriesId("hgl-126"), !checkBoxHGL.Checked);
+
+            graphControl.SetGraphSource(graphControl.GraphModel, CreateOptions());
+        }
+
+        private void checkBoxXAxis_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxElevationYAxis_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxPressureYAxis_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxHGL_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxPressure_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            buttonScenarioA.PerformClick();
+            ApplyOptions();
+        }
+
+        private void buttonApplyTitles_Click(object sender, EventArgs e)
+        {
+            ApplyOptions();
         }
     }
 }

@@ -19,6 +19,20 @@ namespace Graphing.Controls.Presentation
             Series = series;
         }
 
+        public GraphLayoutModel(
+            PlotAreaLayout plotArea,
+            IReadOnlyList<AxisLayoutEntry> axes,
+            IReadOnlyList<SeriesPresentationGeometry> series,
+            TitlePresentationGeometry title = null,
+            SubtitlePresentationGeometry subtitle = null)
+        {
+            PlotArea = plotArea;
+            Axes = axes;
+            Series = series;
+            Title = title;
+            Subtitle = subtitle;
+        }
+
         /// <summary>
         /// Abstract bounds of the plot area, excluding space allocated to axes.
         /// Expressed in a normalized unit square [0,1] x [0,1].
@@ -35,5 +49,15 @@ namespace Graphing.Controls.Presentation
         /// Series geometry forwarded from Phase P1.
         /// </summary>
         public IReadOnlyList<SeriesPresentationGeometry> Series { get; }
+
+        /// <summary>
+        /// Title presentation geometry (if title is present).
+        /// </summary>
+        public TitlePresentationGeometry Title { get; }
+
+        /// <summary>
+        /// Subtitle presentation geometry (if subtitle is present).
+        /// </summary>
+        public SubtitlePresentationGeometry Subtitle { get; }
     }
 }

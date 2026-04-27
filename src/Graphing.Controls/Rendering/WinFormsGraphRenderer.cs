@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using Graphing.Controls.Presentation;
+using Graphing.Controls.Rendering.Geometry;
 
 namespace Graphing.Controls.Rendering
 {
@@ -24,6 +25,8 @@ namespace Graphing.Controls.Rendering
         private static readonly Pen SeriesPen = new Pen(Color.SteelBlue, SeriesLineWidth);
         private static readonly Font TickFont = new Font("Arial", 7f);
         private static readonly Font AxisTitleFont = new Font("Arial", 8f, FontStyle.Bold);
+            private static readonly Font GraphTitleFont = new Font("Arial", 12f, FontStyle.Bold);
+            private static readonly Font GraphSubtitleFont = new Font("Arial", 10f);
         private static readonly Brush TickLabelBrush = Brushes.Black;
 
         /// <summary>
@@ -49,6 +52,7 @@ namespace Graphing.Controls.Rendering
             RenderAxes(g, plotRect, paddedBounds, model);
             RenderSeries(g, plotRect, model);
             RenderAxisTitles(g, plotRect, model);
+                    RenderTitles(g, paddedBounds, model.Layout);
         }
 
         // ── Axis rendering ────────────────────────────────────────────────────
@@ -295,6 +299,72 @@ namespace Graphing.Controls.Rendering
             var centerY = plotRect.Top + plotRect.Height / 2f;
 
             DrawRotatedCenteredText(g, axis.Title, AxisTitleFont, TickLabelBrush, centerX, centerY, 90f);
+        }
+
+        // ── Title rendering ───────────────────────────────────────────────────
+
+        private static void RenderTitles(Graphics g, Rectangle deviceBounds, GraphLayoutModel layout)
+        {
+            if (layout == null)
+            {
+                return;
+            }
+
+            if (layout.Title != null)
+            {
+                RenderGraphTitle(g, deviceBounds, layout.Title);
+            }
+
+            if (layout.Subtitle != null)
+            {
+                RenderGraphSubtitle(g, deviceBounds, layout.Subtitle);
+            }
+        }
+
+        private static void RenderGraphTitle(Graphics g, Rectangle deviceBounds, TitlePresentationGeometry title)
+        {
+            var titleRect = ComputeDeviceBoundsForGeometry(deviceBounds, title.BottomLeft, title.TopRight);
+
+            if (titleRect.Width <= 0 || titleRect.Height <= 0)
+            {
+                return;
+            }
+
+            var titleSize = g.MeasureString(title.Text, GraphTitleFont);
+            var centerX = titleRect.Left + (titleRect.Width - titleSize.Width) / 2f;
+            var centerY = titleRect.Top + (titleRect.Height - titleSize.Height) / 2f;
+
+            g.DrawString(title.Text, GraphTitleFont, TickLabelBrush, centerX, centerY);
+        }
+
+        private static void RenderGraphSubtitle(Graphics g, Rectangle deviceBounds, SubtitlePresentationGeometry subtitle)
+        {
+            var subtitleRect = ComputeDeviceBoundsForGeometry(deviceBounds, subtitle.BottomLeft, subtitle.TopRight);
+
+            if (subtitleRect.Width <= 0 || subtitleRect.Height <= 0)
+            {
+                return;
+            }
+
+            var subtitleSize = g.MeasureString(subtitle.Text, GraphSubtitleFont);
+            var centerX = subtitleRect.Left + (subtitleRect.Width - subtitleSize.Width) / 2f;
+            var centerY = subtitleRect.Top + (subtitleRect.Height - subtitleSize.Height) / 2f;
+
+            g.DrawString(subtitle.Text, GraphSubtitleFont, TickLabelBrush, centerX, centerY);
+        }
+
+        /// <summary>
+        /// Maps abstract geometry bounds to device pixel coordinates.
+        /// </summary>
+        private static RectangleF ComputeDeviceBoundsForGeometry(
+            Rectangle deviceBounds, GeometryPoint3D bottomLeft, GeometryPoint3D topRight)
+        {
+            var left = deviceBounds.Left + bottomLeft.X * deviceBounds.Width;
+            var right = deviceBounds.Left + topRight.X * deviceBounds.Width;
+            var top = deviceBounds.Bottom - topRight.Y * deviceBounds.Height;
+            var bottom = deviceBounds.Bottom - bottomLeft.Y * deviceBounds.Height;
+
+            return RectangleF.FromLTRB((float)left, (float)top, (float)right, (float)bottom);
         }
 
         private static void DrawRotatedCenteredText(

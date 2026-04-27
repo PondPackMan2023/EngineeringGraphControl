@@ -11,34 +11,29 @@ namespace Graphing.Controls.Presentation
     public sealed class GraphPresentationOptions
     {
         private readonly HashSet<SeriesId> _hiddenSeriesIds;
-        private readonly HashSet<string> _hiddenAxisIdentities;
-        private readonly HashSet<string> _hiddenAxisIds;
+        private readonly HashSet<AxisId> _hiddenAxisIds;
         private readonly IReadOnlyList<AnnotationSemantic> _annotations;
 
         public GraphPresentationOptions(
             IEnumerable<SeriesId> hiddenSeriesIds = null,
-            IEnumerable<string> hiddenAxisIdentities = null,
-            IEnumerable<string> hiddenAxisIds = null,
+            IEnumerable<AxisId> hiddenAxisIds = null,
             string graphTitle = null,
             string graphSubtitle = null,
             IEnumerable<AnnotationSemantic> annotations = null)
         {
             _hiddenSeriesIds = hiddenSeriesIds != null
-                ? new HashSet<SeriesId>(hiddenSeriesIds)
+                ? [.. hiddenSeriesIds]
                 : new HashSet<SeriesId>();
 
-            _hiddenAxisIdentities = hiddenAxisIdentities != null
-                ? new HashSet<string>(hiddenAxisIdentities)
-                : new HashSet<string>();
-
             _hiddenAxisIds = hiddenAxisIds != null
-                ? new HashSet<string>(hiddenAxisIds)
-                : new HashSet<string>();
+                ? [.. hiddenAxisIds]
+                : new HashSet<AxisId>();
 
             GraphTitle = graphTitle;
             GraphSubtitle = graphSubtitle;
+            HiddenAxisIds = new ReadOnlyCollection<AxisId>([.. _hiddenAxisIds]);
             _annotations = new ReadOnlyCollection<AnnotationSemantic>(
-                new List<AnnotationSemantic>(annotations ?? new AnnotationSemantic[0]));
+                [.. annotations ?? []]);
         }
 
         public string GraphTitle { get; }
@@ -49,6 +44,8 @@ namespace Graphing.Controls.Presentation
         {
             get { return _annotations; }
         }
+
+        public IReadOnlyCollection<AxisId> HiddenAxisIds { get; }
 
         public bool IsSeriesVisible(ISeriesSnapshot series)
         {
@@ -65,19 +62,14 @@ namespace Graphing.Controls.Presentation
             return true;
         }
 
-        public bool IsAxisVisible(IAxisSnapshot axis, string axisIdentity)
+        public bool IsAxisVisible(IAxisSnapshot axis)
         {
             if (axis == null)
             {
                 return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(axis.AxisId) && _hiddenAxisIds.Contains(axis.AxisId))
-            {
-                return false;
-            }
-
-            if (axisIdentity != null && _hiddenAxisIdentities.Contains(axisIdentity))
+            if (!string.IsNullOrWhiteSpace(axis.AxisId) && _hiddenAxisIds.Contains(new AxisId(axis.AxisId)))
             {
                 return false;
             }
