@@ -11,8 +11,7 @@ namespace Graphing.Controls.Snapshot
     /// </summary>
     internal sealed class SeriesSnapshot : ISeriesSnapshot
     {
-        private readonly object _identifier;
-        private readonly int _id;
+        private readonly SeriesId _seriesId;
         private readonly string _label;
         private readonly ChartType _chartType;
         private readonly string _xAxisId;
@@ -22,19 +21,11 @@ namespace Graphing.Controls.Snapshot
         private readonly IReadOnlyList<FieldSnapshot> _fields;
 
         /// <summary>
-        /// Opaque series identity copied from the graph series model.
+        /// Stable identity of the series.
         /// </summary>
-        public object Identifier
+        public SeriesId SeriesId
         {
-            get { return _identifier; }
-        }
-
-        /// <summary>
-        /// Unique identifier for the series.
-        /// </summary>
-        public int Id
-        {
-            get { return _id; }
+            get { return _seriesId; }
         }
 
         /// <summary>
@@ -84,7 +75,7 @@ namespace Graphing.Controls.Snapshot
         /// <summary>
         /// Creates an immutable snapshot of a series.
         /// </summary>
-        /// <param name="id">Unique identifier for the series.</param>
+        /// <param name="seriesId">Stable identity for the series.</param>
         /// <param name="label">Display label for the series.</param>
         /// <param name="chartType">The chart type for rendering.</param>
         /// <param name="xAxisId">Axis identity for the X field.</param>
@@ -92,8 +83,7 @@ namespace Graphing.Controls.Snapshot
         /// <param name="xField">X field snapshot.</param>
         /// <param name="yField">Y field snapshot.</param>
         public SeriesSnapshot(
-            object identifier,
-            int id,
+            SeriesId seriesId,
             string label,
             ChartType chartType,
             string xAxisId,
@@ -101,8 +91,7 @@ namespace Graphing.Controls.Snapshot
             FieldSnapshot xField,
             FieldSnapshot yField)
         {
-            _identifier = identifier;
-            _id = id;
+            _seriesId = seriesId;
             _label = label;
             _chartType = chartType;
             _xAxisId = xAxisId;

@@ -79,8 +79,7 @@ namespace Graphing.Controls.Presentation
 
                 var points = BuildPoints(seriesSnapshot.XField, seriesSnapshot.YField);
                 var geometry = new SeriesPresentationGeometry(
-                    seriesSnapshot.Identifier,
-                    seriesSnapshot.Id,
+                    seriesSnapshot.SeriesId,
                     seriesSnapshot.Label,
                     seriesSnapshot.ChartType,
                     ResolveConnectivity(seriesSnapshot.ChartType),
@@ -491,7 +490,7 @@ namespace Graphing.Controls.Presentation
                 var context = seriesContexts[index];
                 var item = context.Geometry;
                 var text = item.Label ?? string.Empty;
-                entries.Add(new LegendEntrySemantic(item.Identifier, item.SeriesId, text));
+                entries.Add(new LegendEntrySemantic(item.SeriesId, text));
             }
 
             return new ReadOnlyCollection<LegendEntrySemantic>(entries);

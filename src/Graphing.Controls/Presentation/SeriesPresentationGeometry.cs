@@ -7,14 +7,12 @@ namespace Graphing.Controls.Presentation
     public sealed class SeriesPresentationGeometry
     {
         public SeriesPresentationGeometry(
-            object identifier,
-            int seriesId,
+            SeriesId seriesId,
             string label,
             ChartType chartType,
             SeriesConnectivityIntent connectivityIntent,
             IReadOnlyList<GeometryPoint3D> points)
         {
-            Identifier = identifier;
             SeriesId = seriesId;
             Label = label;
             ChartType = chartType;
@@ -22,8 +20,7 @@ namespace Graphing.Controls.Presentation
             Points = points;
         }
 
-        public object Identifier { get; }
-        public int SeriesId { get; }
+        public SeriesId SeriesId { get; }
         public string Label { get; }
         public ChartType ChartType { get; }
         public SeriesConnectivityIntent ConnectivityIntent { get; }

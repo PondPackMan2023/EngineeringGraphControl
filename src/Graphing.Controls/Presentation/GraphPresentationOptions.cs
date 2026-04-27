@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Graphing.Controls.Models;
 using Graphing.Controls.Snapshot;
 
 namespace Graphing.Controls.Presentation
@@ -9,28 +10,22 @@ namespace Graphing.Controls.Presentation
     /// </summary>
     public sealed class GraphPresentationOptions
     {
-        private readonly HashSet<object> _hiddenSeriesIdentifiers;
-        private readonly HashSet<int> _hiddenSeriesIds;
+        private readonly HashSet<SeriesId> _hiddenSeriesIds;
         private readonly HashSet<string> _hiddenAxisIdentities;
         private readonly HashSet<string> _hiddenAxisIds;
         private readonly IReadOnlyList<AnnotationSemantic> _annotations;
 
         public GraphPresentationOptions(
-            IEnumerable<object> hiddenSeriesIdentifiers = null,
-            IEnumerable<int> hiddenSeriesIds = null,
+            IEnumerable<SeriesId> hiddenSeriesIds = null,
             IEnumerable<string> hiddenAxisIdentities = null,
             IEnumerable<string> hiddenAxisIds = null,
             string graphTitle = null,
             string graphSubtitle = null,
             IEnumerable<AnnotationSemantic> annotations = null)
         {
-            _hiddenSeriesIdentifiers = hiddenSeriesIdentifiers != null
-                ? new HashSet<object>(hiddenSeriesIdentifiers)
-                : new HashSet<object>();
-
             _hiddenSeriesIds = hiddenSeriesIds != null
-                ? new HashSet<int>(hiddenSeriesIds)
-                : new HashSet<int>();
+                ? new HashSet<SeriesId>(hiddenSeriesIds)
+                : new HashSet<SeriesId>();
 
             _hiddenAxisIdentities = hiddenAxisIdentities != null
                 ? new HashSet<string>(hiddenAxisIdentities)
@@ -62,12 +57,7 @@ namespace Graphing.Controls.Presentation
                 return false;
             }
 
-            if (_hiddenSeriesIds.Contains(series.Id))
-            {
-                return false;
-            }
-
-            if (series.Identifier != null && _hiddenSeriesIdentifiers.Contains(series.Identifier))
+            if (series.SeriesId != null && _hiddenSeriesIds.Contains(series.SeriesId))
             {
                 return false;
             }

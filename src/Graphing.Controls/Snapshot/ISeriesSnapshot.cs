@@ -9,14 +9,9 @@ namespace Graphing.Controls.Snapshot
     public interface ISeriesSnapshot
     {
         /// <summary>
-        /// Opaque series identity copied from the graph series model.
+        /// Stable identity of the series.
         /// </summary>
-        object Identifier { get; }
-
-        /// <summary>
-        /// Unique identifier for the series.
-        /// </summary>
-        int Id { get; }
+        SeriesId SeriesId { get; }
 
         /// <summary>
         /// Display label for the series.
