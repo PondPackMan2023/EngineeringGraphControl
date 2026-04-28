@@ -21,16 +21,22 @@ namespace Graphing.Controls.Rendering
         private const float AxisLineWidth = 1f;
         private const float SeriesLineWidth = 1.5f;
         private const float GridLineWidth = 0.5f;
+        private const float LegendLineWidth = 1f;
+        private const float LegendTextOffset = 6f;
+        private const float LegendMarkerSize = 4f;
 
         private static readonly Pen AxisPen = new Pen(Color.Black, AxisLineWidth);
         private static readonly Pen PlotAreaBorderPen = new Pen(Color.Black, AxisLineWidth);
         private static readonly Pen OuterGraphBorderPen = new Pen(Color.Black, AxisLineWidth);
         private static readonly Pen GridLinesPen = new Pen(Color.LightGray, GridLineWidth);
         private static readonly Pen SeriesPen = new Pen(Color.SteelBlue, SeriesLineWidth);
+        private static readonly Pen LegendBorderPen = new Pen(Color.Black, LegendLineWidth);
+        private static readonly Pen LegendGlyphPen = new Pen(Color.DimGray, LegendLineWidth);
         private static readonly Font TickFont = new Font("Arial", 7f);
         private static readonly Font AxisTitleFont = new Font("Arial", 8f, FontStyle.Bold);
         private static readonly Font GraphTitleFont = new Font("Arial", 12f, FontStyle.Bold);
         private static readonly Font GraphSubtitleFont = new Font("Arial", 10f);
+        private static readonly Font LegendFont = new Font("Arial", 8f);
         private static readonly Brush TickLabelBrush = Brushes.Black;
 
         /// <summary>
@@ -60,6 +66,7 @@ namespace Graphing.Controls.Rendering
             RenderSeries(g, plotRect, model);
             RenderAxisTitles(g, plotRect, model);
             RenderTitles(g, paddedBounds, model.Layout);
+            RenderLegend(g, paddedBounds, model.Layout.Legend);
         }
 
         // ── Plot area border rendering ─────────────────────────────────────────
@@ -443,6 +450,67 @@ namespace Graphing.Controls.Rendering
             var centerY = subtitleRect.Top + (subtitleRect.Height - subtitleSize.Height) / 2f;
 
             g.DrawString(subtitle.Text, GraphSubtitleFont, TickLabelBrush, centerX, centerY);
+        }
+
+        private static void RenderLegend(Graphics g, Rectangle deviceBounds, LegendPresentationGeometry legend)
+        {
+            if (legend == null)
+            {
+                return;
+            }
+
+            var legendRect = ComputeDeviceBoundsForGeometry(deviceBounds, legend.BottomLeft, legend.TopRight);
+            if (legendRect.Width <= 0 || legendRect.Height <= 0)
+            {
+                return;
+            }
+
+            if (legend.ShowBorder)
+            {
+                g.DrawRectangle(LegendBorderPen, legendRect.X, legendRect.Y, legendRect.Width, legendRect.Height);
+            }
+
+            var entries = legend.Entries;
+            for (var i = 0; i < entries.Count; i++)
+            {
+                RenderLegendEntry(g, deviceBounds, entries[i]);
+            }
+        }
+
+        private static void RenderLegendEntry(Graphics g, Rectangle deviceBounds, LegendEntryPresentationGeometry entry)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            var entryRect = ComputeDeviceBoundsForGeometry(deviceBounds, entry.BottomLeft, entry.TopRight);
+            if (entryRect.Width <= 0 || entryRect.Height <= 0)
+            {
+                return;
+            }
+
+            var glyphRect = ComputeDeviceBoundsForGeometry(deviceBounds, entry.GlyphBottomLeft, entry.GlyphTopRight);
+            var glyphCenterY = glyphRect.Top + (glyphRect.Height / 2f);
+            g.DrawLine(LegendGlyphPen, glyphRect.Left, glyphCenterY, glyphRect.Right, glyphCenterY);
+
+            var markerRadius = LegendMarkerSize / 2f;
+            var markerCenterX = glyphRect.Left + ((glyphRect.Right - glyphRect.Left) / 2f);
+            g.DrawEllipse(
+                LegendGlyphPen,
+                markerCenterX - markerRadius,
+                glyphCenterY - markerRadius,
+                LegendMarkerSize,
+                LegendMarkerSize);
+
+            if (string.IsNullOrWhiteSpace(entry.DisplayText))
+            {
+                return;
+            }
+
+            var textX = glyphRect.Right + LegendTextOffset;
+            var textY = entryRect.Top + ((entryRect.Height - LegendFont.GetHeight(g)) / 2f);
+            g.DrawString(entry.DisplayText, LegendFont, TickLabelBrush, textX, textY);
         }
 
         /// <summary>

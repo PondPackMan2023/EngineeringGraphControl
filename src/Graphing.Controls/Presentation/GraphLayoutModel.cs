@@ -18,6 +18,7 @@ namespace Graphing.Controls.Presentation
             Axes = axes;
             Series = series;
             GridLines = new GridLinesGeometry(new List<GridLineGeometry>(), new List<GridLineGeometry>());
+            Legend = null;
         }
 
         public GraphLayoutModel(
@@ -26,7 +27,8 @@ namespace Graphing.Controls.Presentation
             IReadOnlyList<SeriesPresentationGeometry> series,
             TitlePresentationGeometry title = null,
             SubtitlePresentationGeometry subtitle = null,
-            GridLinesGeometry gridLines = null)
+            GridLinesGeometry gridLines = null,
+            LegendPresentationGeometry legend = null)
         {
             PlotArea = plotArea;
             Axes = axes;
@@ -34,6 +36,7 @@ namespace Graphing.Controls.Presentation
             Title = title;
             Subtitle = subtitle;
             GridLines = gridLines ?? new GridLinesGeometry(new List<GridLineGeometry>(), new List<GridLineGeometry>());
+            Legend = legend;
         }
 
         /// <summary>
@@ -67,5 +70,10 @@ namespace Graphing.Controls.Presentation
         /// Grid lines aligned with axis ticks and clipped to plot area bounds.
         /// </summary>
         public GridLinesGeometry GridLines { get; }
+
+        /// <summary>
+        /// Legend container and entries rendered as part of layout output.
+        /// </summary>
+        public LegendPresentationGeometry Legend { get; }
     }
 }

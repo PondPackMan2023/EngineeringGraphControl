@@ -412,6 +412,91 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void Layout_Legend_CreatedWhenVisibleSeriesExist()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Layout.Legend, Is.Not.Null);
+            Assert.That(presentation.Layout.Legend.Entries.Count, Is.EqualTo(1));
+            Assert.That(presentation.Layout.Legend.Entries[0].DisplayText, Is.EqualTo("series-1"));
+            Assert.That(presentation.Layout.Legend.ShowBorder, Is.True);
+        }
+
+        [Test]
+        public void Layout_Legend_OmittedWhenNoSeriesVisible()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(hiddenSeriesIds: new[] { new SeriesId("1") });
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Layout.Legend, Is.Null);
+            Assert.That(presentation.Series.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Layout_PlotArea_ReservesSpaceWhenLegendIsPresent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var withLegend = new GraphPresentationModel(snapshot);
+            var withoutLegend = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenSeriesIds: new[] { new SeriesId("1") }));
+
+            Assert.That(withLegend.Layout.PlotArea.BottomLeft.Y, Is.GreaterThan(withoutLegend.Layout.PlotArea.BottomLeft.Y));
+        }
+
+        [Test]
+        public void Layout_LegendBounds_AreBelowPlotArea()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+            Assert.That(legend.BottomLeft.Y, Is.LessThan(legend.TopRight.Y));
+        }
+
+        [Test]
+        public void Layout_LegendReservation_DoesNotAffectAxisOrSeriesGeometryCorrectness()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var withLegend = new GraphPresentationModel(snapshot);
+            var withoutLegend = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenSeriesIds: new[] { new SeriesId("1") }));
+
+            Assert.That(withLegend.Axes.Count, Is.EqualTo(withoutLegend.Axes.Count));
+
+            for (var i = 0; i < withLegend.Axes.Count; i++)
+            {
+                Assert.That(withLegend.Axes[i].AxisId, Is.EqualTo(withoutLegend.Axes[i].AxisId));
+                Assert.That(withLegend.Axes[i].Orientation, Is.EqualTo(withoutLegend.Axes[i].Orientation));
+                Assert.That(withLegend.Axes[i].Side, Is.EqualTo(withoutLegend.Axes[i].Side));
+                Assert.That(withLegend.Axes[i].Ticks.Count, Is.EqualTo(withoutLegend.Axes[i].Ticks.Count));
+            }
+
+            Assert.That(withLegend.Series.Count, Is.EqualTo(1));
+            Assert.That(withLegend.Series[0].Points.Count, Is.EqualTo(3));
+            Assert.That(withLegend.Series[0].Points[0].X, Is.EqualTo(0d));
+            Assert.That(withLegend.Series[0].Points[0].Y, Is.EqualTo(10d));
+            Assert.That(withLegend.Series[0].Points[2].X, Is.EqualTo(2d));
+            Assert.That(withLegend.Series[0].Points[2].Y, Is.EqualTo(30d));
+        }
+
+        [Test]
         public void Layout_PlotArea_ShiftsDownWhenTitleExists()
         {
             var model = CreateModel(seriesType: SeriesType.Line);
@@ -483,8 +568,9 @@ namespace Graphing.Tests
         public void Layout_PlotArea_HasExpectedBoundsWithStandardAxes()
         {
             // A graph with one bottom (X) axis and one left (Y) axis should reserve
-            // AxisSlotSize (0.1) on the left and bottom edges.
+            // AxisSlotSize (0.1) on the left edge and AxisSlotSize + legend band on the bottom edge.
             const double AxisSlotSizeConst = 0.1;
+            const double LegendBandHeightConst = 0.12;
 
             var model = CreateModel(seriesType: SeriesType.Line);
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -493,7 +579,7 @@ namespace Graphing.Tests
             var plotArea = presentation.Layout.PlotArea;
 
             Assert.That(plotArea.BottomLeft.X, Is.EqualTo(AxisSlotSizeConst).Within(1e-12), "Left margin should match axis slot size.");
-            Assert.That(plotArea.BottomLeft.Y, Is.EqualTo(AxisSlotSizeConst).Within(1e-12), "Bottom margin should match axis slot size.");
+            Assert.That(plotArea.BottomLeft.Y, Is.EqualTo(AxisSlotSizeConst + LegendBandHeightConst).Within(1e-12), "Bottom margin should include axis slot and reserved legend band.");
             Assert.That(plotArea.TopRight.X, Is.EqualTo(1d).Within(1e-12), "Right edge should reach 1.0 when no right axis present.");
             Assert.That(plotArea.TopRight.Y, Is.EqualTo(1d).Within(1e-12), "Top edge should reach 1.0 when no title or top axis.");
         }
