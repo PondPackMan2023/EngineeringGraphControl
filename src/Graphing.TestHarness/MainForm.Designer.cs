@@ -55,7 +55,6 @@ namespace Graphing.TestHarness
             this.graphControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.graphControl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.graphControl.Location = new System.Drawing.Point(12, 12);
             this.graphControl.Name = "graphControl";
             this.graphControl.Size = new System.Drawing.Size(670, 371);

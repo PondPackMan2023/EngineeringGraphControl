@@ -20,20 +20,24 @@ namespace Graphing.Controls.Rendering
         private const int AxisTitleOffset = 6;
         private const float AxisLineWidth = 1f;
         private const float SeriesLineWidth = 1.5f;
+        private const float GridLineWidth = 0.5f;
 
         private static readonly Pen AxisPen = new Pen(Color.Black, AxisLineWidth);
+        private static readonly Pen PlotAreaBorderPen = new Pen(Color.Black, AxisLineWidth);
+        private static readonly Pen OuterGraphBorderPen = new Pen(Color.Black, AxisLineWidth);
+        private static readonly Pen GridLinesPen = new Pen(Color.LightGray, GridLineWidth);
         private static readonly Pen SeriesPen = new Pen(Color.SteelBlue, SeriesLineWidth);
         private static readonly Font TickFont = new Font("Arial", 7f);
         private static readonly Font AxisTitleFont = new Font("Arial", 8f, FontStyle.Bold);
-            private static readonly Font GraphTitleFont = new Font("Arial", 12f, FontStyle.Bold);
-            private static readonly Font GraphSubtitleFont = new Font("Arial", 10f);
+        private static readonly Font GraphTitleFont = new Font("Arial", 12f, FontStyle.Bold);
+        private static readonly Font GraphSubtitleFont = new Font("Arial", 10f);
         private static readonly Brush TickLabelBrush = Brushes.Black;
 
         /// <summary>
         /// Renders axes and series from <paramref name="model"/> into <paramref name="g"/>
         /// within the specified <paramref name="deviceBounds"/>.
         /// </summary>
-        internal void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model)
+        internal void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
         {
             if (g == null || model == null || deviceBounds.Width <= 0 || deviceBounds.Height <= 0)
             {
@@ -49,10 +53,98 @@ namespace Graphing.Controls.Rendering
                 return;
             }
 
+            RenderOuterGraphBorder(g, deviceBounds, options);
+            RenderGridLines(g, plotRect, model.Layout.GridLines);
             RenderAxes(g, plotRect, paddedBounds, model);
+            RenderPlotAreaBorder(g, plotRect);
             RenderSeries(g, plotRect, model);
             RenderAxisTitles(g, plotRect, model);
-                    RenderTitles(g, paddedBounds, model.Layout);
+            RenderTitles(g, paddedBounds, model.Layout);
+        }
+
+        // ── Plot area border rendering ─────────────────────────────────────────
+
+        /// <summary>
+        /// Renders a decorative border around the entire control bounds.
+        /// This is a renderer-level concern, independent of presentation geometry.
+        /// Controlled by <see cref="GraphPresentationOptions.ShowGraphBorder"/> (defaults to true).
+        /// </summary>
+        private static void RenderOuterGraphBorder(Graphics g, Rectangle deviceBounds, GraphPresentationOptions options)
+        {
+            // Default to showing the border if options are not supplied
+            var showBorder = options?.ShowGraphBorder ?? true;
+            if (!showBorder)
+            {
+                return;
+            }
+
+            g.DrawRectangle(OuterGraphBorderPen, deviceBounds.X, deviceBounds.Y, deviceBounds.Width - 1, deviceBounds.Height - 1);
+        }
+
+        /// <summary>
+        /// Renders the plot area border as a simple rectangular frame.
+        /// The border is drawn behind series but above the background.
+        /// Geometry is consumed directly from the supplied device-space <paramref name="plotRect"/>,
+        /// which is derived from the abstract <see cref="PlotAreaLayout"/> by the caller.
+        /// </summary>
+        private static void RenderPlotAreaBorder(Graphics g, RectangleF plotRect)
+        {
+            g.DrawRectangle(PlotAreaBorderPen, plotRect.X, plotRect.Y, plotRect.Width, plotRect.Height);
+        }
+
+        /// <summary>
+        /// Renders grid lines derived from axis ticks.
+        /// Grid lines are drawn inside the plot area, behind series.
+        /// Geometry is consumed directly from the PresentationModel.
+        /// </summary>
+        private static void RenderGridLines(Graphics g, RectangleF plotRect, GridLinesGeometry gridLines)
+        {
+            if (gridLines == null)
+            {
+                return;
+            }
+
+            // Clipping ensures grid lines stay inside the plot area
+            var clip = g.ClipBounds;
+            g.SetClip(plotRect, System.Drawing.Drawing2D.CombineMode.Intersect);
+
+            try
+            {
+                // Render vertical grid lines (from X-axis ticks)
+                var verticalLines = gridLines.VerticalLines;
+                for (var i = 0; i < verticalLines.Count; i++)
+                {
+                    var line = verticalLines[i];
+                    var startDevice = ComputeDevicePoint(plotRect, line.Start);
+                    var endDevice = ComputeDevicePoint(plotRect, line.End);
+                    g.DrawLine(GridLinesPen, startDevice, endDevice);
+                }
+
+                // Render horizontal grid lines (from Y-axis ticks)
+                var horizontalLines = gridLines.HorizontalLines;
+                for (var i = 0; i < horizontalLines.Count; i++)
+                {
+                    var line = horizontalLines[i];
+                    var startDevice = ComputeDevicePoint(plotRect, line.Start);
+                    var endDevice = ComputeDevicePoint(plotRect, line.End);
+                    g.DrawLine(GridLinesPen, startDevice, endDevice);
+                }
+            }
+            finally
+            {
+                g.SetClip(clip);
+            }
+        }
+
+        /// <summary>
+        /// Maps a point from normalized abstract space to device pixel coordinates.
+        /// Used for grid lines and other geometry rendering.
+        /// </summary>
+        private static PointF ComputeDevicePoint(RectangleF plotRect, GeometryPoint3D abstractPoint)
+        {
+            var deviceX = plotRect.Left + (float)(abstractPoint.X * plotRect.Width);
+            var deviceY = plotRect.Bottom - (float)(abstractPoint.Y * plotRect.Height);
+            return new PointF(deviceX, deviceY);
         }
 
         // ── Axis rendering ────────────────────────────────────────────────────
@@ -794,9 +886,9 @@ namespace Graphing.Controls.Rendering
         /// </summary>
         private static RectangleF ComputeDevicePlotRect(Rectangle deviceBounds, PlotAreaLayout plotArea)
         {
-            var left   = deviceBounds.Left   + plotArea.BottomLeft.X * deviceBounds.Width;
-            var right  = deviceBounds.Left   + plotArea.TopRight.X   * deviceBounds.Width;
-            var top    = deviceBounds.Bottom - plotArea.TopRight.Y   * deviceBounds.Height;
+            var left = deviceBounds.Left + plotArea.BottomLeft.X * deviceBounds.Width;
+            var right = deviceBounds.Left + plotArea.TopRight.X * deviceBounds.Width;
+            var top = deviceBounds.Bottom - plotArea.TopRight.Y * deviceBounds.Height;
             var bottom = deviceBounds.Bottom - plotArea.BottomLeft.Y * deviceBounds.Height;
 
             return RectangleF.FromLTRB((float)left, (float)top, (float)right, (float)bottom);

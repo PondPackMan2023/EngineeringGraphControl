@@ -469,6 +469,339 @@ namespace Graphing.Tests
             Assert.That(subtitle.BottomLeft.Y, Is.EqualTo(plotArea.TopRight.Y).Within(1e-12).Or.GreaterThan(plotArea.TopRight.Y), "Subtitle should align with or be above plot area");
         }
 
+        [Test]
+        public void Layout_PlotArea_IsAlwaysPresent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Layout.PlotArea, Is.Not.Null);
+        }
+
+        [Test]
+        public void Layout_PlotArea_HasExpectedBoundsWithStandardAxes()
+        {
+            // A graph with one bottom (X) axis and one left (Y) axis should reserve
+            // AxisSlotSize (0.1) on the left and bottom edges.
+            const double AxisSlotSizeConst = 0.1;
+
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(plotArea.BottomLeft.X, Is.EqualTo(AxisSlotSizeConst).Within(1e-12), "Left margin should match axis slot size.");
+            Assert.That(plotArea.BottomLeft.Y, Is.EqualTo(AxisSlotSizeConst).Within(1e-12), "Bottom margin should match axis slot size.");
+            Assert.That(plotArea.TopRight.X, Is.EqualTo(1d).Within(1e-12), "Right edge should reach 1.0 when no right axis present.");
+            Assert.That(plotArea.TopRight.Y, Is.EqualTo(1d).Within(1e-12), "Top edge should reach 1.0 when no title or top axis.");
+        }
+
+        [Test]
+        public void Layout_PlotArea_ExpandsWhenLeftAxisIsHidden()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var optionsVisible = new GraphPresentationOptions();
+            var optionsHidden = new GraphPresentationOptions(hiddenAxisIds: new[] { new AxisId("y-axis") });
+
+            var presentationVisible = new GraphPresentationModel(snapshot, optionsVisible);
+            var presentationHidden = new GraphPresentationModel(snapshot, optionsHidden);
+
+            // Hiding the left axis should remove its slot, shifting the left bound of the plot area to 0.
+            Assert.That(presentationHidden.Layout.PlotArea.BottomLeft.X,
+                Is.LessThan(presentationVisible.Layout.PlotArea.BottomLeft.X),
+                "Left plot area bound should move left when the left axis is hidden.");
+            Assert.That(presentationHidden.Layout.PlotArea.BottomLeft.X, Is.EqualTo(0d).Within(1e-12));
+        }
+
+        [Test]
+        public void Layout_PlotArea_BoundsUnchangedWithStackedLeftAxes()
+        {
+            // Stacked left axes affect internal axis span layout but should NOT change
+            // the outer plot area bounds (a single AxisSlotSize margin is always used).
+            var presentationSingle = CreatePresentationWithLeftAxisCount(1);
+            var presentationStacked = CreatePresentationWithLeftAxisCount(3);
+
+            var singlePlotArea = presentationSingle.Layout.PlotArea;
+            var stackedPlotArea = presentationStacked.Layout.PlotArea;
+
+            Assert.That(stackedPlotArea.BottomLeft.X, Is.EqualTo(singlePlotArea.BottomLeft.X).Within(1e-12),
+                "Left margin should be the same regardless of how many left axes are stacked.");
+            Assert.That(stackedPlotArea.BottomLeft.Y, Is.EqualTo(singlePlotArea.BottomLeft.Y).Within(1e-12));
+            Assert.That(stackedPlotArea.TopRight.X, Is.EqualTo(singlePlotArea.TopRight.X).Within(1e-12));
+            Assert.That(stackedPlotArea.TopRight.Y, Is.EqualTo(singlePlotArea.TopRight.Y).Within(1e-12));
+        }
+
+        [Test]
+        public void Layout_PlotArea_BoundsConsistentWithAxisLayoutSpans()
+        {
+            // Axis NormalizedSpanStart/End are within [0,1] relative to the plot area height.
+            // The plot area itself is defined by PlotAreaLayout. This test verifies that
+            // the axis spans are valid within that context.
+            var presentation = CreatePresentationWithLeftAxisCount(3);
+            var leftAxes = presentation.Layout.Axes
+                .Where(a => a.Side == PresentationAxisSide.Left)
+                .ToArray();
+
+            Assert.That(leftAxes.Length, Is.EqualTo(3));
+
+            foreach (var entry in leftAxes)
+            {
+                Assert.That(entry.NormalizedSpanStart, Is.GreaterThanOrEqualTo(0d).Within(1e-12),
+                    "Axis span start must be within plot area [0,1] range.");
+                Assert.That(entry.NormalizedSpanEnd, Is.LessThanOrEqualTo(1d).Within(1e-12),
+                    "Axis span end must be within plot area [0,1] range.");
+                Assert.That(entry.NormalizedSpanStart, Is.LessThan(entry.NormalizedSpanEnd),
+                    "Axis span must have positive height.");
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_AreAlwaysPresent()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Layout.GridLines, Is.Not.Null);
+        }
+
+        [Test]
+        public void Layout_GridLines_HasVerticalLinesFromXAxisTicks()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var verticalLines = presentation.Layout.GridLines.VerticalLines;
+            Assert.That(verticalLines.Count, Is.GreaterThan(0),
+                "Should have vertical grid lines from X-axis ticks");
+
+            // Verify vertical lines span the plot area height
+            var plotArea = presentation.Layout.PlotArea;
+            for (var i = 0; i < verticalLines.Count; i++)
+            {
+                var line = verticalLines[i];
+                Assert.That(line.Orientation, Is.EqualTo(PresentationAxisOrientation.Vertical),
+                    "Lines should be vertical");
+                Assert.That(line.Start.Y, Is.EqualTo(0d).Within(1e-12),
+                    "Line should start at plot-local bottom bound");
+                Assert.That(line.End.Y, Is.EqualTo(1d).Within(1e-12),
+                    "Line should end at plot-local top bound");
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_HasHorizontalLinesFromYAxisTicks()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+            Assert.That(horizontalLines.Count, Is.GreaterThan(0),
+                "Should have horizontal grid lines from Y-axis ticks");
+
+            // Verify horizontal lines span the plot area width
+            var plotArea = presentation.Layout.PlotArea;
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                var line = horizontalLines[i];
+                Assert.That(line.Orientation, Is.EqualTo(PresentationAxisOrientation.Horizontal),
+                    "Lines should be horizontal");
+                Assert.That(line.Start.X, Is.EqualTo(0d).Within(1e-12),
+                    "Line should start at plot-local left bound");
+                Assert.That(line.End.X, Is.EqualTo(1d).Within(1e-12),
+                    "Line should end at plot-local right bound");
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_AlignWithTickPositions()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var verticalLines = presentation.Layout.GridLines.VerticalLines;
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            // Verify vertical lines are at normalized positions corresponding to tick values
+            for (var i = 0; i < verticalLines.Count; i++)
+            {
+                var line = verticalLines[i];
+                Assert.That(line.Start.X, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
+                Assert.That(line.Start.X, Is.LessThanOrEqualTo(1d).Within(1e-12));
+            }
+
+            // Verify horizontal lines are at normalized positions corresponding to tick values
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                var line = horizontalLines[i];
+                Assert.That(line.Start.Y, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
+                Assert.That(line.Start.Y, Is.LessThanOrEqualTo(1d).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_AreClippedToPlotArea()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var verticalLines = presentation.Layout.GridLines.VerticalLines;
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            // All vertical line X coordinates should be within plot-local bounds
+            for (var i = 0; i < verticalLines.Count; i++)
+            {
+                var line = verticalLines[i];
+                Assert.That(line.Start.X, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
+                Assert.That(line.Start.X, Is.LessThanOrEqualTo(1d).Within(1e-12));
+            }
+
+            // All horizontal line Y coordinates should be within plot-local bounds
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                var line = horizontalLines[i];
+                Assert.That(line.Start.Y, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
+                Assert.That(line.Start.Y, Is.LessThanOrEqualTo(1d).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_TouchPlotAreaBorderWithoutInset()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            var verticalLines = presentation.Layout.GridLines.VerticalLines;
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            Assert.That(verticalLines.Count, Is.GreaterThan(0));
+            Assert.That(horizontalLines.Count, Is.GreaterThan(0));
+
+            for (var i = 0; i < verticalLines.Count; i++)
+            {
+                var line = verticalLines[i];
+                Assert.That(line.Start.Y, Is.EqualTo(0d).Within(1e-12));
+                Assert.That(line.End.Y, Is.EqualTo(1d).Within(1e-12));
+            }
+
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                var line = horizontalLines[i];
+                Assert.That(line.Start.X, Is.EqualTo(0d).Within(1e-12));
+                Assert.That(line.End.X, Is.EqualTo(1d).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_OmittedWhenYAxisIsHidden()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentationWithAxis = new GraphPresentationModel(snapshot);
+            var presentationWithoutAxis = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenAxisIds: new[] { new AxisId("y-axis") }));
+
+            Assert.That(presentationWithAxis.Layout.GridLines.HorizontalLines.Count, Is.GreaterThan(0));
+            Assert.That(presentationWithoutAxis.Layout.GridLines.HorizontalLines.Count, Is.EqualTo(0),
+                "Horizontal grid lines should be omitted when Y-axis is hidden");
+        }
+
+        [Test]
+        public void Layout_GridLines_StackedYAxes_ProduceAxisScopedHorizontalLines()
+        {
+            var presentation = CreatePresentationWithLeftAxisCount(2);
+            var leftAxisEntries = presentation.Layout.Axes
+                .Where(a => a.Side == PresentationAxisSide.Left)
+                .OrderBy(a => a.SideIndex)
+                .ToArray();
+
+            Assert.That(leftAxisEntries.Length, Is.EqualTo(2));
+
+            var expectedHorizontalCount = leftAxisEntries.Sum(entry => entry.Axis.Ticks.Count);
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+            Assert.That(horizontalLines.Count, Is.EqualTo(expectedHorizontalCount),
+                "Each stacked Y-axis should contribute its own horizontal grid lines.");
+
+            for (var axisIndex = 0; axisIndex < leftAxisEntries.Length; axisIndex++)
+            {
+                var entry = leftAxisEntries[axisIndex];
+                var spanStart = entry.NormalizedSpanStart;
+                var spanEnd = entry.NormalizedSpanEnd;
+                var domainMin = entry.Axis.MinimumValue.Value;
+                var domainMax = entry.Axis.MaximumValue.Value;
+                var domainRange = domainMax - domainMin;
+
+                for (var tickIndex = 0; tickIndex < entry.Axis.Ticks.Count; tickIndex++)
+                {
+                    var tick = entry.Axis.Ticks[tickIndex];
+                    var axisRelative = Math.Abs(domainRange) > double.Epsilon
+                        ? (tick.Value - domainMin) / domainRange
+                        : 0.5;
+                    var expectedY = spanStart + (axisRelative * (spanEnd - spanStart));
+
+                    var hasMatch = horizontalLines.Any(line =>
+                        Math.Abs(line.Start.Y - expectedY) <= 1e-12 &&
+                        Math.Abs(line.End.Y - expectedY) <= 1e-12);
+
+                    Assert.That(hasMatch, Is.True,
+                        "Horizontal line should align to tick within the owning axis span.");
+                }
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_StackedYAxes_HorizontalLinesRemainWithinOwningSpans()
+        {
+            var presentation = CreatePresentationWithLeftAxisCount(3);
+            var leftAxisEntries = presentation.Layout.Axes
+                .Where(a => a.Side == PresentationAxisSide.Left)
+                .OrderBy(a => a.SideIndex)
+                .ToArray();
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            Assert.That(horizontalLines.Count, Is.GreaterThan(0));
+
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                var y = horizontalLines[i].Start.Y;
+                var coveredBySomeAxisSpan = leftAxisEntries.Any(entry =>
+                    y >= entry.NormalizedSpanStart - 1e-12 &&
+                    y <= entry.NormalizedSpanEnd + 1e-12);
+
+                Assert.That(coveredBySomeAxisSpan, Is.True,
+                    "Horizontal grid line should not bleed outside stacked axis spans.");
+            }
+        }
+
+        [Test]
+        public void Layout_GridLines_SingleYAxisBehavior_RemainsUnchanged()
+        {
+            var presentation = CreatePresentationWithLeftAxisCount(1);
+            var leftEntry = presentation.Layout.Axes.Single(a => a.Side == PresentationAxisSide.Left);
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            Assert.That(horizontalLines.Count, Is.EqualTo(leftEntry.Axis.Ticks.Count));
+
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                Assert.That(horizontalLines[i].Start.X, Is.EqualTo(0d).Within(1e-12));
+                Assert.That(horizontalLines[i].End.X, Is.EqualTo(1d).Within(1e-12));
+                Assert.That(horizontalLines[i].Start.Y, Is.GreaterThanOrEqualTo(leftEntry.NormalizedSpanStart).Within(1e-12));
+                Assert.That(horizontalLines[i].Start.Y, Is.LessThanOrEqualTo(leftEntry.NormalizedSpanEnd).Within(1e-12));
+            }
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             var registry = UnitsRegistry.Default;
