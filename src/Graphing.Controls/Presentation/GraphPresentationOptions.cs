@@ -20,7 +20,8 @@ namespace Graphing.Controls.Presentation
             string graphTitle = null,
             string graphSubtitle = null,
             IEnumerable<AnnotationSemantic> annotations = null,
-            bool showGraphBorder = true)
+            bool showGraphBorder = true,
+            LegendPlacement legendPlacement = LegendPlacement.Bottom)
         {
             _hiddenSeriesIds = hiddenSeriesIds != null
                 ? [.. hiddenSeriesIds]
@@ -36,6 +37,7 @@ namespace Graphing.Controls.Presentation
             _annotations = new ReadOnlyCollection<AnnotationSemantic>(
                 [.. annotations ?? []]);
             ShowGraphBorder = showGraphBorder;
+            LegendPlacement = legendPlacement;
         }
 
         public string GraphTitle { get; }
@@ -43,6 +45,8 @@ namespace Graphing.Controls.Presentation
         public string GraphSubtitle { get; }
 
         public bool ShowGraphBorder { get; }
+
+        public LegendPlacement LegendPlacement { get; }
 
         public IReadOnlyList<AnnotationSemantic> Annotations
         {

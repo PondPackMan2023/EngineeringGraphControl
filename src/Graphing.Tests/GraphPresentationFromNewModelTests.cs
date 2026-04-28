@@ -18,6 +18,9 @@ namespace Graphing.Tests
     public class GraphPresentationFromNewModelTests
     {
         private const double AxisStackGap = 0.025;
+        private const double AxisSlotSizeConst = 0.1;
+        private const double LegendBandHeightConst = 0.12;
+        private const double LegendBandWidthConst = 0.18;
 
         [Test]
         public void Presentation_UsesExplicitAxisIdentityOrientationAndSide()
@@ -468,6 +471,236 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void Layout_LegendBottom_DoesNotConsumeBottomAxisProtectedBand()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Bottom));
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            var bottomProtectedBandStart = plotArea.BottomLeft.Y - AxisSlotSizeConst;
+            Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(bottomProtectedBandStart).Within(1e-12),
+                "Legend should be outside (below) the bottom axis-title protected band.");
+            Assert.That(plotArea.BottomLeft.Y - legend.TopRight.Y, Is.GreaterThanOrEqualTo(AxisSlotSizeConst).Within(1e-12),
+                "Gap between plot and legend should preserve at least the bottom axis-title protected band.");
+        }
+
+        [Test]
+        public void Layout_LegendTop_DoesNotConsumeTopAxisProtectedBand()
+        {
+            var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Top, yAxisSide: ModelAxisSide.Left);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Top));
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            var topProtectedBandEnd = plotArea.TopRight.Y + AxisSlotSizeConst;
+            Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(topProtectedBandEnd).Within(1e-12),
+                "Legend should be outside (above) the top axis-title protected band.");
+            Assert.That(legend.BottomLeft.Y - plotArea.TopRight.Y, Is.GreaterThanOrEqualTo(AxisSlotSizeConst).Within(1e-12),
+                "Gap between plot and legend should preserve at least the top axis-title protected band.");
+        }
+
+        [Test]
+        public void Layout_LegendLeft_DoesNotConsumeLeftAxisProtectedBand()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Left));
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            var leftProtectedBandStart = plotArea.BottomLeft.X - AxisSlotSizeConst;
+            Assert.That(legend.TopRight.X, Is.LessThanOrEqualTo(leftProtectedBandStart).Within(1e-12),
+                "Legend should be outside (left of) the left axis-title protected band.");
+            Assert.That(plotArea.BottomLeft.X - legend.TopRight.X, Is.GreaterThanOrEqualTo(AxisSlotSizeConst).Within(1e-12),
+                "Gap between plot and legend should preserve at least the left axis-title protected band.");
+        }
+
+        [Test]
+        public void Layout_LegendRight_DoesNotConsumeRightAxisProtectedBand()
+        {
+            var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Right);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Right));
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            var rightProtectedBandStart = plotArea.TopRight.X + AxisSlotSizeConst;
+            Assert.That(legend.BottomLeft.X, Is.GreaterThanOrEqualTo(rightProtectedBandStart).Within(1e-12),
+                "Legend should be outside (right of) the right axis-title protected band.");
+            Assert.That(legend.BottomLeft.X - plotArea.TopRight.X, Is.GreaterThanOrEqualTo(AxisSlotSizeConst).Within(1e-12),
+                "Gap between plot and legend should preserve at least the right axis-title protected band.");
+        }
+
+        [Test]
+        public void Layout_LegendTop_RemainsAboveGraphTitleBand_WhenTitleExists()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Title", legendPlacement: LegendPlacement.Top);
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var legend = presentation.Layout.Legend;
+            var title = presentation.Layout.Title;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(title, Is.Not.Null);
+            Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(title.TopRight.Y).Within(1e-12),
+                "Top legend should not overlap title band.");
+        }
+
+        [Test]
+        public void Layout_Legend_DefaultPlacement_RemainsBottom()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(snapshot);
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void Layout_LegendPlacement_PositionsLegendOnSelectedSide(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(legendPlacement: placement);
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+
+            switch (placement)
+            {
+                case LegendPlacement.Bottom:
+                    Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+                    break;
+
+                case LegendPlacement.Top:
+                    Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(plotArea.TopRight.Y).Within(1e-12));
+                    break;
+
+                case LegendPlacement.Left:
+                    Assert.That(legend.TopRight.X, Is.LessThanOrEqualTo(plotArea.BottomLeft.X).Within(1e-12));
+                    break;
+
+                case LegendPlacement.Right:
+                    Assert.That(legend.BottomLeft.X, Is.GreaterThanOrEqualTo(plotArea.TopRight.X).Within(1e-12));
+                    break;
+            }
+        }
+
+        [Test]
+        public void Layout_LegendPlacement_AdjustsPlotAreaBoundsByPlacement()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var baseline = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenSeriesIds: new[] { new SeriesId("1") }));
+
+            var bottom = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Bottom));
+            var top = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Top));
+            var left = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Left));
+            var right = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Right));
+
+            Assert.That(bottom.Layout.PlotArea.BottomLeft.Y, Is.GreaterThan(baseline.Layout.PlotArea.BottomLeft.Y));
+            Assert.That(top.Layout.PlotArea.TopRight.Y, Is.LessThan(baseline.Layout.PlotArea.TopRight.Y));
+            Assert.That(left.Layout.PlotArea.BottomLeft.X, Is.GreaterThan(baseline.Layout.PlotArea.BottomLeft.X));
+            Assert.That(right.Layout.PlotArea.TopRight.X, Is.LessThan(baseline.Layout.PlotArea.TopRight.X));
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void Layout_LegendEntryGeometry_RemainsValidForAllPlacements(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(legendPlacement: placement);
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var legend = presentation.Layout.Legend;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.Entries.Count, Is.GreaterThan(0));
+
+            for (var i = 0; i < legend.Entries.Count; i++)
+            {
+                var entry = legend.Entries[i];
+                Assert.That(entry.TopRight.X, Is.GreaterThan(entry.BottomLeft.X));
+                Assert.That(entry.TopRight.Y, Is.GreaterThan(entry.BottomLeft.Y));
+
+                Assert.That(entry.BottomLeft.X, Is.GreaterThanOrEqualTo(legend.BottomLeft.X).Within(1e-12));
+                Assert.That(entry.TopRight.X, Is.LessThanOrEqualTo(legend.TopRight.X).Within(1e-12));
+                Assert.That(entry.BottomLeft.Y, Is.GreaterThanOrEqualTo(legend.BottomLeft.Y).Within(1e-12));
+                Assert.That(entry.TopRight.Y, Is.LessThanOrEqualTo(legend.TopRight.Y).Within(1e-12));
+
+                Assert.That(entry.GlyphBottomLeft.X, Is.GreaterThanOrEqualTo(entry.BottomLeft.X).Within(1e-12));
+                Assert.That(entry.GlyphTopRight.X, Is.LessThanOrEqualTo(entry.TopRight.X).Within(1e-12));
+                Assert.That(entry.GlyphBottomLeft.Y, Is.GreaterThanOrEqualTo(entry.BottomLeft.Y).Within(1e-12));
+                Assert.That(entry.GlyphTopRight.Y, Is.LessThanOrEqualTo(entry.TopRight.Y).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void Layout_LegendPlacement_DoesNotRegressAxisOrSeriesGeometry()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var bottom = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Bottom));
+            var top = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Top));
+            var left = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Left));
+            var right = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: LegendPlacement.Right));
+
+            var presentations = new[] { bottom, top, left, right };
+            var baseline = bottom;
+
+            for (var p = 0; p < presentations.Length; p++)
+            {
+                var presentation = presentations[p];
+                Assert.That(presentation.Axes.Count, Is.EqualTo(baseline.Axes.Count));
+                Assert.That(presentation.Series.Count, Is.EqualTo(baseline.Series.Count));
+
+                for (var i = 0; i < baseline.Axes.Count; i++)
+                {
+                    Assert.That(presentation.Axes[i].AxisId, Is.EqualTo(baseline.Axes[i].AxisId));
+                    Assert.That(presentation.Axes[i].Orientation, Is.EqualTo(baseline.Axes[i].Orientation));
+                    Assert.That(presentation.Axes[i].Side, Is.EqualTo(baseline.Axes[i].Side));
+                    Assert.That(presentation.Axes[i].Ticks.Count, Is.EqualTo(baseline.Axes[i].Ticks.Count));
+                }
+
+                Assert.That(presentation.Series[0].Points.Count, Is.EqualTo(baseline.Series[0].Points.Count));
+                for (var pointIndex = 0; pointIndex < baseline.Series[0].Points.Count; pointIndex++)
+                {
+                    Assert.That(presentation.Series[0].Points[pointIndex].X, Is.EqualTo(baseline.Series[0].Points[pointIndex].X));
+                    Assert.That(presentation.Series[0].Points[pointIndex].Y, Is.EqualTo(baseline.Series[0].Points[pointIndex].Y));
+                }
+            }
+        }
+
+        [Test]
         public void Layout_LegendReservation_DoesNotAffectAxisOrSeriesGeometryCorrectness()
         {
             var model = CreateModel(seriesType: SeriesType.Line);
@@ -569,9 +802,6 @@ namespace Graphing.Tests
         {
             // A graph with one bottom (X) axis and one left (Y) axis should reserve
             // AxisSlotSize (0.1) on the left edge and AxisSlotSize + legend band on the bottom edge.
-            const double AxisSlotSizeConst = 0.1;
-            const double LegendBandHeightConst = 0.12;
-
             var model = CreateModel(seriesType: SeriesType.Line);
             var snapshot = new GraphSnapshotBuilder().Build(model);
             var presentation = new GraphPresentationModel(snapshot);
@@ -890,12 +1120,17 @@ namespace Graphing.Tests
 
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
+            return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);
+        }
+
+        private static IGraphModel CreateModelWithAxisSides(SeriesType seriesType, ModelAxisSide xAxisSide, ModelAxisSide yAxisSide)
+        {
             var registry = UnitsRegistry.Default;
             var unit = Units.Length.Meter;
             var formatter = new NumericFormatter("formatter-y", registry, "F2");
 
-            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
-            var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatter);
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, xAxisSide, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, yAxisSide, unit, "m", formatter);
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });

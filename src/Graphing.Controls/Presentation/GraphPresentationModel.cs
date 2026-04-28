@@ -20,6 +20,7 @@ namespace Graphing.Controls.Presentation
         private const double SubtitleHeight = 0.04;
         private const double TitleSubtitleGap = 0.01;
         private const double LegendBandHeight = 0.12;
+        private const double LegendBandWidth = 0.18;
         private const double LegendOuterPaddingX = 0.01;
         private const double LegendOuterPaddingY = 0.015;
         private const double LegendInnerPaddingX = 0.015;
@@ -465,7 +466,13 @@ namespace Graphing.Controls.Presentation
             var bottomCount = bottomAxes.Count;
             var topCount = topAxes.Count;
             var hasLegend = series != null && series.Count > 0;
-            var reservedLegendBand = hasLegend ? LegendBandHeight : 0d;
+            var legendPlacement = options.LegendPlacement;
+            var reservedLegendHeight = hasLegend && (legendPlacement == LegendPlacement.Bottom || legendPlacement == LegendPlacement.Top)
+                ? LegendBandHeight
+                : 0d;
+            var reservedLegendWidth = hasLegend && (legendPlacement == LegendPlacement.Left || legendPlacement == LegendPlacement.Right)
+                ? LegendBandWidth
+                : 0d;
 
             // Calculate space reserved for title and subtitle above plot area
             var titleExists = !string.IsNullOrEmpty(options.GraphTitle);
@@ -490,17 +497,27 @@ namespace Graphing.Controls.Presentation
             // AxisSlotSize represents a fixed outer margin per side, not per axis.
             // Stacked axes affect internal layout only; plot area margins remain constant
             // regardless of how many axes are present on a given side.
-            var plotBottom = (bottomCount > 0 ? AxisSlotSize : 0d) + reservedLegendBand;
-            var plotTop = 1.0 - (topCount > 0 ? AxisSlotSize : 0d) - titleSpaceReserved;
-            var plotLeft = leftCount > 0 ? AxisSlotSize : 0d;
-            var plotRight = 1.0 - (rightCount > 0 ? AxisSlotSize : 0d);
+            var baseBottomReserved = bottomCount > 0 ? AxisSlotSize : 0d;
+            var baseTopReserved = (topCount > 0 ? AxisSlotSize : 0d) + titleSpaceReserved;
+            var baseLeftReserved = leftCount > 0 ? AxisSlotSize : 0d;
+            var baseRightReserved = rightCount > 0 ? AxisSlotSize : 0d;
+
+            var plotBottom = baseBottomReserved + (legendPlacement == LegendPlacement.Bottom ? reservedLegendHeight : 0d);
+            var plotTop = 1.0 - baseTopReserved - (legendPlacement == LegendPlacement.Top ? reservedLegendHeight : 0d);
+            var plotLeft = baseLeftReserved + (legendPlacement == LegendPlacement.Left ? reservedLegendWidth : 0d);
+            var plotRight = 1.0 - baseRightReserved - (legendPlacement == LegendPlacement.Right ? reservedLegendWidth : 0d);
 
             var plotArea = new PlotAreaLayout(
                 new GeometryPoint3D(plotLeft, plotBottom, 0d),
                 new GeometryPoint3D(plotRight, plotTop, 0d));
 
             var legendGeometry = hasLegend
-                ? BuildLegendGeometry(series, plotLeft, plotRight, 0d, reservedLegendBand)
+                ? BuildLegendGeometry(
+                    series,
+                    legendPlacement,
+                    plotArea,
+                    reservedLegendWidth,
+                    reservedLegendHeight)
                 : null;
 
             // Create title and subtitle geometries
@@ -527,14 +544,51 @@ namespace Graphing.Controls.Presentation
 
         private static LegendPresentationGeometry BuildLegendGeometry(
             IReadOnlyList<SeriesPresentationGeometry> series,
-            double layoutLeft,
-            double layoutRight,
-            double bandBottom,
-            double bandTop)
+            LegendPlacement placement,
+            PlotAreaLayout plotArea,
+            double reservedLegendWidth,
+            double reservedLegendHeight)
         {
             if (series == null || series.Count == 0)
             {
                 return null;
+            }
+
+            double bandLeft;
+            double bandRight;
+            double bandBottom;
+            double bandTop;
+
+            switch (placement)
+            {
+                case LegendPlacement.Top:
+                    bandLeft = plotArea.BottomLeft.X;
+                    bandRight = plotArea.TopRight.X;
+                    bandTop = 1.0;
+                    bandBottom = bandTop - reservedLegendHeight;
+                    break;
+
+                case LegendPlacement.Left:
+                    bandLeft = 0d;
+                    bandRight = reservedLegendWidth;
+                    bandBottom = plotArea.BottomLeft.Y;
+                    bandTop = plotArea.TopRight.Y;
+                    break;
+
+                case LegendPlacement.Right:
+                    bandRight = 1.0;
+                    bandLeft = bandRight - reservedLegendWidth;
+                    bandBottom = plotArea.BottomLeft.Y;
+                    bandTop = plotArea.TopRight.Y;
+                    break;
+
+                case LegendPlacement.Bottom:
+                default:
+                    bandLeft = plotArea.BottomLeft.X;
+                    bandRight = plotArea.TopRight.X;
+                    bandBottom = 0d;
+                    bandTop = reservedLegendHeight;
+                    break;
             }
 
             if (bandTop <= bandBottom)
@@ -542,15 +596,20 @@ namespace Graphing.Controls.Presentation
                 return null;
             }
 
-            var containerLeft = layoutLeft + LegendOuterPaddingX;
-            var containerRight = layoutRight - LegendOuterPaddingX;
+            if (bandRight <= bandLeft)
+            {
+                return null;
+            }
+
+            var containerLeft = bandLeft + LegendOuterPaddingX;
+            var containerRight = bandRight - LegendOuterPaddingX;
             var containerBottom = bandBottom + LegendOuterPaddingY;
             var containerTop = bandTop - LegendOuterPaddingY;
 
             if (containerRight <= containerLeft)
             {
-                containerLeft = layoutLeft;
-                containerRight = layoutRight;
+                containerLeft = bandLeft;
+                containerRight = bandRight;
             }
 
             if (containerTop <= containerBottom)
@@ -578,30 +637,32 @@ namespace Graphing.Controls.Presentation
 
             var entryCount = series.Count;
             var totalGap = entryCount > 1 ? (entryCount - 1) * LegendEntryGap : 0d;
-            var entryWidth = (contentRight - contentLeft - totalGap) / entryCount;
-            if (entryWidth <= 0d)
+            var entryHeight = (contentTop - contentBottom - totalGap) / entryCount;
+            if (entryHeight <= 0d)
             {
                 totalGap = 0d;
-                entryWidth = (contentRight - contentLeft) / entryCount;
+                entryHeight = (contentTop - contentBottom) / entryCount;
             }
 
-            var entryBottom = contentBottom;
-            var entryTop = contentTop;
-            var entryHeight = Math.Max(0d, entryTop - entryBottom);
+            var entryLeft = contentLeft;
+            var entryRight = contentRight;
+            var entryWidth = Math.Max(0d, entryRight - entryLeft);
             var glyphHeight = Math.Min(LegendGlyphHeight, entryHeight * 0.7);
-            var glyphCenterY = entryBottom + (entryHeight * 0.5);
-            var glyphBottom = glyphCenterY - (glyphHeight * 0.5);
-            var glyphTop = glyphCenterY + (glyphHeight * 0.5);
 
             var entries = new List<LegendEntryPresentationGeometry>(entryCount);
 
             for (var index = 0; index < entryCount; index++)
             {
-                var entryLeft = contentLeft + (index * (entryWidth + totalGap));
-                var entryRight = entryLeft + entryWidth;
+                var entryTop = contentTop - (index * (entryHeight + totalGap));
+                var entryBottom = entryTop - entryHeight;
+                var glyphCenterY = entryBottom + (entryHeight * 0.5);
+                var glyphBottom = glyphCenterY - (glyphHeight * 0.5);
+                var glyphTop = glyphCenterY + (glyphHeight * 0.5);
 
                 var glyphLeft = entryLeft + LegendEntryPaddingX;
-                var glyphRight = Math.Min(glyphLeft + LegendGlyphWidth, entryRight - LegendEntryPaddingX);
+                var maxGlyphWidth = Math.Max(0d, entryWidth * 0.28);
+                var glyphWidth = Math.Min(LegendGlyphWidth, maxGlyphWidth);
+                var glyphRight = Math.Min(glyphLeft + glyphWidth, entryRight - LegendEntryPaddingX);
                 if (glyphRight <= glyphLeft)
                 {
                     glyphRight = glyphLeft;
