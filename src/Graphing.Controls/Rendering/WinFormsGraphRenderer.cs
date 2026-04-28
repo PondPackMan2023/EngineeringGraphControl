@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Forms;
 using Graphing.Controls.Presentation;
 using Graphing.Controls.Rendering.Geometry;
 
@@ -21,16 +22,28 @@ namespace Graphing.Controls.Rendering
         private const float AxisLineWidth = 1f;
         private const float SeriesLineWidth = 1.5f;
         private const float GridLineWidth = 0.5f;
+        private const float LegendLineWidth = 1f;
+        private const float LegendTextOffset = 6f;
+        private const float LegendMarkerSize = 4f;
+        private const float LegendGlyphSampleWidth = 18f;
+        private const float LegendOuterPaddingPixels = 4f;
+        private const float LegendInnerPaddingPixels = 7f;
+        private const float LegendEntryGapPixels = 4f;
+        private const float LegendMeasurementSafetyMarginPixels = 8f;
+        private const TextFormatFlags LegendTextFormatFlags = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
 
         private static readonly Pen AxisPen = new Pen(Color.Black, AxisLineWidth);
         private static readonly Pen PlotAreaBorderPen = new Pen(Color.Black, AxisLineWidth);
         private static readonly Pen OuterGraphBorderPen = new Pen(Color.Black, AxisLineWidth);
         private static readonly Pen GridLinesPen = new Pen(Color.LightGray, GridLineWidth);
         private static readonly Pen SeriesPen = new Pen(Color.SteelBlue, SeriesLineWidth);
+        private static readonly Pen LegendBorderPen = new Pen(Color.Black, LegendLineWidth);
+        private static readonly Pen LegendGlyphPen = new Pen(Color.DimGray, LegendLineWidth);
         private static readonly Font TickFont = new Font("Arial", 7f);
         private static readonly Font AxisTitleFont = new Font("Arial", 8f, FontStyle.Bold);
         private static readonly Font GraphTitleFont = new Font("Arial", 12f, FontStyle.Bold);
         private static readonly Font GraphSubtitleFont = new Font("Arial", 10f);
+        private static readonly Font LegendFont = new Font("Arial", 8f);
         private static readonly Brush TickLabelBrush = Brushes.Black;
 
         /// <summary>
@@ -44,9 +57,7 @@ namespace Graphing.Controls.Rendering
                 return;
             }
 
-            var padding = MeasureLabelPadding(g, model);
-            var paddedBounds = ApplyPadding(deviceBounds, padding);
-            var plotRect = ComputeDevicePlotRect(paddedBounds, model.Layout.PlotArea);
+            var plotRect = ComputeDevicePlotRect(deviceBounds, model.Layout.PlotArea);
 
             if (plotRect.Width <= 0 || plotRect.Height <= 0)
             {
@@ -55,11 +66,206 @@ namespace Graphing.Controls.Rendering
 
             RenderOuterGraphBorder(g, deviceBounds, options);
             RenderGridLines(g, plotRect, model.Layout.GridLines);
-            RenderAxes(g, plotRect, paddedBounds, model);
+            RenderAxes(g, plotRect, deviceBounds, model);
             RenderPlotAreaBorder(g, plotRect);
             RenderSeries(g, plotRect, model);
-            RenderAxisTitles(g, plotRect, model);
-            RenderTitles(g, paddedBounds, model.Layout);
+            RenderAxisTitles(g, deviceBounds, model.Layout.AxisTitleBands);
+            RenderTitles(g, deviceBounds, model.Layout);
+            RenderLegend(g, deviceBounds, model.Layout.Legend);
+        }
+
+        internal IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
+        {
+            return new WinFormsLayoutMeasurementInput(g, deviceBounds);
+        }
+
+        private sealed class WinFormsLayoutMeasurementInput : IGraphLayoutMeasurementInput
+        {
+            private readonly Graphics _graphics;
+            private readonly Rectangle _deviceBounds;
+
+            internal WinFormsLayoutMeasurementInput(Graphics graphics, Rectangle deviceBounds)
+            {
+                _graphics = graphics;
+                _deviceBounds = deviceBounds;
+            }
+
+            public double MeasureAxisTickThickness(AxisSide side, IReadOnlyList<AxisTickPresentation> ticks)
+            {
+                var maxWidth = 0f;
+                var maxHeight = 0f;
+                for (var i = 0; i < ticks.Count; i++)
+                {
+                    var label = ticks[i].Label;
+                    if (string.IsNullOrWhiteSpace(label))
+                    {
+                        continue;
+                    }
+
+                    var size = _graphics.MeasureString(label, TickFont);
+                    if (size.Width > maxWidth)
+                    {
+                        maxWidth = size.Width;
+                    }
+
+                    if (size.Height > maxHeight)
+                    {
+                        maxHeight = size.Height;
+                    }
+                }
+
+                var pixelThickness = side == AxisSide.Left || side == AxisSide.Right
+                    ? TickLength + TickLabelOffset + maxWidth
+                    : TickLength + TickLabelOffset + maxHeight;
+
+                return NormalizeThickness(pixelThickness, side);
+            }
+
+            public double MeasureAxisTitleThickness(AxisSide side, string title)
+            {
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    return 0d;
+                }
+
+                var size = _graphics.MeasureString(title, AxisTitleFont);
+                var pixelThickness = side == AxisSide.Left || side == AxisSide.Right
+                    ? AxisTitleOffset + size.Height
+                    : AxisTitleOffset + size.Height;
+
+                return NormalizeThickness(pixelThickness, side);
+            }
+
+            public double MeasureAxisEndpointLabelExtent(AxisSide side, IReadOnlyList<AxisTickPresentation> ticks)
+            {
+                var maxWidth = 0f;
+                var maxHeight = 0f;
+                for (var i = 0; i < ticks.Count; i++)
+                {
+                    var label = ticks[i].Label;
+                    if (string.IsNullOrWhiteSpace(label))
+                    {
+                        continue;
+                    }
+
+                    var size = _graphics.MeasureString(label, TickFont);
+                    if (size.Width > maxWidth)
+                    {
+                        maxWidth = size.Width;
+                    }
+
+                    if (size.Height > maxHeight)
+                    {
+                        maxHeight = size.Height;
+                    }
+                }
+
+                if (side == AxisSide.Left || side == AxisSide.Right)
+                {
+                    return _deviceBounds.Height > 0 ? maxHeight / _deviceBounds.Height : 0d;
+                }
+
+                return _deviceBounds.Width > 0 ? maxWidth / _deviceBounds.Width : 0d;
+            }
+
+            public LegendMeasurementAdvice MeasureLegend(
+                LegendPlacement placement,
+                IReadOnlyList<SeriesPresentationGeometry> series,
+                double availablePrimarySpan)
+            {
+                if (series == null || series.Count == 0)
+                {
+                    return new LegendMeasurementAdvice(0d, 0d, 0d, 0d, 0, 0);
+                }
+
+                var maxItemWidth = 0f;
+                var itemHeight = LegendFont.GetHeight(_graphics) + 4f;
+                for (var i = 0; i < series.Count; i++)
+                {
+                    var label = string.IsNullOrWhiteSpace(series[i].Label)
+                        ? series[i].SeriesId != null ? series[i].SeriesId.ToString() : string.Empty
+                        : series[i].Label;
+                    var size = MeasureLegendText(_graphics, label);
+                    var width = LegendGlyphSampleWidth + LegendTextOffset + size.Width;
+                    if (width > maxItemWidth)
+                    {
+                        maxItemWidth = width;
+                    }
+                }
+
+                var itemWidthNormalized = _deviceBounds.Width > 0 ? maxItemWidth / _deviceBounds.Width : 0d;
+                var itemHeightNormalized = _deviceBounds.Height > 0 ? itemHeight / _deviceBounds.Height : 0d;
+
+                if (placement == LegendPlacement.Left || placement == LegendPlacement.Right)
+                {
+                    var availableHeightPixels = _deviceBounds.Height > 0 ? (float)(availablePrimarySpan * _deviceBounds.Height) : 0f;
+                    var rowsPerColumn = 1;
+                    if (availableHeightPixels > 0f)
+                    {
+                        rowsPerColumn = Math.Max(1, (int)Math.Floor((availableHeightPixels + LegendEntryGapPixels) / (itemHeight + LegendEntryGapPixels)));
+                    }
+
+                    var columnCount = (int)Math.Ceiling(series.Count / (double)rowsPerColumn);
+                    var pixelWidth = (2f * LegendOuterPaddingPixels)
+                        + (2f * LegendInnerPaddingPixels)
+                        + (columnCount * maxItemWidth)
+                        + ((columnCount > 1 ? columnCount - 1 : 0) * LegendEntryGapPixels)
+                        + LegendMeasurementSafetyMarginPixels;
+                    var normalizedWidth = _deviceBounds.Width > 0 ? pixelWidth / _deviceBounds.Width : 0d;
+
+                    return new LegendMeasurementAdvice(
+                        normalizedWidth,
+                        itemWidthNormalized,
+                        itemHeightNormalized,
+                        availablePrimarySpan,
+                        rowsPerColumn,
+                        columnCount);
+                }
+
+                var availableWidthPixels = _deviceBounds.Width > 0 ? (float)(availablePrimarySpan * _deviceBounds.Width) : 0f;
+                var itemsPerRow = 1;
+                if (availableWidthPixels > 0f)
+                {
+                    itemsPerRow = Math.Max(1, (int)Math.Floor((availableWidthPixels + LegendEntryGapPixels) / (maxItemWidth + LegendEntryGapPixels)));
+                }
+
+                var rowCount = (int)Math.Ceiling(series.Count / (double)itemsPerRow);
+                var pixelHeight = (2f * LegendOuterPaddingPixels)
+                    + (2f * LegendInnerPaddingPixels)
+                    + (rowCount * itemHeight)
+                    + ((rowCount > 1 ? rowCount - 1 : 0) * LegendEntryGapPixels)
+                    + LegendMeasurementSafetyMarginPixels;
+                var normalizedHeight = _deviceBounds.Height > 0 ? pixelHeight / _deviceBounds.Height : 0d;
+                return new LegendMeasurementAdvice(
+                    normalizedHeight,
+                    itemWidthNormalized,
+                    itemHeightNormalized,
+                    availablePrimarySpan,
+                    itemsPerRow,
+                    rowCount);
+            }
+
+            public double MeasureTitleThickness(string text, bool isSubtitle)
+            {
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return 0d;
+                }
+
+                var font = isSubtitle ? GraphSubtitleFont : GraphTitleFont;
+                var size = _graphics.MeasureString(text, font);
+                return _deviceBounds.Height > 0 ? size.Height / _deviceBounds.Height : 0d;
+            }
+
+            private double NormalizeThickness(float pixelThickness, AxisSide side)
+            {
+                if (side == AxisSide.Left || side == AxisSide.Right)
+                {
+                    return _deviceBounds.Width > 0 ? pixelThickness / _deviceBounds.Width : 0d;
+                }
+
+                return _deviceBounds.Height > 0 ? pixelThickness / _deviceBounds.Height : 0d;
+            }
         }
 
         // ── Plot area border rendering ─────────────────────────────────────────
@@ -162,6 +368,7 @@ namespace Graphing.Controls.Rendering
                 var entry = axisEntries[i];
                 var axis = entry.Axis;
                 var axisRect = ComputeAxisRect(plotRect, entry);
+                var tickRegionRect = FindAxisTickLabelRegionRect(deviceBounds, model.Layout.AxisTitleBands, entry.Side);
 
                 if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
                 {
@@ -171,19 +378,19 @@ namespace Graphing.Controls.Rendering
                 switch (entry.Side)
                 {
                     case AxisSide.Bottom:
-                        RenderBottomAxis(g, axisRect, axis);
+                        RenderBottomAxis(g, axisRect, tickRegionRect, axis, entry.TickEndpointInset);
                         break;
 
                     case AxisSide.Left:
-                        RenderLeftAxis(g, axisRect, axis);
+                        RenderLeftAxis(g, axisRect, tickRegionRect, axis, entry.TickEndpointInset);
                         break;
 
                     case AxisSide.Right:
-                        RenderRightAxis(g, axisRect, axis);
+                        RenderRightAxis(g, axisRect, tickRegionRect, axis, entry.TickEndpointInset);
                         break;
 
                     case AxisSide.Top:
-                        RenderTopAxis(g, axisRect, axis);
+                        RenderTopAxis(g, axisRect, tickRegionRect, axis, entry.TickEndpointInset);
                         break;
                 }
             }
@@ -192,205 +399,296 @@ namespace Graphing.Controls.Rendering
         private static void RenderBottomAxis(
             Graphics g,
             RectangleF plotRect,
-            AxisPresentationGeometry axis)
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
+            _ = endpointInset;
             var axisY = plotRect.Bottom;
             g.DrawLine(AxisPen, plotRect.Left, axisY, plotRect.Right, axisY);
 
-            var ticks = axis.Ticks;
-            for (var i = 0; i < ticks.Count; i++)
-            {
-                var tick = ticks[i];
-                var deviceX = DomainToDeviceX(tick.Value, axis.MinimumValue.Value, axis.MaximumValue.Value, plotRect);
-                g.DrawLine(AxisPen, deviceX, axisY, deviceX, axisY + TickLength);
+            // Ticks are already placed at inset-adjusted positions by the model.
+            // Only suppress the last label if it would overflow the physical plot area.
+            var maxLabelRight = plotRect.Right;
 
-                if (!string.IsNullOrEmpty(tick.Label))
+            var clip = g.ClipBounds;
+            if (sideBandRect.HasValue)
+            {
+                g.SetClip(sideBandRect.Value, System.Drawing.Drawing2D.CombineMode.Intersect);
+            }
+
+            var ticks = axis.Ticks;
+            var step = ComputeTickLabelStep(g, ticks, sideBandRect, AxisSide.Bottom);
+            try
+            {
+                for (var i = 0; i < ticks.Count; i++)
                 {
-                    var labelSize = g.MeasureString(tick.Label, TickFont);
-                    g.DrawString(
-                        tick.Label,
-                        TickFont,
-                        TickLabelBrush,
-                        deviceX - labelSize.Width / 2f,
-                        axisY + TickLength + TickLabelOffset);
+                    var tick = ticks[i];
+                    var deviceX = TickAnchorToDeviceX(tick, plotRect);
+                    g.DrawLine(AxisPen, deviceX, axisY, deviceX, axisY + TickLength);
+
+                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
+                    {
+                        var labelSize = g.MeasureString(tick.Label, TickFont);
+                        var labelRight = deviceX + (labelSize.Width / 2f);
+                        if (i == ticks.Count - 1 && labelRight > maxLabelRight)
+                        {
+                            continue;
+                        }
+
+                        var x = deviceX - labelSize.Width / 2f;
+                        var y = axisY + TickLength + TickLabelOffset;
+                        if (sideBandRect.HasValue)
+                        {
+                            y = Math.Min(y, sideBandRect.Value.Bottom - labelSize.Height);
+                        }
+
+                        g.DrawString(tick.Label, TickFont, TickLabelBrush, x, y);
+                    }
                 }
+            }
+            finally
+            {
+                g.SetClip(clip);
             }
         }
 
         private static void RenderLeftAxis(
             Graphics g,
             RectangleF plotRect,
-            AxisPresentationGeometry axis)
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
+            _ = endpointInset;
             var axisX = plotRect.Left;
             g.DrawLine(AxisPen, axisX, plotRect.Top, axisX, plotRect.Bottom);
 
-            var ticks = axis.Ticks;
-            for (var i = 0; i < ticks.Count; i++)
+            var clip = g.ClipBounds;
+            if (sideBandRect.HasValue)
             {
-                var tick = ticks[i];
-                var deviceY = DomainToDeviceY(tick.Value, axis.MinimumValue.Value, axis.MaximumValue.Value, plotRect);
-                g.DrawLine(AxisPen, axisX - TickLength, deviceY, axisX, deviceY);
+                g.SetClip(sideBandRect.Value, System.Drawing.Drawing2D.CombineMode.Intersect);
+            }
 
-                if (!string.IsNullOrEmpty(tick.Label))
+            var ticks = axis.Ticks;
+            var step = ComputeTickLabelStep(g, ticks, sideBandRect, AxisSide.Left);
+            try
+            {
+                for (var i = 0; i < ticks.Count; i++)
                 {
-                    var labelSize = g.MeasureString(tick.Label, TickFont);
-                    g.DrawString(
-                        tick.Label,
-                        TickFont,
-                        TickLabelBrush,
-                        axisX - TickLength - TickLabelOffset - labelSize.Width,
-                        deviceY - labelSize.Height / 2f);
+                    var tick = ticks[i];
+                    var deviceY = TickAnchorToDeviceY(tick, plotRect);
+                    g.DrawLine(AxisPen, axisX - TickLength, deviceY, axisX, deviceY);
+
+                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
+                    {
+                        var label = FitLabelToWidth(g, tick.Label, TickFont, sideBandRect.HasValue ? sideBandRect.Value.Width : float.MaxValue);
+                        if (string.IsNullOrEmpty(label))
+                        {
+                            continue;
+                        }
+
+                        var labelSize = g.MeasureString(label, TickFont);
+                        var x = axisX - TickLength - TickLabelOffset - labelSize.Width;
+                        var y = deviceY - labelSize.Height / 2f;
+                        if (sideBandRect.HasValue)
+                        {
+                            x = Math.Max(x, sideBandRect.Value.Left);
+                        }
+
+                        g.DrawString(label, TickFont, TickLabelBrush, x, y);
+                    }
                 }
+            }
+            finally
+            {
+                g.SetClip(clip);
             }
         }
 
         private static void RenderRightAxis(
             Graphics g,
             RectangleF plotRect,
-            AxisPresentationGeometry axis)
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
+            _ = endpointInset;
             var axisX = plotRect.Right;
             g.DrawLine(AxisPen, axisX, plotRect.Top, axisX, plotRect.Bottom);
 
-            var ticks = axis.Ticks;
-            for (var i = 0; i < ticks.Count; i++)
+            var clip = g.ClipBounds;
+            if (sideBandRect.HasValue)
             {
-                var tick = ticks[i];
-                var deviceY = DomainToDeviceY(tick.Value, axis.MinimumValue.Value, axis.MaximumValue.Value, plotRect);
-                g.DrawLine(AxisPen, axisX, deviceY, axisX + TickLength, deviceY);
+                g.SetClip(sideBandRect.Value, System.Drawing.Drawing2D.CombineMode.Intersect);
+            }
 
-                if (!string.IsNullOrEmpty(tick.Label))
+            var ticks = axis.Ticks;
+            var step = ComputeTickLabelStep(g, ticks, sideBandRect, AxisSide.Right);
+            try
+            {
+                for (var i = 0; i < ticks.Count; i++)
                 {
-                    g.DrawString(
-                        tick.Label,
-                        TickFont,
-                        TickLabelBrush,
-                        axisX + TickLength + TickLabelOffset,
-                        deviceY - TickFont.Height / 2f);
+                    var tick = ticks[i];
+                    var deviceY = TickAnchorToDeviceY(tick, plotRect);
+                    g.DrawLine(AxisPen, axisX, deviceY, axisX + TickLength, deviceY);
+
+                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
+                    {
+                        var label = FitLabelToWidth(g, tick.Label, TickFont, sideBandRect.HasValue ? sideBandRect.Value.Width : float.MaxValue);
+                        if (string.IsNullOrEmpty(label))
+                        {
+                            continue;
+                        }
+
+                        var labelSize = g.MeasureString(label, TickFont);
+                        var x = axisX + TickLength + TickLabelOffset;
+                        var y = deviceY - TickFont.Height / 2f;
+                        if (sideBandRect.HasValue)
+                        {
+                            x = Math.Min(x, sideBandRect.Value.Right - labelSize.Width);
+                        }
+
+                        g.DrawString(label, TickFont, TickLabelBrush, x, y);
+                    }
                 }
+            }
+            finally
+            {
+                g.SetClip(clip);
             }
         }
 
         private static void RenderTopAxis(
             Graphics g,
             RectangleF plotRect,
-            AxisPresentationGeometry axis)
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
+            _ = endpointInset;
             var axisY = plotRect.Top;
             g.DrawLine(AxisPen, plotRect.Left, axisY, plotRect.Right, axisY);
 
-            var ticks = axis.Ticks;
-            for (var i = 0; i < ticks.Count; i++)
+            var clip = g.ClipBounds;
+            if (sideBandRect.HasValue)
             {
-                var tick = ticks[i];
-                var deviceX = DomainToDeviceX(tick.Value, axis.MinimumValue.Value, axis.MaximumValue.Value, plotRect);
-                g.DrawLine(AxisPen, deviceX, axisY - TickLength, deviceX, axisY);
+                g.SetClip(sideBandRect.Value, System.Drawing.Drawing2D.CombineMode.Intersect);
+            }
 
-                if (!string.IsNullOrEmpty(tick.Label))
+            var ticks = axis.Ticks;
+            var step = ComputeTickLabelStep(g, ticks, sideBandRect, AxisSide.Top);
+            try
+            {
+                for (var i = 0; i < ticks.Count; i++)
                 {
-                    var labelSize = g.MeasureString(tick.Label, TickFont);
-                    g.DrawString(
-                        tick.Label,
-                        TickFont,
-                        TickLabelBrush,
-                        deviceX - labelSize.Width / 2f,
-                        axisY - TickLength - TickLabelOffset - TickFont.Height);
+                    var tick = ticks[i];
+                    var deviceX = TickAnchorToDeviceX(tick, plotRect);
+                    g.DrawLine(AxisPen, deviceX, axisY - TickLength, deviceX, axisY);
+
+                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
+                    {
+                        var labelSize = g.MeasureString(tick.Label, TickFont);
+                        var labelLeft = deviceX - (labelSize.Width / 2f);
+                        var labelRight = deviceX + (labelSize.Width / 2f);
+                        if (labelLeft < plotRect.Left || labelRight > plotRect.Right)
+                        {
+                            continue;
+                        }
+
+                        var x = deviceX - labelSize.Width / 2f;
+                        var y = axisY - TickLength - TickLabelOffset - TickFont.Height;
+                        if (sideBandRect.HasValue)
+                        {
+                            y = Math.Max(y, sideBandRect.Value.Top);
+                        }
+
+                        g.DrawString(tick.Label, TickFont, TickLabelBrush, x, y);
+                    }
                 }
+            }
+            finally
+            {
+                g.SetClip(clip);
             }
         }
 
-        private static void RenderAxisTitles(
-            Graphics g,
-            RectangleF plotRect,
-            GraphPresentationModel model)
+        private static RectangleF? FindAxisTickLabelRegionRect(
+            Rectangle deviceBounds,
+            IReadOnlyList<AxisTitleBandGeometry> bands,
+            AxisSide side)
         {
-            var axisEntries = model.Layout.Axes;
-
-            for (var i = 0; i < axisEntries.Count; i++)
+            if (bands == null)
             {
-                var entry = axisEntries[i];
-                var axis = entry.Axis;
-                var axisRect = ComputeAxisRect(plotRect, entry);
+                return null;
+            }
 
-                if (string.IsNullOrWhiteSpace(axis.Title))
+            for (var i = 0; i < bands.Count; i++)
+            {
+                if (bands[i].Side != side)
                 {
                     continue;
                 }
 
-                switch (entry.Side)
+                return ComputeDeviceBoundsForGeometry(
+                    deviceBounds,
+                    bands[i].AxisTickLabelRegion.BottomLeft,
+                    bands[i].AxisTickLabelRegion.TopRight);
+            }
+
+            return null;
+        }
+
+        private static void RenderAxisTitles(
+            Graphics g,
+            Rectangle deviceBounds,
+            IReadOnlyList<AxisTitleBandGeometry> bands)
+        {
+            if (bands == null)
+            {
+                return;
+            }
+
+            for (var bandIndex = 0; bandIndex < bands.Count; bandIndex++)
+            {
+                var items = bands[bandIndex].Items;
+                for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
                 {
-                    case AxisSide.Bottom:
-                        RenderBottomAxisTitle(g, axisRect, axis);
-                        break;
+                    var item = items[itemIndex];
+                    if (string.IsNullOrWhiteSpace(item.Title))
+                    {
+                        continue;
+                    }
 
-                    case AxisSide.Left:
-                        RenderLeftAxisTitle(g, axisRect, axis);
-                        break;
+                    var itemRect = ComputeDeviceBoundsForGeometry(
+                        deviceBounds,
+                        item.AxisTitleRegion.BottomLeft,
+                        item.AxisTitleRegion.TopRight);
+                    if (itemRect.Width <= 0 || itemRect.Height <= 0)
+                    {
+                        continue;
+                    }
 
-                    case AxisSide.Right:
-                        RenderRightAxisTitle(g, axisRect, axis);
-                        break;
+                    var centerX = itemRect.Left + (itemRect.Width / 2f);
+                    var centerY = itemRect.Top + (itemRect.Height / 2f);
 
-                    case AxisSide.Top:
-                        RenderTopAxisTitle(g, axisRect, axis);
-                        break;
+                    if (item.Side == AxisSide.Left)
+                    {
+                        DrawRotatedCenteredText(g, item.Title, AxisTitleFont, TickLabelBrush, centerX, centerY, -90f);
+                    }
+                    else if (item.Side == AxisSide.Right)
+                    {
+                        DrawRotatedCenteredText(g, item.Title, AxisTitleFont, TickLabelBrush, centerX, centerY, 90f);
+                    }
+                    else
+                    {
+                        var titleSize = g.MeasureString(item.Title, AxisTitleFont);
+                        var x = itemRect.Left + (itemRect.Width - titleSize.Width) / 2f;
+                        var y = itemRect.Top + (itemRect.Height - titleSize.Height) / 2f;
+                        g.DrawString(item.Title, AxisTitleFont, TickLabelBrush, x, y);
+                    }
                 }
             }
-        }
-
-        private static void RenderBottomAxisTitle(
-            Graphics g,
-            RectangleF plotRect,
-            AxisPresentationGeometry axis)
-        {
-            var tickLabelSize = MeasureMaxTickLabelSize(g, axis);
-            var titleSize = g.MeasureString(axis.Title, AxisTitleFont);
-            var x = plotRect.Left + (plotRect.Width - titleSize.Width) / 2f;
-            var y = plotRect.Bottom + TickLength + TickLabelOffset + tickLabelSize.Height + AxisTitleOffset;
-
-            g.DrawString(axis.Title, AxisTitleFont, TickLabelBrush, x, y);
-        }
-
-        private static void RenderTopAxisTitle(
-            Graphics g,
-            RectangleF plotRect,
-            AxisPresentationGeometry axis)
-        {
-            var tickLabelSize = MeasureMaxTickLabelSize(g, axis);
-            var titleSize = g.MeasureString(axis.Title, AxisTitleFont);
-            var x = plotRect.Left + (plotRect.Width - titleSize.Width) / 2f;
-            var y = plotRect.Top - TickLength - TickLabelOffset - tickLabelSize.Height - AxisTitleOffset - titleSize.Height;
-
-            g.DrawString(axis.Title, AxisTitleFont, TickLabelBrush, x, y);
-        }
-
-        private static void RenderLeftAxisTitle(
-            Graphics g,
-            RectangleF plotRect,
-            AxisPresentationGeometry axis)
-        {
-            var tickLabelSize = MeasureMaxTickLabelSize(g, axis);
-            var titleSize = g.MeasureString(axis.Title, AxisTitleFont);
-            var desiredRight = plotRect.Left - TickLength - TickLabelOffset - tickLabelSize.Width - AxisTitleOffset;
-            var centerX = desiredRight - titleSize.Height / 2f;
-            var centerY = plotRect.Top + plotRect.Height / 2f;
-
-            DrawRotatedCenteredText(g, axis.Title, AxisTitleFont, TickLabelBrush, centerX, centerY, -90f);
-        }
-
-        private static void RenderRightAxisTitle(
-            Graphics g,
-            RectangleF plotRect,
-            AxisPresentationGeometry axis)
-        {
-            var tickLabelSize = MeasureMaxTickLabelSize(g, axis);
-            var titleSize = g.MeasureString(axis.Title, AxisTitleFont);
-            var desiredLeft = plotRect.Right + TickLength + TickLabelOffset + tickLabelSize.Width + AxisTitleOffset;
-            var centerX = desiredLeft + titleSize.Height / 2f;
-            var centerY = plotRect.Top + plotRect.Height / 2f;
-
-            DrawRotatedCenteredText(g, axis.Title, AxisTitleFont, TickLabelBrush, centerX, centerY, 90f);
         }
 
         // ── Title rendering ───────────────────────────────────────────────────
@@ -445,6 +743,105 @@ namespace Graphing.Controls.Rendering
             g.DrawString(subtitle.Text, GraphSubtitleFont, TickLabelBrush, centerX, centerY);
         }
 
+        private static void RenderLegend(Graphics g, Rectangle deviceBounds, LegendPresentationGeometry legend)
+        {
+            if (legend == null)
+            {
+                return;
+            }
+
+            var legendRect = ComputeDeviceBoundsForGeometry(deviceBounds, legend.BottomLeft, legend.TopRight);
+            if (legendRect.Width <= 0 || legendRect.Height <= 0)
+            {
+                return;
+            }
+
+            if (legend.ShowBorder)
+            {
+                g.DrawRectangle(LegendBorderPen, legendRect.X, legendRect.Y, legendRect.Width, legendRect.Height);
+            }
+
+            var contentRect = ComputeDeviceBoundsForGeometry(deviceBounds, legend.ContentBottomLeft, legend.ContentTopRight);
+            var clip = g.ClipBounds;
+            g.SetClip(contentRect, System.Drawing.Drawing2D.CombineMode.Intersect);
+            try
+            {
+                var entries = legend.Entries;
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    RenderLegendEntry(g, deviceBounds, entries[i]);
+                }
+            }
+            finally
+            {
+                g.SetClip(clip);
+            }
+        }
+
+        private static void RenderLegendEntry(Graphics g, Rectangle deviceBounds, LegendEntryPresentationGeometry entry)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            var entryRect = ComputeDeviceBoundsForGeometry(deviceBounds, entry.BottomLeft, entry.TopRight);
+            if (entryRect.Width <= 0 || entryRect.Height <= 0)
+            {
+                return;
+            }
+
+            var glyphRect = ComputeDeviceBoundsForGeometry(deviceBounds, entry.GlyphBottomLeft, entry.GlyphTopRight);
+            var glyphLeft = Math.Max(entryRect.Left, glyphRect.Left);
+            var glyphWidth = Math.Min(LegendGlyphSampleWidth, Math.Max(0f, entryRect.Right - glyphLeft));
+            var glyphRight = glyphLeft + glyphWidth;
+            var glyphCenterY = glyphRect.Top + (glyphRect.Height / 2f);
+
+            using (var glyphPen = new Pen(entry.SeriesColor, LegendLineWidth))
+            {
+                g.DrawLine(glyphPen, glyphLeft, glyphCenterY, glyphRight, glyphCenterY);
+
+                var markerRadius = LegendMarkerSize / 2f;
+                var markerCenterX = glyphLeft + (glyphWidth / 2f);
+                g.DrawEllipse(
+                    glyphPen,
+                    markerCenterX - markerRadius,
+                    glyphCenterY - markerRadius,
+                    LegendMarkerSize,
+                    LegendMarkerSize);
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.DisplayText))
+            {
+                return;
+            }
+
+            var textX = glyphRight + LegendTextOffset;
+            var textSize = MeasureLegendText(g, entry.DisplayText);
+            var textY = entryRect.Top + ((entryRect.Height - textSize.Height) / 2f);
+            DrawLegendText(g, entry.DisplayText, textX, textY);
+        }
+
+        private static Size MeasureLegendText(Graphics g, string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return Size.Empty;
+            }
+
+            return TextRenderer.MeasureText(g, text, LegendFont, new Size(int.MaxValue, int.MaxValue), LegendTextFormatFlags);
+        }
+
+        private static void DrawLegendText(Graphics g, string text, float x, float y)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            TextRenderer.DrawText(g, text, LegendFont, new Point((int)Math.Round(x), (int)Math.Round(y)), Color.Black, LegendTextFormatFlags);
+        }
+
         /// <summary>
         /// Maps abstract geometry bounds to device pixel coordinates.
         /// </summary>
@@ -483,33 +880,90 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static SizeF MeasureMaxTickLabelSize(Graphics g, AxisPresentationGeometry axis)
+        private static int ComputeTickLabelStep(
+            Graphics g,
+            IReadOnlyList<AxisTickPresentation> ticks,
+            RectangleF? tickLabelRegion,
+            AxisSide side)
         {
-            var ticks = axis.Ticks;
-            var maxWidth = 0f;
-            var maxHeight = 0f;
+            var region = tickLabelRegion.Value;
+            if (region.Width <= 1f || region.Height <= 1f)
+            {
+                return int.MaxValue;
+            }
 
+            var maxLabelWidth = 0f;
             for (var i = 0; i < ticks.Count; i++)
             {
-                var label = ticks[i].Label;
-                if (string.IsNullOrEmpty(label))
+                if (string.IsNullOrWhiteSpace(ticks[i].Label))
                 {
                     continue;
                 }
 
-                var size = g.MeasureString(label, TickFont);
-                if (size.Width > maxWidth)
+                var size = g.MeasureString(ticks[i].Label, TickFont);
+                if (size.Width > maxLabelWidth)
                 {
-                    maxWidth = size.Width;
-                }
-
-                if (size.Height > maxHeight)
-                {
-                    maxHeight = size.Height;
+                    maxLabelWidth = size.Width;
                 }
             }
 
-            return new SizeF(maxWidth, maxHeight);
+            if (maxLabelWidth <= 0f)
+            {
+                return 1;
+            }
+
+            int allowedLabels;
+            if (side == AxisSide.Left || side == AxisSide.Right)
+            {
+                var slotHeight = TickFont.GetHeight(g) + 2f;
+                allowedLabels = slotHeight > 0f ? (int)Math.Floor(region.Height / slotHeight) : 1;
+            }
+            else
+            {
+                allowedLabels = (int)Math.Floor(region.Width / (maxLabelWidth + 2f));
+            }
+
+            if (allowedLabels <= 0)
+            {
+                return int.MaxValue;
+            }
+
+            return Math.Max(1, (int)Math.Ceiling(ticks.Count / (double)allowedLabels));
+        }
+
+        private static bool ShouldRenderTickLabel(int index, int step)
+        {
+            if (step == int.MaxValue)
+            {
+                return false;
+            }
+
+            return index % Math.Max(1, step) == 0;
+        }
+
+        private static string FitLabelToWidth(Graphics g, string text, Font font, float maxWidth)
+        {
+            if (string.IsNullOrEmpty(text) || maxWidth <= 1f)
+            {
+                return string.Empty;
+            }
+
+            if (g.MeasureString(text, font).Width <= maxWidth)
+            {
+                return text;
+            }
+
+            const string Ellipsis = "...";
+            for (var len = text.Length - 1; len > 0; len--)
+            {
+                var candidate = text.Substring(0, len) + Ellipsis;
+                if (g.MeasureString(candidate, font).Width <= maxWidth)
+                {
+                    return candidate;
+                }
+            }
+
+            return string.Empty;
         }
 
         // ── Series rendering ──────────────────────────────────────────────────
@@ -581,31 +1035,35 @@ namespace Graphing.Controls.Rendering
             }
 
             // Use a clipping region to keep lines inside the plot area.
+            // Use a clipping region to keep lines inside the plot area.
             var clip = g.ClipBounds;
             g.SetClip(plotRect, System.Drawing.Drawing2D.CombineMode.Intersect);
 
-            try
+            using (var seriesPen = new Pen(series.SeriesColor, SeriesLineWidth))
             {
-                PointF? previous = null;
-
-                for (var i = 0; i < points.Count; i++)
+                try
                 {
-                    var domainPoint = points[i];
-                    var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, plotRect);
-                    var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, plotRect);
-                    var current = new PointF(deviceX, deviceY);
+                    PointF? previous = null;
 
-                    if (previous.HasValue && series.ConnectivityIntent != SeriesConnectivityIntent.Discrete)
+                    for (var i = 0; i < points.Count; i++)
                     {
-                        g.DrawLine(SeriesPen, previous.Value, current);
-                    }
+                        var domainPoint = points[i];
+                        var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, plotRect);
+                        var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, plotRect);
+                        var current = new PointF(deviceX, deviceY);
 
-                    previous = current;
+                        if (previous.HasValue && series.ConnectivityIntent != SeriesConnectivityIntent.Discrete)
+                        {
+                            g.DrawLine(seriesPen, previous.Value, current);
+                        }
+
+                        previous = current;
+                    }
                 }
-            }
-            finally
-            {
-                g.SetClip(clip);
+                finally
+                {
+                    g.SetClip(clip);
+                }
             }
         }
 
@@ -644,7 +1102,7 @@ namespace Graphing.Controls.Rendering
             SeriesPresentationGeometry series,
             IReadOnlyList<AxisLayoutEntry> verticalAxisEntries)
         {
-            if (series == null || verticalAxisEntries == null || verticalAxisEntries.Count == 0)
+            if (verticalAxisEntries == null || verticalAxisEntries.Count == 0)
             {
                 return null;
             }
@@ -772,112 +1230,6 @@ namespace Graphing.Controls.Rendering
             return value;
         }
 
-        // ── Padding ───────────────────────────────────────────────────────────
-
-        private struct LabelPadding
-        {
-            internal float Top;
-            internal float Right;
-            internal float Bottom;
-            internal float Left;
-        }
-
-        /// <summary>
-        /// Measures renderer-only padding required to keep tick labels and axis titles visible.
-        /// </summary>
-        private static LabelPadding MeasureLabelPadding(Graphics g, GraphPresentationModel model)
-        {
-            var lineHeight = TickFont.GetHeight(g);
-            var titleLineHeight = AxisTitleFont.GetHeight(g);
-            var padding = new LabelPadding
-            {
-                Top = lineHeight / 2f + TickLabelOffset,
-                Right = lineHeight + TickLabelOffset,
-                Bottom = lineHeight + TickLabelOffset,
-                Left = lineHeight + TickLabelOffset,
-            };
-
-            var axisEntries = model.Layout.Axes;
-            for (var i = 0; i < axisEntries.Count; i++)
-            {
-                var entry = axisEntries[i];
-                var axis = entry.Axis;
-                var ticks = axis.Ticks;
-                var tickLabelSize = MeasureMaxTickLabelSize(g, axis);
-                var hasTitle = !string.IsNullOrWhiteSpace(axis.Title);
-                var titleHeightAllowance = hasTitle ? titleLineHeight + AxisTitleOffset : 0f;
-                var titleWidthAllowance = hasTitle ? titleLineHeight + AxisTitleOffset : 0f;
-
-                if (entry.Side == AxisSide.Bottom || entry.Side == AxisSide.Top)
-                {
-                    for (var t = 0; t < ticks.Count; t++)
-                    {
-                        if (string.IsNullOrEmpty(ticks[t].Label))
-                        {
-                            continue;
-                        }
-
-                        var sz = g.MeasureString(ticks[t].Label, TickFont);
-                        var halfWidth = sz.Width / 2f + TickLabelOffset;
-                        if (halfWidth > padding.Right)
-                        {
-                            padding.Right = halfWidth;
-                        }
-                    }
-                }
-
-                switch (entry.Side)
-                {
-                    case AxisSide.Bottom:
-                        padding.Bottom = Math.Max(
-                            padding.Bottom,
-                            TickLength + TickLabelOffset + tickLabelSize.Height + titleHeightAllowance);
-                        break;
-
-                    case AxisSide.Top:
-                        padding.Top = Math.Max(
-                            padding.Top,
-                            TickLength + TickLabelOffset + tickLabelSize.Height + titleHeightAllowance);
-                        break;
-
-                    case AxisSide.Left:
-                        padding.Left = Math.Max(
-                            padding.Left,
-                            TickLength + TickLabelOffset + tickLabelSize.Width + titleWidthAllowance);
-                        padding.Top = Math.Max(padding.Top, lineHeight / 2f + TickLabelOffset);
-                        break;
-
-                    case AxisSide.Right:
-                        padding.Right = Math.Max(
-                            padding.Right,
-                            TickLength + TickLabelOffset + tickLabelSize.Width + titleWidthAllowance);
-                        padding.Top = Math.Max(padding.Top, lineHeight / 2f + TickLabelOffset);
-                        break;
-                }
-            }
-
-            return padding;
-        }
-
-        /// <summary>
-        /// Shrinks <paramref name="deviceBounds"/> by the given <paramref name="padding"/>,
-        /// reserving edge space for labels and titles drawn outside the plot area.
-        /// </summary>
-        private static Rectangle ApplyPadding(Rectangle deviceBounds, LabelPadding padding)
-        {
-            var top = deviceBounds.Top + (int)Math.Ceiling(padding.Top);
-            var right = deviceBounds.Right - (int)Math.Ceiling(padding.Right);
-            var bottom = deviceBounds.Bottom - (int)Math.Ceiling(padding.Bottom);
-            var left = deviceBounds.Left + (int)Math.Ceiling(padding.Left);
-
-            if (right <= left || bottom <= top)
-            {
-                return deviceBounds;
-            }
-
-            return Rectangle.FromLTRB(left, top, right, bottom);
-        }
-
         // ── Coordinate transforms ─────────────────────────────────────────────
 
         /// <summary>
@@ -923,6 +1275,18 @@ namespace Graphing.Controls.Rendering
             }
             var t = (domainValue - domainMin) / range;
             return plotRect.Bottom - (float)(t * plotRect.Height);
+        }
+
+        private static float TickAnchorToDeviceX(AxisTickPresentation tick, RectangleF axisRect)
+        {
+            var t = Clamp01(tick.AnchorPoint.X);
+            return axisRect.Left + (float)(t * axisRect.Width);
+        }
+
+        private static float TickAnchorToDeviceY(AxisTickPresentation tick, RectangleF axisRect)
+        {
+            var t = Clamp01(tick.AnchorPoint.Y);
+            return axisRect.Bottom - (float)(t * axisRect.Height);
         }
     }
 }

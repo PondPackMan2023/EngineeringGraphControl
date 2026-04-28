@@ -105,6 +105,27 @@ namespace Graphing.TestHarness
 
         private GraphPresentationOptions CreateOptions()
         {
+            LegendPlacement legend = LegendPlacement.None;
+            if (checkBoxShowLegend.Checked)
+            {
+                if (radioButtonBottom.Checked)
+                {
+                    legend = LegendPlacement.Bottom;
+                }
+                else if (radioButtonLeft.Checked)
+                {
+                    legend = LegendPlacement.Left;
+                }
+                else if (radioButtonTop.Checked)
+                {
+                    legend = LegendPlacement.Top;
+                }
+                else if (radioButtonRight.Checked)
+                {
+                    legend = LegendPlacement.Right;
+                }
+            }
+
             ShowHideAxis(new AxisId("time"), !checkBoxXAxis.Checked);
             ShowHideAxis(new AxisId("elevation"), !checkBoxElevationYAxis.Checked);
             ShowHideAxis(new AxisId("pressure"), !checkBoxPressureYAxis.Checked);
@@ -113,7 +134,9 @@ namespace Graphing.TestHarness
             ShowHideSeries(new SeriesId("hgl-126"), !checkBoxHGL.Checked);
 
             return new GraphPresentationOptions(hiddenAxisIds: hiddenAxes.ToArray(),
-                hiddenSeriesIds: hiddenSeries.ToArray(), graphTitle: textBoxTitle.Text, graphSubtitle: textBoxSubTitle.Text);
+                hiddenSeriesIds: hiddenSeries.ToArray(), graphTitle: textBoxTitle.Text,
+                graphSubtitle: textBoxSubTitle.Text, resizeChart: checkBoxResizeChart.Checked,
+                legendPlacement: legend);
         }
 
         private void ApplyOptions()
@@ -160,6 +183,36 @@ namespace Graphing.TestHarness
         }
 
         private void buttonApplyTitles_Click(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxResizeChart_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void radioButtonBottom_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void radioButtonLeft_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void radioButtonTop_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void radioButtonRight_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxShowLegend_CheckedChanged(object sender, EventArgs e)
         {
             ApplyOptions();
         }
