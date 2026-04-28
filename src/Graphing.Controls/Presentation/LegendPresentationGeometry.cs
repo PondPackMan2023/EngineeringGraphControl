@@ -11,11 +11,15 @@ namespace Graphing.Controls.Presentation
         public LegendPresentationGeometry(
             GeometryPoint3D bottomLeft,
             GeometryPoint3D topRight,
+            GeometryPoint3D contentBottomLeft,
+            GeometryPoint3D contentTopRight,
             IReadOnlyList<LegendEntryPresentationGeometry> entries,
             bool showBorder = true)
         {
             BottomLeft = bottomLeft;
             TopRight = topRight;
+            ContentBottomLeft = contentBottomLeft;
+            ContentTopRight = contentTopRight;
             Entries = entries;
             ShowBorder = showBorder;
         }
@@ -23,6 +27,10 @@ namespace Graphing.Controls.Presentation
         public GeometryPoint3D BottomLeft { get; }
 
         public GeometryPoint3D TopRight { get; }
+
+        public GeometryPoint3D ContentBottomLeft { get; }
+
+        public GeometryPoint3D ContentTopRight { get; }
 
         public IReadOnlyList<LegendEntryPresentationGeometry> Entries { get; }
 

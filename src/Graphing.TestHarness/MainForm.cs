@@ -105,22 +105,25 @@ namespace Graphing.TestHarness
 
         private GraphPresentationOptions CreateOptions()
         {
-            LegendPlacement legend = LegendPlacement.Bottom;
-            if (radioButtonBottom.Checked)
+            LegendPlacement legend = LegendPlacement.None;
+            if (checkBoxShowLegend.Checked)
             {
-                legend = LegendPlacement.Bottom;
-            }
-            else if (radioButtonLeft.Checked)
-            {
-                legend = LegendPlacement.Left;
-            }
-            else if (radioButtonTop.Checked)
-            {
-                legend = LegendPlacement.Top;
-            }
-            else if (radioButtonRight.Checked)
-            {
-                legend = LegendPlacement.Right;
+                if (radioButtonBottom.Checked)
+                {
+                    legend = LegendPlacement.Bottom;
+                }
+                else if (radioButtonLeft.Checked)
+                {
+                    legend = LegendPlacement.Left;
+                }
+                else if (radioButtonTop.Checked)
+                {
+                    legend = LegendPlacement.Top;
+                }
+                else if (radioButtonRight.Checked)
+                {
+                    legend = LegendPlacement.Right;
+                }
             }
 
             ShowHideAxis(new AxisId("time"), !checkBoxXAxis.Checked);
@@ -205,6 +208,11 @@ namespace Graphing.TestHarness
         }
 
         private void radioButtonRight_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxShowLegend_CheckedChanged(object sender, EventArgs e)
         {
             ApplyOptions();
         }

@@ -1,3 +1,4 @@
+using System.Drawing;
 using Graphing.Controls.Models;
 using Graphing.Controls.Rendering.Geometry;
 
@@ -15,7 +16,8 @@ namespace Graphing.Controls.Presentation
             GeometryPoint3D bottomLeft,
             GeometryPoint3D topRight,
             GeometryPoint3D glyphBottomLeft,
-            GeometryPoint3D glyphTopRight)
+            GeometryPoint3D glyphTopRight,
+            Color seriesColor = default)
         {
             SeriesId = seriesId;
             DisplayText = displayText;
@@ -23,6 +25,7 @@ namespace Graphing.Controls.Presentation
             TopRight = topRight;
             GlyphBottomLeft = glyphBottomLeft;
             GlyphTopRight = glyphTopRight;
+            SeriesColor = seriesColor == default ? Color.SteelBlue : seriesColor;
         }
 
         public SeriesId SeriesId { get; }
@@ -36,5 +39,7 @@ namespace Graphing.Controls.Presentation
         public GeometryPoint3D GlyphBottomLeft { get; }
 
         public GeometryPoint3D GlyphTopRight { get; }
+
+        public Color SeriesColor { get; }
     }
 }

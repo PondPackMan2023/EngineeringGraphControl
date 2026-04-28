@@ -22,7 +22,9 @@ namespace Graphing.Controls.Presentation
             IEnumerable<AnnotationSemantic> annotations = null,
             bool showGraphBorder = true,
             LegendPlacement legendPlacement = LegendPlacement.Bottom,
-            bool resizeChart = true)
+            bool resizeChart = true,
+            AxisEndpointInsetMode axisEndpointInsetMode = AxisEndpointInsetMode.Auto,
+            double axisEndpointInsetFixedValue = 0.01)
         {
             _hiddenSeriesIds = hiddenSeriesIds != null
                 ? [.. hiddenSeriesIds]
@@ -40,6 +42,8 @@ namespace Graphing.Controls.Presentation
             ShowGraphBorder = showGraphBorder;
             LegendPlacement = legendPlacement;
             ResizeChart = resizeChart;
+            AxisEndpointInsetMode = axisEndpointInsetMode;
+            AxisEndpointInsetFixedValue = axisEndpointInsetFixedValue;
         }
 
         public string GraphTitle { get; }
@@ -51,6 +55,10 @@ namespace Graphing.Controls.Presentation
         public LegendPlacement LegendPlacement { get; }
 
         public bool ResizeChart { get; }
+
+        public AxisEndpointInsetMode AxisEndpointInsetMode { get; }
+
+        public double AxisEndpointInsetFixedValue { get; }
 
         public IReadOnlyList<AnnotationSemantic> Annotations
         {

@@ -5,9 +5,10 @@ namespace Graphing.Controls.Presentation
     /// </summary>
     public enum LegendPlacement
     {
-        Bottom = 0,
-        Top = 1,
-        Left = 2,
-        Right = 3,
+        None = 0,
+        Bottom = 1,
+        Top = 2,
+        Left = 3,
+        Right = 4,
     }
 }

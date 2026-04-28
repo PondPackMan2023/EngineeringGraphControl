@@ -66,10 +66,22 @@ namespace Graphing.Controls
 
             GraphPresentationModel presentation;
             GraphPresentationOptions options;
+            IGraphSnapshot snapshot;
             lock (_snapshotSync)
             {
                 presentation = _activePresentation;
                 options = _activePresentationOptions;
+                snapshot = _activeSnapshot;
+            }
+
+            if (snapshot != null)
+            {
+                var measurementInput = _renderer.CreateMeasurementInput(e.Graphics, ClientRectangle);
+                presentation = CreatePresentationModel(snapshot, options, measurementInput);
+                lock (_snapshotSync)
+                {
+                    _activePresentation = presentation;
+                }
             }
 
             if (presentation != null)
@@ -84,10 +96,12 @@ namespace Graphing.Controls
             Invalidate();
         }
 
-        protected virtual GraphPresentationModel CreatePresentationModel(IGraphSnapshot snapshot,
-            GraphPresentationOptions options = null)
+        protected virtual GraphPresentationModel CreatePresentationModel(
+            IGraphSnapshot snapshot,
+            GraphPresentationOptions options = null,
+            IGraphLayoutMeasurementInput measurementInput = null)
         {
-            return new GraphPresentationModel(snapshot, options);
+            return new GraphPresentationModel(snapshot, options, measurementInput);
         }
 
         private void TryInstallSnapshotAndPresentation(IGraphSnapshot nextSnapshot,

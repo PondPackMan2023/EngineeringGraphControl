@@ -11,13 +11,15 @@ namespace Graphing.Controls.Presentation
             AxisSide side,
             int sideIndex,
             double normalizedSpanStart,
-            double normalizedSpanEnd)
+            double normalizedSpanEnd,
+            double tickEndpointInset)
         {
             Axis = axis;
             Side = side;
             SideIndex = sideIndex;
             NormalizedSpanStart = normalizedSpanStart;
             NormalizedSpanEnd = normalizedSpanEnd;
+            TickEndpointInset = tickEndpointInset;
         }
 
         /// <summary>
@@ -46,5 +48,10 @@ namespace Graphing.Controls.Presentation
         /// For stacked left-side axes this represents the upper Y bound of the axis region.
         /// </summary>
         public double NormalizedSpanEnd { get; }
+
+        /// <summary>
+        /// Axis-internal symmetric inset applied to tick label endpoints in plot-normalized units.
+        /// </summary>
+        public double TickEndpointInset { get; }
     }
 }

@@ -73,8 +73,27 @@ namespace Graphing.TestHarness.Scenarios
                 44.465744, 44.356205, 44.222588, 44.095119, 44.023846,
                 43.955742, 43.930233, 43.865326
             };
+            // Multiply the values in pressures by 0.25.
+            for (int i = 0; i < pressures.Length; i++)
+            {
+                pressures[i] *= 0.25;
+            }
+            // Create a copy of the times array and then adjust the values by adding 60 to each.
+            double[] adjustedTimes = new double[times.Length];
+            for (int i = 0; i < times.Length; i++)
+            {
+                adjustedTimes[i] = times[i] + 3600;
+            }
+
+            double[] adjustedTimes2 = new double[times.Length];
+            for (int i = 0; i < times.Length; i++)
+            {
+                adjustedTimes2[i] = times[i] + 7200;
+            }
 
             var timeField = new GraphFieldDefinition("Time", "Time", Units.Time.Second, times);
+            var adjTimeField = new GraphFieldDefinition("Adjusted Time", "Time", Units.Time.Second, adjustedTimes);
+            var adjTimeField2 = new GraphFieldDefinition("Adjusted Time (2)", "Time", Units.Time.Second, adjustedTimes2);
             var hglField = new GraphFieldDefinition("HGL", "Hydraulic Grade Line", Units.Length.Meter, hgl);
             var pressureField = new GraphFieldDefinition("Pressure", "Pressure", Units.Pressure.Psi, pressures);
 
@@ -82,12 +101,16 @@ namespace Graphing.TestHarness.Scenarios
                 NumericFormatterLibrary.DefaultTimeFormatter);
             var lengthYAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
                 NumericFormatterLibrary.DefaultElevationFormatter);
-            var pressureYAxis = new AxisModel(new AxisId("pressure"), AxisOrientation.Y, AxisSide.Left, Units.Pressure.Psi, "psi",
+            var pressureYAxis = new AxisModel(new AxisId("pressure"), AxisOrientation.Y, AxisSide.Right, Units.Pressure.Psi, "psi",
                 NumericFormatterLibrary.DefaultPressureFormatter);
-            var hglSeries = new GraphSeriesModel(new SeriesId("hgl-126"), "J-1", SeriesType.Line, timeField, hglField, xAxis, lengthYAxis);
-            var psiSeries = new GraphSeriesModel(new SeriesId("pressure-126"), "J-1", SeriesType.Line, timeField, pressureField, xAxis, pressureYAxis);
+            var leftPressureYAxis = new AxisModel(new AxisId("pressure"), AxisOrientation.Y, AxisSide.Left, Units.Pressure.Psi, "psi",
+                NumericFormatterLibrary.DefaultPressureFormatter);
 
-            var graph = new GraphModel(new[] { xAxis, lengthYAxis, pressureYAxis }, new[] { hglSeries, psiSeries });
+            var hglSeries = new GraphSeriesModel(new SeriesId("hgl-126"), "J-1 HGL", SeriesType.Line, timeField, hglField, xAxis, lengthYAxis);
+            var psiSeries = new GraphSeriesModel(new SeriesId("pressure-126"), "J-1 Pressure", SeriesType.Line, adjTimeField, pressureField, xAxis, pressureYAxis);
+            var psiSeries2 = new GraphSeriesModel(new SeriesId("pressure2-126"), "My very very long label", SeriesType.Line, adjTimeField2, pressureField, xAxis, leftPressureYAxis);
+
+            var graph = new GraphModel(new[] { xAxis, lengthYAxis, pressureYAxis, leftPressureYAxis }, new[] { hglSeries, psiSeries, psiSeries2 });
 
             return graph;
         }

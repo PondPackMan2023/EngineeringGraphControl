@@ -30,7 +30,6 @@ namespace Graphing.TestHarness
         /// </summary>
         private void InitializeComponent()
         {
-            this.graphControl = new Graphing.Controls.EngineeringGraphControl();
             this.groupBoxUnits = new System.Windows.Forms.GroupBox();
             this.buttonPressure = new System.Windows.Forms.Button();
             this.buttonElevation = new System.Windows.Forms.Button();
@@ -48,24 +47,16 @@ namespace Graphing.TestHarness
             this.buttonApplyTitles = new System.Windows.Forms.Button();
             this.checkBoxResizeChart = new System.Windows.Forms.CheckBox();
             this.groupBoxLegend = new System.Windows.Forms.GroupBox();
-            this.radioButtonBottom = new System.Windows.Forms.RadioButton();
-            this.radioButtonLeft = new System.Windows.Forms.RadioButton();
-            this.radioButtonTop = new System.Windows.Forms.RadioButton();
+            this.checkBoxShowLegend = new System.Windows.Forms.CheckBox();
             this.radioButtonRight = new System.Windows.Forms.RadioButton();
+            this.radioButtonTop = new System.Windows.Forms.RadioButton();
+            this.radioButtonLeft = new System.Windows.Forms.RadioButton();
+            this.radioButtonBottom = new System.Windows.Forms.RadioButton();
+            this.graphControl = new Graphing.Controls.EngineeringGraphControl();
             this.groupBoxUnits.SuspendLayout();
             this.groupBoxSeriesAxesVisibility.SuspendLayout();
             this.groupBoxLegend.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // graphControl
-            // 
-            this.graphControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.graphControl.Location = new System.Drawing.Point(12, 12);
-            this.graphControl.Name = "graphControl";
-            this.graphControl.Size = new System.Drawing.Size(670, 371);
-            this.graphControl.TabIndex = 0;
             // 
             // groupBoxUnits
             // 
@@ -261,6 +252,7 @@ namespace Graphing.TestHarness
             // 
             // checkBoxResizeChart
             // 
+            this.checkBoxResizeChart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.checkBoxResizeChart.AutoSize = true;
             this.checkBoxResizeChart.Checked = true;
             this.checkBoxResizeChart.CheckState = System.Windows.Forms.CheckState.Checked;
@@ -275,6 +267,8 @@ namespace Graphing.TestHarness
             // 
             // groupBoxLegend
             // 
+            this.groupBoxLegend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxLegend.Controls.Add(this.checkBoxShowLegend);
             this.groupBoxLegend.Controls.Add(this.radioButtonRight);
             this.groupBoxLegend.Controls.Add(this.radioButtonTop);
             this.groupBoxLegend.Controls.Add(this.radioButtonLeft);
@@ -285,7 +279,56 @@ namespace Graphing.TestHarness
             this.groupBoxLegend.Size = new System.Drawing.Size(100, 122);
             this.groupBoxLegend.TabIndex = 9;
             this.groupBoxLegend.TabStop = false;
-            this.groupBoxLegend.Text = "Legend";
+            // 
+            // checkBoxShowLegend
+            // 
+            this.checkBoxShowLegend.AutoSize = true;
+            this.checkBoxShowLegend.Checked = true;
+            this.checkBoxShowLegend.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxShowLegend.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxShowLegend.Location = new System.Drawing.Point(6, -2);
+            this.checkBoxShowLegend.Name = "checkBoxShowLegend";
+            this.checkBoxShowLegend.Size = new System.Drawing.Size(68, 18);
+            this.checkBoxShowLegend.TabIndex = 10;
+            this.checkBoxShowLegend.Text = "Legend";
+            this.checkBoxShowLegend.UseVisualStyleBackColor = true;
+            this.checkBoxShowLegend.CheckedChanged += new System.EventHandler(this.checkBoxShowLegend_CheckedChanged);
+            // 
+            // radioButtonRight
+            // 
+            this.radioButtonRight.AutoSize = true;
+            this.radioButtonRight.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.radioButtonRight.Location = new System.Drawing.Point(6, 90);
+            this.radioButtonRight.Name = "radioButtonRight";
+            this.radioButtonRight.Size = new System.Drawing.Size(56, 18);
+            this.radioButtonRight.TabIndex = 3;
+            this.radioButtonRight.Text = "Right";
+            this.radioButtonRight.UseVisualStyleBackColor = true;
+            this.radioButtonRight.CheckedChanged += new System.EventHandler(this.radioButtonRight_CheckedChanged);
+            // 
+            // radioButtonTop
+            // 
+            this.radioButtonTop.AutoSize = true;
+            this.radioButtonTop.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.radioButtonTop.Location = new System.Drawing.Point(6, 66);
+            this.radioButtonTop.Name = "radioButtonTop";
+            this.radioButtonTop.Size = new System.Drawing.Size(50, 18);
+            this.radioButtonTop.TabIndex = 2;
+            this.radioButtonTop.Text = "Top";
+            this.radioButtonTop.UseVisualStyleBackColor = true;
+            this.radioButtonTop.CheckedChanged += new System.EventHandler(this.radioButtonTop_CheckedChanged);
+            // 
+            // radioButtonLeft
+            // 
+            this.radioButtonLeft.AutoSize = true;
+            this.radioButtonLeft.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.radioButtonLeft.Location = new System.Drawing.Point(6, 42);
+            this.radioButtonLeft.Name = "radioButtonLeft";
+            this.radioButtonLeft.Size = new System.Drawing.Size(49, 18);
+            this.radioButtonLeft.TabIndex = 1;
+            this.radioButtonLeft.Text = "Left";
+            this.radioButtonLeft.UseVisualStyleBackColor = true;
+            this.radioButtonLeft.CheckedChanged += new System.EventHandler(this.radioButtonLeft_CheckedChanged);
             // 
             // radioButtonBottom
             // 
@@ -301,41 +344,15 @@ namespace Graphing.TestHarness
             this.radioButtonBottom.UseVisualStyleBackColor = true;
             this.radioButtonBottom.CheckedChanged += new System.EventHandler(this.radioButtonBottom_CheckedChanged);
             // 
-            // radioButtonLeft
+            // graphControl
             // 
-            this.radioButtonLeft.AutoSize = true;
-            this.radioButtonLeft.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.radioButtonLeft.Location = new System.Drawing.Point(6, 42);
-            this.radioButtonLeft.Name = "radioButtonLeft";
-            this.radioButtonLeft.Size = new System.Drawing.Size(49, 18);
-            this.radioButtonLeft.TabIndex = 1;
-            this.radioButtonLeft.Text = "Left";
-            this.radioButtonLeft.UseVisualStyleBackColor = true;
-            this.radioButtonLeft.CheckedChanged += new System.EventHandler(this.radioButtonLeft_CheckedChanged);
-            // 
-            // radioButtonTop
-            // 
-            this.radioButtonTop.AutoSize = true;
-            this.radioButtonTop.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.radioButtonTop.Location = new System.Drawing.Point(6, 66);
-            this.radioButtonTop.Name = "radioButtonTop";
-            this.radioButtonTop.Size = new System.Drawing.Size(50, 18);
-            this.radioButtonTop.TabIndex = 2;
-            this.radioButtonTop.Text = "Top";
-            this.radioButtonTop.UseVisualStyleBackColor = true;
-            this.radioButtonTop.CheckedChanged += new System.EventHandler(this.radioButtonTop_CheckedChanged);
-            // 
-            // radioButtonRight
-            // 
-            this.radioButtonRight.AutoSize = true;
-            this.radioButtonRight.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.radioButtonRight.Location = new System.Drawing.Point(6, 90);
-            this.radioButtonRight.Name = "radioButtonRight";
-            this.radioButtonRight.Size = new System.Drawing.Size(56, 18);
-            this.radioButtonRight.TabIndex = 3;
-            this.radioButtonRight.Text = "Right";
-            this.radioButtonRight.UseVisualStyleBackColor = true;
-            this.radioButtonRight.CheckedChanged += new System.EventHandler(this.radioButtonRight_CheckedChanged);
+            this.graphControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.graphControl.Location = new System.Drawing.Point(12, 12);
+            this.graphControl.Name = "graphControl";
+            this.graphControl.Size = new System.Drawing.Size(670, 371);
+            this.graphControl.TabIndex = 0;
             // 
             // MainForm
             // 
@@ -387,5 +404,6 @@ namespace Graphing.TestHarness
         private System.Windows.Forms.RadioButton radioButtonTop;
         private System.Windows.Forms.RadioButton radioButtonLeft;
         private System.Windows.Forms.RadioButton radioButtonBottom;
+        private System.Windows.Forms.CheckBox checkBoxShowLegend;
     }
 }
