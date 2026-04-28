@@ -467,12 +467,15 @@ namespace Graphing.Controls.Presentation
             var topCount = topAxes.Count;
             var hasLegend = series != null && series.Count > 0;
             var legendPlacement = options.LegendPlacement;
-            var reservedLegendHeight = hasLegend && (legendPlacement == LegendPlacement.Bottom || legendPlacement == LegendPlacement.Top)
+            var resizeChart = options.ResizeChart;
+            var legendBandHeight = hasLegend && (legendPlacement == LegendPlacement.Bottom || legendPlacement == LegendPlacement.Top)
                 ? LegendBandHeight
                 : 0d;
-            var reservedLegendWidth = hasLegend && (legendPlacement == LegendPlacement.Left || legendPlacement == LegendPlacement.Right)
+            var legendBandWidth = hasLegend && (legendPlacement == LegendPlacement.Left || legendPlacement == LegendPlacement.Right)
                 ? LegendBandWidth
                 : 0d;
+            var reservedLegendHeight = resizeChart ? legendBandHeight : 0d;
+            var reservedLegendWidth = resizeChart ? legendBandWidth : 0d;
 
             // Calculate space reserved for title and subtitle above plot area
             var titleExists = !string.IsNullOrEmpty(options.GraphTitle);
@@ -515,9 +518,10 @@ namespace Graphing.Controls.Presentation
                 ? BuildLegendGeometry(
                     series,
                     legendPlacement,
+                    resizeChart,
                     plotArea,
-                    reservedLegendWidth,
-                    reservedLegendHeight)
+                    legendBandWidth,
+                    legendBandHeight)
                 : null;
 
             // Create title and subtitle geometries
@@ -545,9 +549,10 @@ namespace Graphing.Controls.Presentation
         private static LegendPresentationGeometry BuildLegendGeometry(
             IReadOnlyList<SeriesPresentationGeometry> series,
             LegendPlacement placement,
+            bool resizeChart,
             PlotAreaLayout plotArea,
-            double reservedLegendWidth,
-            double reservedLegendHeight)
+            double legendBandWidth,
+            double legendBandHeight)
         {
             if (series == null || series.Count == 0)
             {
@@ -562,32 +567,72 @@ namespace Graphing.Controls.Presentation
             switch (placement)
             {
                 case LegendPlacement.Top:
-                    bandLeft = plotArea.BottomLeft.X;
-                    bandRight = plotArea.TopRight.X;
-                    bandTop = 1.0;
-                    bandBottom = bandTop - reservedLegendHeight;
+                    if (resizeChart)
+                    {
+                        bandLeft = plotArea.BottomLeft.X;
+                        bandRight = plotArea.TopRight.X;
+                        bandTop = 1.0;
+                        bandBottom = bandTop - legendBandHeight;
+                    }
+                    else
+                    {
+                        bandLeft = plotArea.BottomLeft.X;
+                        bandRight = plotArea.TopRight.X;
+                        bandTop = plotArea.TopRight.Y;
+                        bandBottom = Math.Max(plotArea.BottomLeft.Y, bandTop - legendBandHeight);
+                    }
                     break;
 
                 case LegendPlacement.Left:
-                    bandLeft = 0d;
-                    bandRight = reservedLegendWidth;
-                    bandBottom = plotArea.BottomLeft.Y;
-                    bandTop = plotArea.TopRight.Y;
+                    if (resizeChart)
+                    {
+                        bandLeft = 0d;
+                        bandRight = legendBandWidth;
+                        bandBottom = plotArea.BottomLeft.Y;
+                        bandTop = plotArea.TopRight.Y;
+                    }
+                    else
+                    {
+                        bandLeft = plotArea.BottomLeft.X;
+                        bandRight = Math.Min(plotArea.TopRight.X, bandLeft + legendBandWidth);
+                        bandBottom = plotArea.BottomLeft.Y;
+                        bandTop = plotArea.TopRight.Y;
+                    }
                     break;
 
                 case LegendPlacement.Right:
-                    bandRight = 1.0;
-                    bandLeft = bandRight - reservedLegendWidth;
-                    bandBottom = plotArea.BottomLeft.Y;
-                    bandTop = plotArea.TopRight.Y;
+                    if (resizeChart)
+                    {
+                        bandRight = 1.0;
+                        bandLeft = bandRight - legendBandWidth;
+                        bandBottom = plotArea.BottomLeft.Y;
+                        bandTop = plotArea.TopRight.Y;
+                    }
+                    else
+                    {
+                        bandRight = plotArea.TopRight.X;
+                        bandLeft = Math.Max(plotArea.BottomLeft.X, bandRight - legendBandWidth);
+                        bandBottom = plotArea.BottomLeft.Y;
+                        bandTop = plotArea.TopRight.Y;
+                    }
                     break;
 
                 case LegendPlacement.Bottom:
                 default:
-                    bandLeft = plotArea.BottomLeft.X;
-                    bandRight = plotArea.TopRight.X;
-                    bandBottom = 0d;
-                    bandTop = reservedLegendHeight;
+                    if (resizeChart)
+                    {
+                        bandLeft = plotArea.BottomLeft.X;
+                        bandRight = plotArea.TopRight.X;
+                        bandBottom = 0d;
+                        bandTop = legendBandHeight;
+                    }
+                    else
+                    {
+                        bandLeft = plotArea.BottomLeft.X;
+                        bandRight = plotArea.TopRight.X;
+                        bandBottom = plotArea.BottomLeft.Y;
+                        bandTop = Math.Min(plotArea.TopRight.Y, bandBottom + legendBandHeight);
+                    }
                     break;
             }
 

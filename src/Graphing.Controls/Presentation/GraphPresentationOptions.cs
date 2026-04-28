@@ -21,7 +21,8 @@ namespace Graphing.Controls.Presentation
             string graphSubtitle = null,
             IEnumerable<AnnotationSemantic> annotations = null,
             bool showGraphBorder = true,
-            LegendPlacement legendPlacement = LegendPlacement.Bottom)
+            LegendPlacement legendPlacement = LegendPlacement.Bottom,
+            bool resizeChart = true)
         {
             _hiddenSeriesIds = hiddenSeriesIds != null
                 ? [.. hiddenSeriesIds]
@@ -38,6 +39,7 @@ namespace Graphing.Controls.Presentation
                 [.. annotations ?? []]);
             ShowGraphBorder = showGraphBorder;
             LegendPlacement = legendPlacement;
+            ResizeChart = resizeChart;
         }
 
         public string GraphTitle { get; }
@@ -47,6 +49,8 @@ namespace Graphing.Controls.Presentation
         public bool ShowGraphBorder { get; }
 
         public LegendPlacement LegendPlacement { get; }
+
+        public bool ResizeChart { get; }
 
         public IReadOnlyList<AnnotationSemantic> Annotations
         {

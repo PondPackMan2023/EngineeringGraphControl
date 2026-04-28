@@ -429,6 +429,14 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void Layout_LegendResizeChart_DefaultsToTrue()
+        {
+            var options = new GraphPresentationOptions();
+
+            Assert.That(options.ResizeChart, Is.True);
+        }
+
+        [Test]
         public void Layout_Legend_OmittedWhenNoSeriesVisible()
         {
             var model = CreateModel(seriesType: SeriesType.Line);
@@ -696,6 +704,178 @@ namespace Graphing.Tests
                 {
                     Assert.That(presentation.Series[0].Points[pointIndex].X, Is.EqualTo(baseline.Series[0].Points[pointIndex].X));
                     Assert.That(presentation.Series[0].Points[pointIndex].Y, Is.EqualTo(baseline.Series[0].Points[pointIndex].Y));
+                }
+            }
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void Layout_LegendOverlay_DoesNotResizePlotArea(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var baselineWithoutLegend = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenSeriesIds: new[] { new SeriesId("1") }, legendPlacement: placement));
+            var overlay = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: placement, resizeChart: false));
+
+            Assert.That(overlay.Layout.PlotArea.BottomLeft.X, Is.EqualTo(baselineWithoutLegend.Layout.PlotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(overlay.Layout.PlotArea.BottomLeft.Y, Is.EqualTo(baselineWithoutLegend.Layout.PlotArea.BottomLeft.Y).Within(1e-12));
+            Assert.That(overlay.Layout.PlotArea.TopRight.X, Is.EqualTo(baselineWithoutLegend.Layout.PlotArea.TopRight.X).Within(1e-12));
+            Assert.That(overlay.Layout.PlotArea.TopRight.Y, Is.EqualTo(baselineWithoutLegend.Layout.PlotArea.TopRight.Y).Within(1e-12));
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void Layout_LegendOverlay_IsPositionedInsidePlotAreaByPlacement(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var overlay = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: placement, resizeChart: false));
+
+            var legend = overlay.Layout.Legend;
+            var plotArea = overlay.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.BottomLeft.X, Is.GreaterThanOrEqualTo(plotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(legend.TopRight.X, Is.LessThanOrEqualTo(plotArea.TopRight.X).Within(1e-12));
+            Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+            Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.TopRight.Y).Within(1e-12));
+
+            switch (placement)
+            {
+                case LegendPlacement.Bottom:
+                    Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+                    Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y + LegendBandHeightConst).Within(1e-12));
+                    break;
+
+                case LegendPlacement.Top:
+                    Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.TopRight.Y).Within(1e-12));
+                    Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(plotArea.TopRight.Y - LegendBandHeightConst).Within(1e-12));
+                    break;
+
+                case LegendPlacement.Left:
+                    Assert.That(legend.BottomLeft.X, Is.GreaterThanOrEqualTo(plotArea.BottomLeft.X).Within(1e-12));
+                    Assert.That(legend.TopRight.X, Is.LessThanOrEqualTo(plotArea.BottomLeft.X + LegendBandWidthConst).Within(1e-12));
+                    break;
+
+                case LegendPlacement.Right:
+                    Assert.That(legend.TopRight.X, Is.LessThanOrEqualTo(plotArea.TopRight.X).Within(1e-12));
+                    Assert.That(legend.BottomLeft.X, Is.GreaterThanOrEqualTo(plotArea.TopRight.X - LegendBandWidthConst).Within(1e-12));
+                    break;
+            }
+        }
+
+        [Test]
+        public void Layout_LegendOverlay_RespectsAxisTitleProtectedSpace_Bottom()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var overlay = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: LegendPlacement.Bottom, resizeChart: false));
+
+            var legend = overlay.Layout.Legend;
+            var plotArea = overlay.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12),
+                "Overlay legend should remain inside plot and outside protected bottom axis-title band.");
+        }
+
+        [Test]
+        public void Layout_LegendOverlay_RespectsAxisTitleProtectedSpace_Top()
+        {
+            var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Top, yAxisSide: ModelAxisSide.Left);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var overlay = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: LegendPlacement.Top, resizeChart: false));
+
+            var legend = overlay.Layout.Legend;
+            var plotArea = overlay.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.TopRight.Y, Is.LessThanOrEqualTo(plotArea.TopRight.Y).Within(1e-12),
+                "Overlay legend should remain inside plot and outside protected top axis-title band.");
+        }
+
+        [Test]
+        public void Layout_LegendOverlay_RespectsAxisTitleProtectedSpace_Left()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var overlay = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: LegendPlacement.Left, resizeChart: false));
+
+            var legend = overlay.Layout.Legend;
+            var plotArea = overlay.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.BottomLeft.X, Is.GreaterThanOrEqualTo(plotArea.BottomLeft.X).Within(1e-12),
+                "Overlay legend should remain inside plot and outside protected left axis-title band.");
+        }
+
+        [Test]
+        public void Layout_LegendOverlay_RespectsAxisTitleProtectedSpace_Right()
+        {
+            var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Right);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var overlay = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: LegendPlacement.Right, resizeChart: false));
+
+            var legend = overlay.Layout.Legend;
+            var plotArea = overlay.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.TopRight.X, Is.LessThanOrEqualTo(plotArea.TopRight.X).Within(1e-12),
+                "Overlay legend should remain inside plot and outside protected right axis-title band.");
+        }
+
+        [Test]
+        public void Layout_LegendOverlay_DoesNotAffectAxisGridOrSeriesGeometry()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var resizeLayout = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: LegendPlacement.Right, resizeChart: true));
+            var overlayLayout = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(legendPlacement: LegendPlacement.Right, resizeChart: false));
+
+            Assert.That(overlayLayout.Axes.Count, Is.EqualTo(resizeLayout.Axes.Count));
+            Assert.That(overlayLayout.Series.Count, Is.EqualTo(resizeLayout.Series.Count));
+            Assert.That(overlayLayout.Layout.GridLines.VerticalLines.Count, Is.EqualTo(resizeLayout.Layout.GridLines.VerticalLines.Count));
+            Assert.That(overlayLayout.Layout.GridLines.HorizontalLines.Count, Is.EqualTo(resizeLayout.Layout.GridLines.HorizontalLines.Count));
+
+            for (var i = 0; i < resizeLayout.Axes.Count; i++)
+            {
+                Assert.That(overlayLayout.Axes[i].AxisId, Is.EqualTo(resizeLayout.Axes[i].AxisId));
+                Assert.That(overlayLayout.Axes[i].Orientation, Is.EqualTo(resizeLayout.Axes[i].Orientation));
+                Assert.That(overlayLayout.Axes[i].Side, Is.EqualTo(resizeLayout.Axes[i].Side));
+                Assert.That(overlayLayout.Axes[i].Ticks.Count, Is.EqualTo(resizeLayout.Axes[i].Ticks.Count));
+            }
+
+            for (var seriesIndex = 0; seriesIndex < resizeLayout.Series.Count; seriesIndex++)
+            {
+                Assert.That(overlayLayout.Series[seriesIndex].Points.Count, Is.EqualTo(resizeLayout.Series[seriesIndex].Points.Count));
+                for (var pointIndex = 0; pointIndex < resizeLayout.Series[seriesIndex].Points.Count; pointIndex++)
+                {
+                    Assert.That(overlayLayout.Series[seriesIndex].Points[pointIndex].X, Is.EqualTo(resizeLayout.Series[seriesIndex].Points[pointIndex].X));
+                    Assert.That(overlayLayout.Series[seriesIndex].Points[pointIndex].Y, Is.EqualTo(resizeLayout.Series[seriesIndex].Points[pointIndex].Y));
                 }
             }
         }
