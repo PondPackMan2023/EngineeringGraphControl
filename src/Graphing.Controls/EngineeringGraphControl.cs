@@ -15,6 +15,7 @@ namespace Graphing.Controls
         private IGraphModel _graphModel;
         private IGraphSnapshot _activeSnapshot;
         private GraphPresentationModel _activePresentation;
+        private GraphPresentationOptions _activePresentationOptions;
 
         public EngineeringGraphControl()
         {
@@ -64,14 +65,16 @@ namespace Graphing.Controls
             base.OnPaint(e);
 
             GraphPresentationModel presentation;
+            GraphPresentationOptions options;
             lock (_snapshotSync)
             {
                 presentation = _activePresentation;
+                options = _activePresentationOptions;
             }
 
             if (presentation != null)
             {
-                _renderer.Render(e.Graphics, ClientRectangle, presentation);
+                _renderer.Render(e.Graphics, ClientRectangle, presentation, options);
             }
         }
 
@@ -99,6 +102,7 @@ namespace Graphing.Controls
             {
                 _activeSnapshot = null;
                 _activePresentation = null;
+                _activePresentationOptions = null;
                 return;
             }
 
@@ -114,6 +118,7 @@ namespace Graphing.Controls
 
             _activeSnapshot = nextSnapshot;
             _activePresentation = nextPresentation;
+            _activePresentationOptions = options;
             Invalidate();
         }
     }

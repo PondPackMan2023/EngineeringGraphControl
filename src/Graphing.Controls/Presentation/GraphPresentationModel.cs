@@ -492,12 +492,16 @@ namespace Graphing.Controls.Presentation
                 ? BuildSubtitleGeometry(options.GraphSubtitle, titleGeometry, plotArea)
                 : null;
 
+            // Create grid lines geometry
+            var gridLines = BuildGridLinesGeometry(entries, plotArea);
+
             return new GraphLayoutModel(
                 plotArea,
                 new ReadOnlyCollection<AxisLayoutEntry>(entries),
                 series,
                 titleGeometry,
-                subtitleGeometry);
+                subtitleGeometry,
+                gridLines);
         }
 
         private static TitlePresentationGeometry BuildTitleGeometry(string titleText, double topY)
@@ -526,6 +530,105 @@ namespace Graphing.Controls.Presentation
                 subtitleText,
                 new GeometryPoint3D(0d, subtitleBottom, 0d),
                 new GeometryPoint3D(1d, subtitleTop, 0d));
+        }
+
+        private static GridLinesGeometry BuildGridLinesGeometry(
+            IReadOnlyList<AxisLayoutEntry> axisEntries,
+            PlotAreaLayout plotArea)
+        {
+            var verticalLines = new List<GridLineGeometry>();
+            var horizontalLines = new List<GridLineGeometry>();
+
+            // Grid lines are rendered inside the plot rectangle. In this geometry,
+            // tick-derived positions remain normalized in plot-local space [0,1],
+            // and extents must always span the full plot-local bounds.
+            const double PlotLocalStart = 0d;
+            const double PlotLocalEnd = 1d;
+
+            for (var i = 0; i < axisEntries.Count; i++)
+            {
+                var entry = axisEntries[i];
+                var axis = entry.Axis;
+
+                // Vertical grid lines from X-axis (Bottom/Top) ticks
+                if ((entry.Side == AxisSide.Bottom || entry.Side == AxisSide.Top) &&
+                    axis.Orientation == AxisOrientation.Horizontal)
+                {
+                    if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var domainMin = axis.MinimumValue.Value;
+                    var domainMax = axis.MaximumValue.Value;
+                    var domainRange = domainMax - domainMin;
+
+                    var ticks = axis.Ticks;
+                    for (var tickIndex = 0; tickIndex < ticks.Count; tickIndex++)
+                    {
+                        var tick = ticks[tickIndex];
+                        // Normalize domain value to [0, 1] within axis bounds
+                        var normalizedX = Math.Abs(domainRange) > double.Epsilon
+                            ? (tick.Value - domainMin) / domainRange
+                            : 0.5;
+
+                        // Clip to plot-local bounds.
+                        if (normalizedX >= PlotLocalStart && normalizedX <= PlotLocalEnd)
+                        {
+                            verticalLines.Add(new GridLineGeometry(
+                                AxisOrientation.Vertical,
+                                new GeometryPoint3D(normalizedX, PlotLocalStart, 0d),
+                                new GeometryPoint3D(normalizedX, PlotLocalEnd, 0d)));
+                        }
+                    }
+                }
+
+                // Horizontal grid lines from Y-axis (Left/Right) ticks
+                if ((entry.Side == AxisSide.Left || entry.Side == AxisSide.Right) &&
+                    axis.Orientation == AxisOrientation.Vertical)
+                {
+                    if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var domainMin = axis.MinimumValue.Value;
+                    var domainMax = axis.MaximumValue.Value;
+                    var domainRange = domainMax - domainMin;
+                    var spanStart = entry.NormalizedSpanStart;
+                    var spanEnd = entry.NormalizedSpanEnd;
+                    var spanHeight = spanEnd - spanStart;
+
+                    if (spanHeight <= 0d)
+                    {
+                        continue;
+                    }
+
+                    var ticks = axis.Ticks;
+                    for (var tickIndex = 0; tickIndex < ticks.Count; tickIndex++)
+                    {
+                        var tick = ticks[tickIndex];
+                        // Normalize domain value to [0,1] within the owning axis domain,
+                        // then map into this axis' allocated vertical span.
+                        var axisRelativeY = Math.Abs(domainRange) > double.Epsilon
+                            ? (tick.Value - domainMin) / domainRange
+                            : 0.5;
+
+                        var normalizedY = spanStart + (axisRelativeY * spanHeight);
+
+                        // Clip to the owning axis span so lines do not bleed into other stacked bands.
+                        if (normalizedY >= spanStart && normalizedY <= spanEnd)
+                        {
+                            horizontalLines.Add(new GridLineGeometry(
+                                AxisOrientation.Horizontal,
+                                new GeometryPoint3D(PlotLocalStart, normalizedY, 0d),
+                                new GeometryPoint3D(PlotLocalEnd, normalizedY, 0d)));
+                        }
+                    }
+                }
+            }
+
+            return new GridLinesGeometry(verticalLines, horizontalLines);
         }
 
         private static GraphSemanticModel BuildSemanticModel(

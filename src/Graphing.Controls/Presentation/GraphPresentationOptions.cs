@@ -19,7 +19,8 @@ namespace Graphing.Controls.Presentation
             IEnumerable<AxisId> hiddenAxisIds = null,
             string graphTitle = null,
             string graphSubtitle = null,
-            IEnumerable<AnnotationSemantic> annotations = null)
+            IEnumerable<AnnotationSemantic> annotations = null,
+            bool showGraphBorder = true)
         {
             _hiddenSeriesIds = hiddenSeriesIds != null
                 ? [.. hiddenSeriesIds]
@@ -34,11 +35,14 @@ namespace Graphing.Controls.Presentation
             HiddenAxisIds = new ReadOnlyCollection<AxisId>([.. _hiddenAxisIds]);
             _annotations = new ReadOnlyCollection<AnnotationSemantic>(
                 [.. annotations ?? []]);
+            ShowGraphBorder = showGraphBorder;
         }
 
         public string GraphTitle { get; }
 
         public string GraphSubtitle { get; }
+
+        public bool ShowGraphBorder { get; }
 
         public IReadOnlyList<AnnotationSemantic> Annotations
         {
