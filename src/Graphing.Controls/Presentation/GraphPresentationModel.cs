@@ -15,11 +15,11 @@ namespace Graphing.Controls.Presentation
     public sealed class GraphPresentationModel
     {
         private const int MaxLeftAxisCount = 6;
-        private const double AxisStackGap = 0.025;
+        private const double AxisStackGap = 0.06;
         private const double SideBandSiblingGap = 0.0025;
         private const double EdgePaddingThickness = 0.012;
         private const double LegendBoundaryEpsilon = 1e-6;
-            private const double VerticalAxisEndpointInsetAutoFactor = 0.60;
+        private const double VerticalAxisEndpointInsetAutoFactor = 0.60;
         private const double HorizontalAxisEndpointInsetAutoFactor = 0.85;
         private const double TitleHeight = 0.06;
         private const double SubtitleHeight = 0.04;
@@ -1688,24 +1688,24 @@ namespace Graphing.Controls.Presentation
                 switch (entry.Side)
                 {
                     case AxisSide.Left:
-                    {
-                        var y0 = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * Clamp01(entry.NormalizedSpanStart));
-                        var y1 = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * Clamp01(entry.NormalizedSpanEnd));
-                        leftItems.Add(new AxisTitlePresentationItem(
-                            axis.AxisId,
-                            AxisSide.Left,
-                            axis.Orientation,
-                            axis.Title,
-                            new GeometryPoint3D(leftBandLeft, y0, 0d),
-                            new GeometryPoint3D(leftBandRight, y1, 0d),
-                            new AxisBandRegionGeometry(
+                        {
+                            var y0 = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * Clamp01(entry.NormalizedSpanStart));
+                            var y1 = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * Clamp01(entry.NormalizedSpanEnd));
+                            leftItems.Add(new AxisTitlePresentationItem(
+                                axis.AxisId,
+                                AxisSide.Left,
+                                axis.Orientation,
+                                axis.Title,
                                 new GeometryPoint3D(leftBandLeft, y0, 0d),
-                                new GeometryPoint3D(Math.Max(leftBandLeft, leftTitleRight), y1, 0d)),
-                            new AxisBandRegionGeometry(
-                                new GeometryPoint3D(Math.Min(leftBandRight, Math.Max(leftBandLeft, leftTickLeft)), y0, 0d),
-                                new GeometryPoint3D(leftBandRight, y1, 0d))));
-                        break;
-                    }
+                                new GeometryPoint3D(leftBandRight, y1, 0d),
+                                new AxisBandRegionGeometry(
+                                    new GeometryPoint3D(leftBandLeft, y0, 0d),
+                                    new GeometryPoint3D(Math.Max(leftBandLeft, leftTitleRight), y1, 0d)),
+                                new AxisBandRegionGeometry(
+                                    new GeometryPoint3D(Math.Min(leftBandRight, Math.Max(leftBandLeft, leftTickLeft)), y0, 0d),
+                                    new GeometryPoint3D(leftBandRight, y1, 0d))));
+                            break;
+                        }
                     case AxisSide.Right:
                         rightItems.Add(new AxisTitlePresentationItem(
                             axis.AxisId,
