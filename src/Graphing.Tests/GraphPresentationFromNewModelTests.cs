@@ -17,7 +17,7 @@ namespace Graphing.Tests
     [TestFixture]
     public class GraphPresentationFromNewModelTests
     {
-        private const double AxisStackGap = 0.025;
+        private const double AxisStackGap = 0.06;
         private const double EdgePaddingBandConst = 0.012;
         private const double LegendBandHeightConst = 0.12;
         private const double LegendBandWidthConst = 0.18;
