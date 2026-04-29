@@ -1,0 +1,370 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using Graphing.Controls.Models.Series;
+using Graphing.Controls.Rendering.Geometry;
+using Graphing.Controls.Snapshot;
+using UnitRegistry.Formatting;
+using ModelAxisOrientation = Graphing.Controls.Models.AxisOrientation;
+using ModelAxisSide = Graphing.Controls.Models.AxisSide;
+
+namespace Graphing.Controls.Presentation
+{
+    public sealed partial class GraphPresentationModel
+    {
+        private static IReadOnlyList<SeriesGeometryContext> BuildSeriesGeometry(
+            IGraphSnapshot snapshot,
+            GraphPresentationOptions options)
+        {
+            var result = new List<SeriesGeometryContext>();
+            var seriesSnapshots = snapshot != null ? snapshot.Series : null;
+
+            if (seriesSnapshots == null)
+            {
+                return new ReadOnlyCollection<SeriesGeometryContext>(result);
+            }
+
+            for (var seriesIndex = 0; seriesIndex < seriesSnapshots.Count; seriesIndex++)
+            {
+                var seriesSnapshot = seriesSnapshots[seriesIndex];
+                if (seriesSnapshot == null)
+                {
+                    continue;
+                }
+
+                if (!options.IsSeriesVisible(seriesSnapshot))
+                {
+                    continue;
+                }
+
+                var points = BuildPoints(seriesSnapshot.XField, seriesSnapshot.YField);
+                var paletteColor = SeriesColorPalette[result.Count % SeriesColorPalette.Length];
+                var geometry = new SeriesPresentationGeometry(
+                    seriesSnapshot.SeriesId,
+                    seriesSnapshot.Label,
+                    seriesSnapshot.SeriesType,
+                    ResolveConnectivity(seriesSnapshot.SeriesType),
+                    points,
+                    paletteColor);
+
+                result.Add(new SeriesGeometryContext(seriesSnapshot, geometry));
+            }
+
+            return new ReadOnlyCollection<SeriesGeometryContext>(result);
+        }
+
+        private static IReadOnlyList<SeriesPresentationGeometry> BuildSeriesList(IReadOnlyList<SeriesGeometryContext> contexts)
+        {
+            var result = new List<SeriesPresentationGeometry>(contexts.Count);
+
+            for (var index = 0; index < contexts.Count; index++)
+            {
+                result.Add(contexts[index].Geometry);
+            }
+
+            return new ReadOnlyCollection<SeriesPresentationGeometry>(result);
+        }
+
+        private static IReadOnlyList<AxisPresentationGeometry> BuildAxisGeometry(
+            IGraphSnapshot snapshot,
+            IReadOnlyList<SeriesGeometryContext> seriesContexts,
+            GraphPresentationOptions options)
+        {
+            var result = new List<AxisPresentationGeometry>();
+            var axisSnapshots = snapshot != null ? snapshot.Axes : null;
+
+            if (axisSnapshots == null)
+            {
+                return new ReadOnlyCollection<AxisPresentationGeometry>(result);
+            }
+
+            for (var axisIndex = 0; axisIndex < axisSnapshots.Count; axisIndex++)
+            {
+                var axisSnapshot = axisSnapshots[axisIndex];
+                if (axisSnapshot == null)
+                {
+                    continue;
+                }
+
+                var identity = BuildAxisIdentity(axisSnapshot);
+                if (!options.IsAxisVisible(axisSnapshot))
+                {
+                    continue;
+                }
+
+                var orientation = ResolveAxisOrientation(axisSnapshot.Orientation);
+                var side = ResolveAxisSide(axisSnapshot.Side);
+                var title = axisSnapshot.Title;
+                var formatter = ResolveAxisFormatter(axisSnapshot);
+                var linePoints = BuildAxisLine(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation);
+                var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, formatter, axisSnapshot.Unit);
+
+                result.Add(
+                    new AxisPresentationGeometry(
+                        identity,
+                        axisSnapshot.AxisId,
+                        side,
+                        orientation,
+                        title,
+                        axisSnapshot.FormatterName,
+                        axisSnapshot.DisplayUnitLabel,
+                        axisSnapshot.MinimumValue,
+                        axisSnapshot.MaximumValue,
+                        linePoints,
+                        ticks));
+            }
+
+            return new ReadOnlyCollection<AxisPresentationGeometry>(result);
+        }
+
+        private static IReadOnlyList<GeometryPoint3D> BuildPoints(IFieldSnapshot xField, IFieldSnapshot yField)
+        {
+            if (xField == null || yField == null)
+            {
+                return new ReadOnlyCollection<GeometryPoint3D>(new List<GeometryPoint3D>());
+            }
+
+            var xValues = xField.Values;
+            var yValues = yField.Values;
+
+            if (xValues == null || yValues == null)
+            {
+                return new ReadOnlyCollection<GeometryPoint3D>(new List<GeometryPoint3D>());
+            }
+
+            var pointCount = Math.Min(xValues.Length, yValues.Length);
+            var points = new List<GeometryPoint3D>(pointCount);
+
+            for (var index = 0; index < pointCount; index++)
+            {
+                var xVal = TryToDouble(xValues.GetValue(index));
+                var yVal = TryToDouble(yValues.GetValue(index));
+
+                if (double.IsNaN(xVal) || double.IsNaN(yVal))
+                {
+                    continue;
+                }
+
+                points.Add(new GeometryPoint3D(xVal, yVal, 0d));
+            }
+
+            return new ReadOnlyCollection<GeometryPoint3D>(points);
+        }
+
+        private static AxisOrientation ResolveAxisOrientation(ModelAxisOrientation orientation)
+        {
+            return orientation == ModelAxisOrientation.X
+                ? AxisOrientation.Horizontal
+                : AxisOrientation.Vertical;
+        }
+
+        private static AxisSide ResolveAxisSide(ModelAxisSide side)
+        {
+            switch (side)
+            {
+                case ModelAxisSide.Left:
+                    return AxisSide.Left;
+
+                case ModelAxisSide.Right:
+                    return AxisSide.Right;
+
+                case ModelAxisSide.Bottom:
+                    return AxisSide.Bottom;
+
+                case ModelAxisSide.Top:
+                    return AxisSide.Top;
+
+                default:
+                    return AxisSide.Other;
+            }
+        }
+
+        private static string BuildAxisIdentity(IAxisSnapshot axisSnapshot)
+        {
+            if (!string.IsNullOrWhiteSpace(axisSnapshot.AxisId))
+            {
+                return axisSnapshot.AxisId;
+            }
+
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}|{1}",
+                axisSnapshot.FormatterName ?? string.Empty,
+                axisSnapshot.DisplayUnitLabel ?? string.Empty);
+        }
+
+        private static NumericFormatter ResolveAxisFormatter(IAxisSnapshot axisSnapshot)
+        {
+            var fields = axisSnapshot.Fields;
+            if (fields == null)
+            {
+                return null;
+            }
+
+            for (var index = 0; index < fields.Count; index++)
+            {
+                if (fields[index] != null && fields[index].Formatter != null)
+                {
+                    return fields[index].Formatter;
+                }
+            }
+
+            return null;
+        }
+
+        private static IReadOnlyList<GeometryPoint3D> BuildAxisLine(
+            double? minimumValue,
+            double? maximumValue,
+            AxisOrientation orientation)
+        {
+            var points = new List<GeometryPoint3D>();
+
+            if (!minimumValue.HasValue || !maximumValue.HasValue)
+            {
+                return new ReadOnlyCollection<GeometryPoint3D>(points);
+            }
+
+            if (orientation == AxisOrientation.Horizontal)
+            {
+                points.Add(new GeometryPoint3D(minimumValue.Value, 0d, 0d));
+                points.Add(new GeometryPoint3D(maximumValue.Value, 0d, 0d));
+            }
+            else
+            {
+                points.Add(new GeometryPoint3D(0d, minimumValue.Value, 0d));
+                points.Add(new GeometryPoint3D(0d, maximumValue.Value, 0d));
+            }
+
+            return new ReadOnlyCollection<GeometryPoint3D>(points);
+        }
+
+        private static IReadOnlyList<AxisTickPresentation> BuildAxisTicks(
+            double? minimumValue,
+            double? maximumValue,
+            NumericFormatter formatter,
+            UnitRegistry.Unit unit)
+        {
+            var ticks = new List<AxisTickPresentation>();
+
+            if (!minimumValue.HasValue || !maximumValue.HasValue)
+            {
+                return new ReadOnlyCollection<AxisTickPresentation>(ticks);
+            }
+
+            var tickValues = BuildTickValues(minimumValue.Value, maximumValue.Value);
+
+            for (var index = 0; index < tickValues.Count; index++)
+            {
+                var value = tickValues[index];
+                ticks.Add(new AxisTickPresentation(value, FormatAxisLabel(formatter, value)));
+            }
+
+            return new ReadOnlyCollection<AxisTickPresentation>(ticks);
+        }
+
+        private static IReadOnlyList<double> BuildTickValues(double minimumValue, double maximumValue)
+        {
+            if (minimumValue == maximumValue)
+            {
+                return new ReadOnlyCollection<double>(new List<double> { minimumValue });
+            }
+
+            const int TickCount = 5;
+            var ticks = new List<double>(TickCount);
+            var increment = (maximumValue - minimumValue) / (TickCount - 1);
+
+            for (var index = 0; index < TickCount; index++)
+            {
+                ticks.Add(minimumValue + (increment * index));
+            }
+
+            return new ReadOnlyCollection<double>(ticks);
+        }
+
+        private static string FormatAxisLabel(NumericFormatter formatter, double value)
+        {
+            if (formatter != null)
+            {
+                return formatter.Format(value);
+            }
+
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static double TryToDouble(object value)
+        {
+            if (value == null)
+            {
+                return double.NaN;
+            }
+
+            try
+            {
+                return Convert.ToDouble(value, CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                return double.NaN;
+            }
+        }
+
+        private static SeriesConnectivityIntent ResolveConnectivity(SeriesType seriesType)
+        {
+            switch (seriesType)
+            {
+                case SeriesType.Line:
+                case SeriesType.Profile:
+                case SeriesType.Contour:
+                    return SeriesConnectivityIntent.Continuous;
+
+                case SeriesType.Bar:
+                    return SeriesConnectivityIntent.Step;
+
+                case SeriesType.Scatter:
+                case SeriesType.Shape:
+                    return SeriesConnectivityIntent.Discrete;
+
+                case SeriesType.Auto:
+                default:
+                    return SeriesConnectivityIntent.Unspecified;
+            }
+        }
+
+        private static void BindSeriesAxisEntries(
+            IReadOnlyList<SeriesGeometryContext> seriesContexts,
+            IReadOnlyList<AxisLayoutEntry> layoutAxes)
+        {
+            var axisLookup = new Dictionary<string, AxisLayoutEntry>(StringComparer.Ordinal);
+
+            for (var i = 0; i < layoutAxes.Count; i++)
+            {
+                var entry = layoutAxes[i];
+                var axisId = entry.Axis.AxisId;
+                if (!string.IsNullOrEmpty(axisId) && !axisLookup.ContainsKey(axisId))
+                {
+                    axisLookup[axisId] = entry;
+                }
+            }
+
+            for (var i = 0; i < seriesContexts.Count; i++)
+            {
+                var context = seriesContexts[i];
+                var xAxisId = context.Source.XAxisId;
+                var yAxisId = context.Source.YAxisId;
+
+                if (!string.IsNullOrEmpty(xAxisId))
+                {
+                    axisLookup.TryGetValue(xAxisId, out var xEntry);
+                    context.Geometry.XAxisEntry = xEntry;
+                }
+
+                if (!string.IsNullOrEmpty(yAxisId))
+                {
+                    axisLookup.TryGetValue(yAxisId, out var yEntry);
+                    context.Geometry.YAxisEntry = yEntry;
+                }
+            }
+        }
+    }
+}
