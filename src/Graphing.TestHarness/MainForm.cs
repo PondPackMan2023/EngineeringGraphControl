@@ -41,6 +41,30 @@ namespace Graphing.TestHarness
             graphControl.SetGraphSource(graph, CreateOptions());
         }
 
+        private void buttonScenarioC_Click(object sender, EventArgs e)
+        {
+            checkBoxPressureYAxis.Checked = true;
+            checkBoxPressure.Checked = true;
+
+            checkBoxPressureYAxis.Visible = false;
+            checkBoxPressure.Visible = false;
+
+            var graph = ScenarioDefinitions.BuildScenarioC();
+            graphControl.SetGraphSource(graph, CreateOptions());
+        }
+
+        private void buttonScenarioD_Click(object sender, EventArgs e)
+        {
+            checkBoxPressureYAxis.Checked = true;
+            checkBoxPressure.Checked = true;
+
+            checkBoxPressureYAxis.Visible = false;
+            checkBoxPressure.Visible = false;
+
+            var graph = ScenarioDefinitions.BuildScenarioD();
+            graphControl.SetGraphSource(graph, CreateOptions());
+        }
+
         private void buttonTime_Click(object sender, System.EventArgs e)
         {
             var allTimeUnits = Units.Time.All;

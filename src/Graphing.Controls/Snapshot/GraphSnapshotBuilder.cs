@@ -67,7 +67,17 @@ namespace Graphing.Controls.Snapshot
                     var axis = axes[axisIndex];
                     if (axis != null && axis.Id != null)
                     {
-                        lookup[axis.Id.Value] = axis;
+                        var axisId = axis.Id.Value;
+                        if (lookup.ContainsKey(axisId))
+                        {
+                            throw new InvalidOperationException(
+                                string.Format(
+                                    CultureInfo.InvariantCulture,
+                                    "Graph model contains duplicate AxisId '{0}'. Axis ids must be unique.",
+                                    axisId));
+                        }
+
+                        lookup[axisId] = axis;
                     }
                 }
             }

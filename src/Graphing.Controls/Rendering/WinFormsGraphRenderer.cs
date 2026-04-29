@@ -65,7 +65,7 @@ namespace Graphing.Controls.Rendering
             }
 
             RenderOuterGraphBorder(g, deviceBounds, options);
-            RenderGridLines(g, plotRect, model.Layout.GridLines);
+            RenderGridLines(g, plotRect, model.Layout.GridLines, model);
             RenderAxes(g, plotRect, deviceBounds, model);
             RenderPlotAreaBorder(g, plotRect);
             RenderSeries(g, plotRect, model);
@@ -301,11 +301,11 @@ namespace Graphing.Controls.Rendering
         /// <summary>
         /// Renders grid lines derived from axis ticks.
         /// Grid lines are drawn inside the plot area, behind series.
-        /// Geometry is consumed directly from the PresentationModel.
+        /// Each grid line is normalized using its bound AxisLayoutEntry, exactly like series geometry.
         /// </summary>
-        private static void RenderGridLines(Graphics g, RectangleF plotRect, GridLinesGeometry gridLines)
+        private static void RenderGridLines(Graphics g, RectangleF plotRect, GridLinesGeometry gridLines, GraphPresentationModel model)
         {
-            if (gridLines == null)
+            if (gridLines == null || model == null)
             {
                 return;
             }
@@ -317,40 +317,91 @@ namespace Graphing.Controls.Rendering
             try
             {
                 // Render vertical grid lines (from X-axis ticks)
+                // Vertical grid lines span the full plot height using the full plotRect.
                 var verticalLines = gridLines.VerticalLines;
                 for (var i = 0; i < verticalLines.Count; i++)
                 {
                     var line = verticalLines[i];
-                    var startDevice = ComputeDevicePoint(plotRect, line.Start);
-                    var endDevice = ComputeDevicePoint(plotRect, line.End);
-                    g.DrawLine(GridLinesPen, startDevice, endDevice);
+                    if (line.AxisEntry == null)
+                    {
+                        continue;
+                    }
+
+                    var xAxis = line.AxisEntry.Axis;
+                    if (!xAxis.MinimumValue.HasValue || !xAxis.MaximumValue.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var xMin = xAxis.MinimumValue.Value;
+                    var xMax = xAxis.MaximumValue.Value;
+                    var axisRect = ComputeAxisRect(plotRect, line.AxisEntry);
+
+                    // Render vertical line spanning full plot height.
+                    var startDeviceX = DomainToDeviceX(line.Start.X, xMin, xMax, axisRect);
+                    var endDeviceX = DomainToDeviceX(line.End.X, xMin, xMax, axisRect);
+                    var startDeviceY = plotRect.Top;
+                    var endDeviceY = plotRect.Bottom;
+
+                    g.DrawLine(GridLinesPen, startDeviceX, startDeviceY, endDeviceX, endDeviceY);
                 }
 
                 // Render horizontal grid lines (from Y-axis ticks)
+                // Each horizontal grid line must be mapped using its bound Y-axis rectangle,
+                // exactly like series geometry. This ensures correct positioning with stacked axes.
                 var horizontalLines = gridLines.HorizontalLines;
                 for (var i = 0; i < horizontalLines.Count; i++)
                 {
                     var line = horizontalLines[i];
-                    var startDevice = ComputeDevicePoint(plotRect, line.Start);
-                    var endDevice = ComputeDevicePoint(plotRect, line.End);
-                    g.DrawLine(GridLinesPen, startDevice, endDevice);
+                    if (line.AxisEntry == null)
+                    {
+                        continue;
+                    }
+
+                    var yAxis = line.AxisEntry.Axis;
+                    if (!yAxis.MinimumValue.HasValue || !yAxis.MaximumValue.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var yMin = yAxis.MinimumValue.Value;
+                    var yMax = yAxis.MaximumValue.Value;
+
+                    // Aggregate all X-axis domains to span the full plot width.
+                    var xEntries = model.Layout.Axes;
+                    var xMin = double.MaxValue;
+                    var xMax = double.MinValue;
+
+                    for (var j = 0; j < xEntries.Count; j++)
+                    {
+                        var entry = xEntries[j];
+                        if (entry.Axis.Orientation == AxisOrientation.Horizontal && entry.Axis.MinimumValue.HasValue && entry.Axis.MaximumValue.HasValue)
+                        {
+                            xMin = Math.Min(xMin, entry.Axis.MinimumValue.Value);
+                            xMax = Math.Max(xMax, entry.Axis.MaximumValue.Value);
+                        }
+                    }
+
+                    if (xMin >= xMax)
+                    {
+                        continue;
+                    }
+
+                    // Map using the Y-axis-specific rectangle to respect stacked layout.
+                    var axisRect = ComputeAxisRect(plotRect, line.AxisEntry);
+
+                    var startDeviceX = DomainToDeviceX(line.Start.X, xMin, xMax, plotRect);
+                    var endDeviceX = DomainToDeviceX(line.End.X, xMin, xMax, plotRect);
+                    var startDeviceY = DomainToDeviceY(line.Start.Y, yMin, yMax, axisRect);
+                    var endDeviceY = DomainToDeviceY(line.End.Y, yMin, yMax, axisRect);
+
+                    g.DrawLine(GridLinesPen, startDeviceX, startDeviceY, endDeviceX, endDeviceY);
                 }
             }
             finally
             {
                 g.SetClip(clip);
             }
-        }
-
-        /// <summary>
-        /// Maps a point from normalized abstract space to device pixel coordinates.
-        /// Used for grid lines and other geometry rendering.
-        /// </summary>
-        private static PointF ComputeDevicePoint(RectangleF plotRect, GeometryPoint3D abstractPoint)
-        {
-            var deviceX = plotRect.Left + (float)(abstractPoint.X * plotRect.Width);
-            var deviceY = plotRect.Bottom - (float)(abstractPoint.Y * plotRect.Height);
-            return new PointF(deviceX, deviceY);
         }
 
         // ── Axis rendering ────────────────────────────────────────────────────
@@ -404,10 +455,16 @@ namespace Graphing.Controls.Rendering
             double endpointInset)
         {
             _ = endpointInset;
+            if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+            {
+                return;
+            }
+
+            var domainMin = axis.MinimumValue.Value;
+            var domainMax = axis.MaximumValue.Value;
             var axisY = plotRect.Bottom;
             g.DrawLine(AxisPen, plotRect.Left, axisY, plotRect.Right, axisY);
 
-            // Ticks are already placed at inset-adjusted positions by the model.
             // Only suppress the last label if it would overflow the physical plot area.
             var maxLabelRight = plotRect.Right;
 
@@ -424,7 +481,7 @@ namespace Graphing.Controls.Rendering
                 for (var i = 0; i < ticks.Count; i++)
                 {
                     var tick = ticks[i];
-                    var deviceX = TickAnchorToDeviceX(tick, plotRect);
+                    var deviceX = DomainToDeviceX(tick.Value, domainMin, domainMax, plotRect);
                     g.DrawLine(AxisPen, deviceX, axisY, deviceX, axisY + TickLength);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
@@ -461,6 +518,13 @@ namespace Graphing.Controls.Rendering
             double endpointInset)
         {
             _ = endpointInset;
+            if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+            {
+                return;
+            }
+
+            var domainMin = axis.MinimumValue.Value;
+            var domainMax = axis.MaximumValue.Value;
             var axisX = plotRect.Left;
             g.DrawLine(AxisPen, axisX, plotRect.Top, axisX, plotRect.Bottom);
 
@@ -477,8 +541,8 @@ namespace Graphing.Controls.Rendering
                 for (var i = 0; i < ticks.Count; i++)
                 {
                     var tick = ticks[i];
-                    var deviceY = TickAnchorToDeviceY(tick, plotRect);
-                    g.DrawLine(AxisPen, axisX - TickLength, deviceY, axisX, deviceY);
+                    var deviceY = DomainToDeviceY(tick.Value, domainMin, domainMax, plotRect);
+                    g.DrawLine(AxisPen, axisX, deviceY, axisX + TickLength, deviceY);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
@@ -514,6 +578,13 @@ namespace Graphing.Controls.Rendering
             double endpointInset)
         {
             _ = endpointInset;
+            if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+            {
+                return;
+            }
+
+            var domainMin = axis.MinimumValue.Value;
+            var domainMax = axis.MaximumValue.Value;
             var axisX = plotRect.Right;
             g.DrawLine(AxisPen, axisX, plotRect.Top, axisX, plotRect.Bottom);
 
@@ -530,8 +601,8 @@ namespace Graphing.Controls.Rendering
                 for (var i = 0; i < ticks.Count; i++)
                 {
                     var tick = ticks[i];
-                    var deviceY = TickAnchorToDeviceY(tick, plotRect);
-                    g.DrawLine(AxisPen, axisX, deviceY, axisX + TickLength, deviceY);
+                    var deviceY = DomainToDeviceY(tick.Value, domainMin, domainMax, plotRect);
+                    g.DrawLine(AxisPen, axisX - TickLength, deviceY, axisX, deviceY);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
@@ -567,6 +638,13 @@ namespace Graphing.Controls.Rendering
             double endpointInset)
         {
             _ = endpointInset;
+            if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+            {
+                return;
+            }
+
+            var domainMin = axis.MinimumValue.Value;
+            var domainMax = axis.MaximumValue.Value;
             var axisY = plotRect.Top;
             g.DrawLine(AxisPen, plotRect.Left, axisY, plotRect.Right, axisY);
 
@@ -583,7 +661,7 @@ namespace Graphing.Controls.Rendering
                 for (var i = 0; i < ticks.Count; i++)
                 {
                     var tick = ticks[i];
-                    var deviceX = TickAnchorToDeviceX(tick, plotRect);
+                    var deviceX = DomainToDeviceX(tick.Value, domainMin, domainMax, plotRect);
                     g.DrawLine(AxisPen, deviceX, axisY - TickLength, deviceX, axisY);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
@@ -973,57 +1051,54 @@ namespace Graphing.Controls.Rendering
             RectangleF plotRect,
             GraphPresentationModel model)
         {
-            var xAxis = FindHorizontalAxis(model);
-            var verticalAxisEntries = FindVerticalAxisEntries(model);
-
-            if (xAxis == null || verticalAxisEntries.Count == 0)
-            {
-                return;
-            }
-
-            if (!xAxis.MinimumValue.HasValue || !xAxis.MaximumValue.HasValue)
-            {
-                return;
-            }
-
-            double xMin = xAxis.MinimumValue.Value;
-            double xMax = xAxis.MaximumValue.Value;
-
-            if (xMin >= xMax)
-            {
-                return;
-            }
-
             var series = model.Layout.Series;
+
             for (var i = 0; i < series.Count; i++)
             {
-                var axisEntry = ResolveSeriesVerticalAxisEntry(series[i], verticalAxisEntries);
-                if (axisEntry == null)
+                var s = series[i];
+                var xAxisEntry = s.XAxisEntry;
+                var yAxisEntry = s.YAxisEntry;
+
+                if (xAxisEntry == null || yAxisEntry == null)
                 {
                     continue;
                 }
 
-                var yAxis = axisEntry.Axis;
+                var xAxis = xAxisEntry.Axis;
+                var yAxis = yAxisEntry.Axis;
+
+                if (!xAxis.MinimumValue.HasValue || !xAxis.MaximumValue.HasValue)
+                {
+                    continue;
+                }
+
                 if (!yAxis.MinimumValue.HasValue || !yAxis.MaximumValue.HasValue)
                 {
                     continue;
                 }
 
-                var yMin = yAxis.MinimumValue.Value;
-                var yMax = yAxis.MaximumValue.Value;
+                double xMin = xAxis.MinimumValue.Value;
+                double xMax = xAxis.MaximumValue.Value;
+                if (xMin >= xMax)
+                {
+                    continue;
+                }
+
+                double yMin = yAxis.MinimumValue.Value;
+                double yMax = yAxis.MaximumValue.Value;
                 if (yMin >= yMax)
                 {
                     continue;
                 }
 
-                var seriesRect = ComputeAxisRect(plotRect, axisEntry);
-                RenderOneSeries(g, seriesRect, series[i], xMin, xMax, yMin, yMax);
+                var seriesRect = ComputeSeriesRect(plotRect, xAxisEntry, yAxisEntry);
+                RenderOneSeries(g, seriesRect, s, xMin, xMax, yMin, yMax);
             }
         }
 
         private static void RenderOneSeries(
             Graphics g,
-            RectangleF plotRect,
+            RectangleF seriesRect,
             SeriesPresentationGeometry series,
             double xMin, double xMax,
             double yMin, double yMax)
@@ -1037,7 +1112,7 @@ namespace Graphing.Controls.Rendering
             // Use a clipping region to keep lines inside the plot area.
             // Use a clipping region to keep lines inside the plot area.
             var clip = g.ClipBounds;
-            g.SetClip(plotRect, System.Drawing.Drawing2D.CombineMode.Intersect);
+            g.SetClip(seriesRect, System.Drawing.Drawing2D.CombineMode.Intersect);
 
             using (var seriesPen = new Pen(series.SeriesColor, SeriesLineWidth))
             {
@@ -1048,8 +1123,8 @@ namespace Graphing.Controls.Rendering
                     for (var i = 0; i < points.Count; i++)
                     {
                         var domainPoint = points[i];
-                        var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, plotRect);
-                        var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, plotRect);
+                        var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
+                        var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
                         var current = new PointF(deviceX, deviceY);
 
                         if (previous.HasValue && series.ConnectivityIntent != SeriesConnectivityIntent.Discrete)
@@ -1067,152 +1142,89 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        // ── Axis lookup helpers ───────────────────────────────────────────────
-
-        private static AxisPresentationGeometry FindHorizontalAxis(GraphPresentationModel model)
-        {
-            var axisEntries = model.Layout.Axes;
-            for (var i = 0; i < axisEntries.Count; i++)
-            {
-                if (axisEntries[i].Axis.Orientation == AxisOrientation.Horizontal)
-                {
-                    return axisEntries[i].Axis;
-                }
-            }
-            return null;
-        }
-
-        private static List<AxisLayoutEntry> FindVerticalAxisEntries(GraphPresentationModel model)
-        {
-            var entries = new List<AxisLayoutEntry>();
-            var axisEntries = model.Layout.Axes;
-
-            for (var i = 0; i < axisEntries.Count; i++)
-            {
-                if (axisEntries[i].Axis.Orientation == AxisOrientation.Vertical)
-                {
-                    entries.Add(axisEntries[i]);
-                }
-            }
-
-            return entries;
-        }
-
-        private static AxisLayoutEntry ResolveSeriesVerticalAxisEntry(
-            SeriesPresentationGeometry series,
-            IReadOnlyList<AxisLayoutEntry> verticalAxisEntries)
-        {
-            if (verticalAxisEntries == null || verticalAxisEntries.Count == 0)
-            {
-                return null;
-            }
-
-            var points = series.Points;
-            if (points == null || points.Count == 0)
-            {
-                return verticalAxisEntries[0];
-            }
-
-            double? seriesMin = null;
-            double? seriesMax = null;
-            for (var i = 0; i < points.Count; i++)
-            {
-                var y = points[i].Y;
-                if (!seriesMin.HasValue || y < seriesMin.Value)
-                {
-                    seriesMin = y;
-                }
-
-                if (!seriesMax.HasValue || y > seriesMax.Value)
-                {
-                    seriesMax = y;
-                }
-            }
-
-            if (!seriesMin.HasValue || !seriesMax.HasValue)
-            {
-                return verticalAxisEntries[0];
-            }
-
-            const double Epsilon = 1e-12;
-            AxisLayoutEntry bestContaining = null;
-            double bestRange = double.MaxValue;
-
-            for (var i = 0; i < verticalAxisEntries.Count; i++)
-            {
-                var candidate = verticalAxisEntries[i];
-                var axis = candidate.Axis;
-                if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
-                {
-                    continue;
-                }
-
-                var axisMin = axis.MinimumValue.Value;
-                var axisMax = axis.MaximumValue.Value;
-                if (axisMin > seriesMin.Value + Epsilon || axisMax < seriesMax.Value - Epsilon)
-                {
-                    continue;
-                }
-
-                var range = axisMax - axisMin;
-                if (range < bestRange)
-                {
-                    bestRange = range;
-                    bestContaining = candidate;
-                }
-            }
-
-            if (bestContaining != null)
-            {
-                return bestContaining;
-            }
-
-            AxisLayoutEntry closest = verticalAxisEntries[0];
-            double closestDistance = double.MaxValue;
-
-            for (var i = 0; i < verticalAxisEntries.Count; i++)
-            {
-                var candidate = verticalAxisEntries[i];
-                var axis = candidate.Axis;
-                if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
-                {
-                    continue;
-                }
-
-                var axisMin = axis.MinimumValue.Value;
-                var axisMax = axis.MaximumValue.Value;
-                var underflow = axisMin - seriesMin.Value;
-                var overflow = seriesMax.Value - axisMax;
-                var distance = Math.Max(0d, underflow) + Math.Max(0d, overflow);
-
-                if (distance < closestDistance)
-                {
-                    closestDistance = distance;
-                    closest = candidate;
-                }
-            }
-
-            return closest;
-        }
+        // ── Axis rect helpers ─────────────────────────────────────────────────
 
         private static RectangleF ComputeAxisRect(RectangleF plotRect, AxisLayoutEntry entry)
         {
-            if (entry == null || entry.Side != AxisSide.Left)
+            if (entry == null)
             {
                 return plotRect;
+            }
+
+            var insetRect = ApplyAxisInset(plotRect, entry);
+            if (entry.Side != AxisSide.Left)
+            {
+                return insetRect;
             }
 
             var spanStart = Clamp01(entry.NormalizedSpanStart);
             var spanEnd = Clamp01(entry.NormalizedSpanEnd);
             if (spanEnd <= spanStart)
             {
+                return insetRect;
+            }
+
+            // Left-axis stacked spans map to a vertical sub-rectangle of the plot.
+            var plotHeight = insetRect.Height;
+            var top = insetRect.Bottom - (float)(spanEnd * plotHeight);
+            var bottom = insetRect.Bottom - (float)(spanStart * plotHeight);
+            return RectangleF.FromLTRB(insetRect.Left, top, insetRect.Right, bottom);
+        }
+
+        private static RectangleF ComputeSeriesRect(
+            RectangleF plotRect,
+            AxisLayoutEntry xAxisEntry,
+            AxisLayoutEntry yAxisEntry)
+        {
+            var rect = plotRect;
+            if (xAxisEntry != null)
+            {
+                rect = ApplyAxisInset(rect, xAxisEntry);
+            }
+
+            if (yAxisEntry != null)
+            {
+                rect = ComputeAxisRect(rect, yAxisEntry);
+            }
+
+            return rect;
+        }
+
+        private static RectangleF ApplyAxisInset(RectangleF plotRect, AxisLayoutEntry entry)
+        {
+            if (entry == null)
+            {
                 return plotRect;
             }
 
-            var plotHeight = plotRect.Height;
-            var top = plotRect.Bottom - (float)(spanEnd * plotHeight);
-            var bottom = plotRect.Bottom - (float)(spanStart * plotHeight);
-            return RectangleF.FromLTRB(plotRect.Left, top, plotRect.Right, bottom);
+            var inset = Math.Min(0.49d, Clamp01(entry.TickEndpointInset));
+            if (inset <= 0d)
+            {
+                return plotRect;
+            }
+
+            if (entry.Side == AxisSide.Left || entry.Side == AxisSide.Right)
+            {
+                var delta = (float)(inset * plotRect.Height);
+                var top = plotRect.Top + delta;
+                var bottom = plotRect.Bottom - delta;
+                if (bottom <= top)
+                {
+                    return plotRect;
+                }
+
+                return RectangleF.FromLTRB(plotRect.Left, top, plotRect.Right, bottom);
+            }
+
+            var horizontalDelta = (float)(inset * plotRect.Width);
+            var left = plotRect.Left + horizontalDelta;
+            var right = plotRect.Right - horizontalDelta;
+            if (right <= left)
+            {
+                return plotRect;
+            }
+
+            return RectangleF.FromLTRB(left, plotRect.Top, right, plotRect.Bottom);
         }
 
         private static double Clamp01(double value)
@@ -1277,16 +1289,5 @@ namespace Graphing.Controls.Rendering
             return plotRect.Bottom - (float)(t * plotRect.Height);
         }
 
-        private static float TickAnchorToDeviceX(AxisTickPresentation tick, RectangleF axisRect)
-        {
-            var t = Clamp01(tick.AnchorPoint.X);
-            return axisRect.Left + (float)(t * axisRect.Width);
-        }
-
-        private static float TickAnchorToDeviceY(AxisTickPresentation tick, RectangleF axisRect)
-        {
-            var t = Clamp01(tick.AnchorPoint.Y);
-            return axisRect.Bottom - (float)(t * axisRect.Height);
-        }
     }
 }
