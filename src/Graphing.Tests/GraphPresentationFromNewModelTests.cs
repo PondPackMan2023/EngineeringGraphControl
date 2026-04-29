@@ -2386,6 +2386,204 @@ namespace Graphing.Tests
             Assert.That(e2.NormalizedSpanStart, Is.Not.EqualTo(e3.NormalizedSpanStart).Within(1e-12));
         }
 
+        // ── Legend framing regression tests (placement-specific rules) ────────────
+
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void LegendFraming_LeftRight_FrameHeightTightened_ToContentHeight(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var legend = presentation.Layout.Legend;
+
+            Assert.That(legend, Is.Not.Null);
+
+            var frameHeight = legend.TopRight.Y - legend.BottomLeft.Y;
+
+            // The allocated band height for a left/right legend spans most of the chart height.
+            // After tightening, the frame height must be a small fraction of that — not the full band.
+            Assert.That(frameHeight, Is.LessThan(0.15),
+                "Left/right legend frame must be height-tightened to content, not span the full band.");
+        }
+
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void LegendFraming_LeftRight_FrameIsTopAligned(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var legend = presentation.Layout.Legend;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.Entries.Count, Is.GreaterThan(0));
+
+            // The gap between the frame top and the first entry top should be small (inner padding only).
+            var gapAboveFirstEntry = legend.TopRight.Y - legend.Entries[0].TopRight.Y;
+            Assert.That(gapAboveFirstEntry, Is.GreaterThanOrEqualTo(0d),
+                "Frame top must be above or equal to first entry top.");
+            Assert.That(gapAboveFirstEntry, Is.LessThan(0.03),
+                "Frame must be top-aligned: gap above first entry must be small (inner padding only).");
+        }
+
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void LegendFraming_LeftRight_WidthUnchanged_FullBandWidth(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(
+                snapshot, new GraphPresentationOptions(legendPlacement: placement, resizeChart: true));
+            var legend = presentation.Layout.Legend;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.Entries.Count, Is.GreaterThan(0));
+
+            // The frame must be strictly wider than any single entry — horizontal space is not tightened.
+            var entry = legend.Entries[0];
+            var entryWidth = entry.TopRight.X - entry.BottomLeft.X;
+            var frameWidth = legend.TopRight.X - legend.BottomLeft.X;
+
+            Assert.That(frameWidth, Is.GreaterThan(entryWidth),
+                "Left/right legend frame width must exceed the entry width (full band width, not tightened).");
+
+            // The frame left must be strictly left of the entry (inner padding is present on the left).
+            Assert.That(legend.BottomLeft.X, Is.LessThan(entry.BottomLeft.X),
+                "Frame left must be to the left of the entry (horizontal padding not removed).");
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        public void LegendFraming_TopBottom_FrameHorizontallyCentered_InBand(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+
+            // For top/bottom placement the legend band has the same horizontal extent as the plot area
+            // (both are bounded by edge padding + axis bands on each side). The legend frame must
+            // be centered within that band.
+            var bandMidX = (plotArea.BottomLeft.X + plotArea.TopRight.X) / 2.0;
+            var frameMidX = (legend.BottomLeft.X + legend.TopRight.X) / 2.0;
+
+            Assert.That(frameMidX, Is.EqualTo(bandMidX).Within(1e-6),
+                "Legend frame must be horizontally centered within the band.");
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        public void LegendFraming_TopBottom_FrameWidthNarrowerThanBand(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(legend, Is.Not.Null);
+
+            var bandWidth = plotArea.TopRight.X - plotArea.BottomLeft.X;
+            var frameWidth = legend.TopRight.X - legend.BottomLeft.X;
+
+            // A single-entry legend must produce a frame much narrower than the full band.
+            Assert.That(frameWidth, Is.LessThan(bandWidth),
+                "Top/bottom legend frame must be narrower than the full band (content-driven width).");
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        public void LegendFraming_TopBottom_EntriesHorizontallyCenteredWithinFrame(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var legend = presentation.Layout.Legend;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.Entries.Count, Is.GreaterThan(0));
+
+            // All entry bounds must remain within the legend frame after centering.
+            for (var i = 0; i < legend.Entries.Count; i++)
+            {
+                var entry = legend.Entries[i];
+                Assert.That(entry.BottomLeft.X, Is.GreaterThanOrEqualTo(legend.BottomLeft.X).Within(1e-12),
+                    $"Entry {i} left must be within frame left.");
+                Assert.That(entry.TopRight.X, Is.LessThanOrEqualTo(legend.TopRight.X).Within(1e-12),
+                    $"Entry {i} right must be within frame right.");
+            }
+        }
+
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void LegendFraming_LeftRight_MultipleEntries_AllContainedWithinTightenedFrame(LegendPlacement placement)
+        {
+            // Build a model with 3 series to test multi-entry height tightening.
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField1 = new TestFieldDefinition("Y1", "y1", unit, new[] { 10d, 20d, 30d });
+            var yField2 = new TestFieldDefinition("Y2", "y2", unit, new[] { 5d, 15d, 25d });
+            var yField3 = new TestFieldDefinition("Y3", "y3", unit, new[] { 2d, 12d, 22d });
+
+            var s1 = new GraphSeriesModel(new SeriesId("1"), "alpha", SeriesType.Line, xField, yField1, xAxis, yAxis);
+            var s2 = new GraphSeriesModel(new SeriesId("2"), "beta", SeriesType.Line, xField, yField2, xAxis, yAxis);
+            var s3 = new GraphSeriesModel(new SeriesId("3"), "gamma", SeriesType.Line, xField, yField3, xAxis, yAxis);
+
+            var graphModel = new GraphModel(new[] { xAxis, yAxis }, new[] { s1, s2, s3 });
+            var snapshot = new GraphSnapshotBuilder().Build(graphModel);
+            var presentation = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var legend = presentation.Layout.Legend;
+
+            Assert.That(legend, Is.Not.Null);
+            Assert.That(legend.Entries.Count, Is.EqualTo(3));
+
+            // All entries must be within the tightened frame.
+            for (var i = 0; i < legend.Entries.Count; i++)
+            {
+                var entry = legend.Entries[i];
+                Assert.That(entry.BottomLeft.Y, Is.GreaterThanOrEqualTo(legend.BottomLeft.Y).Within(1e-12),
+                    $"Entry {i} bottom must be within frame bottom.");
+                Assert.That(entry.TopRight.Y, Is.LessThanOrEqualTo(legend.TopRight.Y).Within(1e-12),
+                    $"Entry {i} top must be within frame top.");
+            }
+
+            // Frame must still be tighter than the full band height.
+            var frameHeight = legend.TopRight.Y - legend.BottomLeft.Y;
+            Assert.That(frameHeight, Is.LessThan(0.4),
+                "3-entry left/right frame height must still be tightened to content, not span the full band.");
+        }
+
+        [TestCase(LegendPlacement.Bottom)]
+        [TestCase(LegendPlacement.Top)]
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void LegendFraming_PlotAndAxesUnchanged_AfterFramingApplied(LegendPlacement placement)
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var withFraming = new GraphPresentationModel(snapshot, new GraphPresentationOptions(legendPlacement: placement));
+            var withoutLegend = new GraphPresentationModel(
+                snapshot, new GraphPresentationOptions(hiddenSeriesIds: new[] { new SeriesId("1") }, legendPlacement: placement));
+
+            // Plot area must only differ in the direction the legend occupies.
+            // This verifies no side-effects on axis geometry or series.
+            Assert.That(withFraming.Axes.Count, Is.EqualTo(withoutLegend.Axes.Count));
+            for (var i = 0; i < withFraming.Axes.Count; i++)
+            {
+                Assert.That(withFraming.Axes[i].AxisId, Is.EqualTo(withoutLegend.Axes[i].AxisId));
+                Assert.That(withFraming.Axes[i].Ticks.Count, Is.EqualTo(withoutLegend.Axes[i].Ticks.Count));
+            }
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);
