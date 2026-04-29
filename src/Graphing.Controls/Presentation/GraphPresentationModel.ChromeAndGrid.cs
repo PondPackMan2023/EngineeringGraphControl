@@ -202,8 +202,7 @@ namespace Graphing.Controls.Presentation
             string titleText,
             double topY,
             double titleHeight,
-            double leftEdgePadding,
-            double rightEdgePadding)
+                PlotAreaLayout plotArea)
         {
             if (titleHeight <= 0d)
             {
@@ -215,17 +214,15 @@ namespace Graphing.Controls.Presentation
 
             return new TitlePresentationGeometry(
                 titleText,
-                new GeometryPoint3D(leftEdgePadding, titleBottom, 0d),
-                new GeometryPoint3D(1d - rightEdgePadding, titleTop, 0d));
+                new GeometryPoint3D(plotArea.BottomLeft.X, titleBottom, 0d),
+                new GeometryPoint3D(plotArea.TopRight.X, titleTop, 0d));
         }
 
         private static SubtitlePresentationGeometry BuildSubtitleGeometry(
             string subtitleText,
             TitlePresentationGeometry titleGeometry,
             PlotAreaLayout plotArea,
-            double subtitleHeight,
-            double leftEdgePadding,
-            double rightEdgePadding)
+            double subtitleHeight)
         {
             if (subtitleHeight <= 0d)
             {
@@ -243,8 +240,8 @@ namespace Graphing.Controls.Presentation
 
             return new SubtitlePresentationGeometry(
                 subtitleText,
-                new GeometryPoint3D(leftEdgePadding, subtitleBottom, 0d),
-                new GeometryPoint3D(1d - rightEdgePadding, subtitleTop, 0d));
+                new GeometryPoint3D(plotArea.BottomLeft.X, subtitleBottom, 0d),
+                new GeometryPoint3D(plotArea.TopRight.X, subtitleTop, 0d));
         }
 
         private static IReadOnlyList<EdgePaddingBandGeometry> BuildEdgePaddingBandsGeometry(
