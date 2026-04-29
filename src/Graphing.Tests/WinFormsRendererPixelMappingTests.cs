@@ -399,6 +399,57 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void RightAxisSeries_RenderFullHeight_WhenRightAxisGridLinesAreHidden()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft1 = new AxisModel(new AxisId("y-left-1"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yLeft2 = new AxisModel(new AxisId("y-left-2"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDef("X", "x", unit, new double[] { 0d, 0.5d, 1d });
+            var yField = new TestFieldDef("Y", "y", unit, new double[] { 0d, 50d, 100d });
+
+            var sLeft1 = new GraphSeriesModel(new SeriesId("1"), "left-1", SeriesType.Line, xField, yField, xAxis, yLeft1);
+            var sLeft2 = new GraphSeriesModel(new SeriesId("2"), "left-2", SeriesType.Line, xField, yField, xAxis, yLeft2);
+            var sRight = new GraphSeriesModel(new SeriesId("3"), "right", SeriesType.Line, xField, yField, xAxis, yRight);
+
+            var model = new GraphModel(
+                new IAxisModel[] { xAxis, yLeft1, yLeft2, yRight },
+                new IGraphSeriesModel[] { sLeft1, sLeft2, sRight });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenAxisGridLineIds: new[] { new AxisId("y-right") }));
+            var deviceBounds = new Rectangle(0, 0, W, H);
+
+            Assert.That(presentation.Layout.GridLines.VerticalLines.Count, Is.GreaterThan(0));
+            Assert.That(presentation.Layout.GridLines.HorizontalLines.Count, Is.GreaterThan(0));
+            Assert.That(presentation.Layout.GridLines.HorizontalLines.All(l => l.AxisEntry.Axis.AxisId != "y-right"), Is.True,
+                "Renderer should receive only the geometry emitted by the presentation model.");
+
+            using (var bmp = new Bitmap(W, H))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                new WinFormsGraphRenderer().Render(g, deviceBounds, presentation);
+
+                var plotRect = ComputePlotRect(deviceBounds, presentation);
+                var rightSeries = presentation.Series[2];
+                var rightEntry = rightSeries.YAxisEntry;
+
+                Assert.That(rightEntry.NormalizedSpanStart, Is.EqualTo(0d).Within(1e-12));
+                Assert.That(rightEntry.NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12));
+
+                var expectedY = ComputeExpectedDeviceY(plotRect, rightEntry, 0d, 100d, 50d);
+                var sampleX = (int)(plotRect.Left + 0.5f * plotRect.Width);
+
+                Assert.That(HasColorNear(bmp, sampleX, (int)expectedY, rightSeries.SeriesColor), Is.True,
+                    "Right-axis series should still map across full plot height when right-axis grid lines are hidden.");
+            }
+        }
+
+        [Test]
         public void Ticks_GridLines_Series_UseSameAxisMapping()
         {
             var unit = Units.Length.Meter;

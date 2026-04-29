@@ -1252,6 +1252,97 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void Layout_GridLines_OmittedWhenYAxisGridLinesAreHiddenByAxisId()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentationWithGridLines = new GraphPresentationModel(snapshot);
+            var presentationWithoutYAxisGridLines = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenAxisGridLineIds: new[] { new AxisId("y-axis") }));
+
+            Assert.That(presentationWithGridLines.Layout.GridLines.HorizontalLines.Count, Is.GreaterThan(0));
+            Assert.That(presentationWithoutYAxisGridLines.Layout.GridLines.HorizontalLines.Count, Is.EqualTo(0),
+                "Horizontal grid lines should be omitted when the owning Y-axis grid lines are hidden.");
+            Assert.That(
+                presentationWithoutYAxisGridLines.Layout.GridLines.VerticalLines.Count,
+                Is.EqualTo(presentationWithGridLines.Layout.GridLines.VerticalLines.Count),
+                "Hiding Y-axis grid lines must not affect X-axis-owned vertical grid lines.");
+        }
+
+        [Test]
+        public void Layout_GridLines_EmptyHiddenAxisGridLineIds_PreservesDefaultBehavior()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var defaultPresentation = new GraphPresentationModel(snapshot);
+            var explicitEmptyPresentation = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenAxisGridLineIds: Array.Empty<AxisId>()));
+
+            Assert.That(
+                explicitEmptyPresentation.Layout.GridLines.VerticalLines.Count,
+                Is.EqualTo(defaultPresentation.Layout.GridLines.VerticalLines.Count));
+            Assert.That(
+                explicitEmptyPresentation.Layout.GridLines.HorizontalLines.Count,
+                Is.EqualTo(defaultPresentation.Layout.GridLines.HorizontalLines.Count));
+        }
+
+        [Test]
+        public void Layout_GridLines_StackedLeftAxes_CanHideSingleAxisByAxisId()
+        {
+            var snapshot = CreateSnapshotWithLeftAxisCount(2);
+
+            var presentation = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenAxisGridLineIds: new[] { new AxisId("y-axis-0") }));
+
+            var remainingAxis = presentation.Layout.Axes.Single(a => a.Axis.AxisId == "y-axis-1");
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            Assert.That(horizontalLines.Count, Is.EqualTo(remainingAxis.Axis.Ticks.Count),
+                "Only the visible stacked Y-axis should contribute horizontal grid lines.");
+            Assert.That(horizontalLines.All(line => line.AxisEntry.Axis.AxisId == "y-axis-1"), Is.True,
+                "Every emitted horizontal grid line should remain bound to the visible stacked axis.");
+            Assert.That(horizontalLines.Any(line => line.AxisEntry.Axis.AxisId == "y-axis-0"), Is.False,
+                "The hidden stacked axis must not emit horizontal grid lines.");
+        }
+
+        [Test]
+        public void Layout_GridLines_RightAxisCanBeHiddenWhileLeftAxisRemainsVisible()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yLeftField = new TestFieldDefinition("Y Left", "y-left", unit, new[] { 10d, 20d, 30d });
+            var yRightField = new TestFieldDefinition("Y Right", "y-right", unit, new[] { 100d, 200d, 300d });
+
+            var leftSeries = new GraphSeriesModel(new SeriesId("1"), "left", SeriesType.Line, xField, yLeftField, xAxis, yLeft);
+            var rightSeries = new GraphSeriesModel(new SeriesId("2"), "right", SeriesType.Line, xField, yRightField, xAxis, yRight);
+            var model = new GraphModel(
+                new IAxisModel[] { xAxis, yLeft, yRight },
+                new IGraphSeriesModel[] { leftSeries, rightSeries });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            var presentation = new GraphPresentationModel(
+                snapshot,
+                new GraphPresentationOptions(hiddenAxisGridLineIds: new[] { new AxisId("y-right") }));
+
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            Assert.That(horizontalLines.Count, Is.EqualTo(presentation.Layout.Axes.Single(a => a.Axis.AxisId == "y-left").Axis.Ticks.Count));
+            Assert.That(horizontalLines.All(line => line.AxisEntry.Axis.AxisId == "y-left"), Is.True,
+                "Left-axis horizontal grid lines should remain visible when the right axis is hidden.");
+            Assert.That(horizontalLines.Any(line => line.AxisEntry.Axis.AxisId == "y-right"), Is.False,
+                "The hidden right axis must not emit horizontal grid lines.");
+        }
+
+        [Test]
         public void Layout_GridLines_StackedYAxes_ProduceAxisScopedHorizontalLines()
         {
             var presentation = CreatePresentationWithLeftAxisCount(2);
@@ -2608,6 +2699,12 @@ namespace Graphing.Tests
 
         private static GraphPresentationModel CreatePresentationWithLeftAxisCount(int leftAxisCount)
         {
+            var snapshot = CreateSnapshotWithLeftAxisCount(leftAxisCount);
+            return new GraphPresentationModel(snapshot);
+        }
+
+        private static IGraphSnapshot CreateSnapshotWithLeftAxisCount(int leftAxisCount)
+        {
             var unit = Units.Length.Meter;
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
@@ -2628,8 +2725,7 @@ namespace Graphing.Tests
             }
 
             var model = new GraphModel(axes, series);
-            var snapshot = new GraphSnapshotBuilder().Build(model);
-            return new GraphPresentationModel(snapshot);
+            return new GraphSnapshotBuilder().Build(model);
         }
 
         private sealed class TestFieldDefinition : GraphFieldDefinitionBase

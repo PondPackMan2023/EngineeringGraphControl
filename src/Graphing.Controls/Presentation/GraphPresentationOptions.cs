@@ -12,6 +12,7 @@ namespace Graphing.Controls.Presentation
     {
         private readonly HashSet<SeriesId> _hiddenSeriesIds;
         private readonly HashSet<AxisId> _hiddenAxisIds;
+        private readonly HashSet<AxisId> _hiddenAxisGridLineIds;
         private readonly IReadOnlyList<AnnotationSemantic> _annotations;
 
         public GraphPresentationOptions(
@@ -24,7 +25,8 @@ namespace Graphing.Controls.Presentation
             LegendPlacement legendPlacement = LegendPlacement.Bottom,
             bool resizeChart = true,
             AxisEndpointInsetMode axisEndpointInsetMode = AxisEndpointInsetMode.Auto,
-            double axisEndpointInsetFixedValue = 0.01)
+            double axisEndpointInsetFixedValue = 0.01,
+            IEnumerable<AxisId> hiddenAxisGridLineIds = null)
         {
             _hiddenSeriesIds = hiddenSeriesIds != null
                 ? [.. hiddenSeriesIds]
@@ -34,9 +36,14 @@ namespace Graphing.Controls.Presentation
                 ? [.. hiddenAxisIds]
                 : new HashSet<AxisId>();
 
+            _hiddenAxisGridLineIds = hiddenAxisGridLineIds != null
+                ? [.. hiddenAxisGridLineIds]
+                : new HashSet<AxisId>();
+
             GraphTitle = graphTitle;
             GraphSubtitle = graphSubtitle;
             HiddenAxisIds = new ReadOnlyCollection<AxisId>([.. _hiddenAxisIds]);
+            HiddenAxisGridLineIds = new ReadOnlyCollection<AxisId>([.. _hiddenAxisGridLineIds]);
             _annotations = new ReadOnlyCollection<AnnotationSemantic>(
                 [.. annotations ?? []]);
             ShowGraphBorder = showGraphBorder;
@@ -67,6 +74,8 @@ namespace Graphing.Controls.Presentation
 
         public IReadOnlyCollection<AxisId> HiddenAxisIds { get; }
 
+        public IReadOnlyCollection<AxisId> HiddenAxisGridLineIds { get; }
+
         public bool IsSeriesVisible(ISeriesSnapshot series)
         {
             if (series == null)
@@ -95,6 +104,16 @@ namespace Graphing.Controls.Presentation
             }
 
             return true;
+        }
+
+        public bool IsAxisGridLinesVisible(string axisId)
+        {
+            if (string.IsNullOrWhiteSpace(axisId))
+            {
+                return true;
+            }
+
+            return !_hiddenAxisGridLineIds.Contains(new AxisId(axisId));
         }
     }
 }
