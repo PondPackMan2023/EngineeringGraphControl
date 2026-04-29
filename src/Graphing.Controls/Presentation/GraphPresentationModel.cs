@@ -1017,7 +1017,7 @@ namespace Graphing.Controls.Presentation
                 topTickBandThickness);
 
             // Create grid lines geometry
-            var gridLines = BuildGridLinesGeometry(entries, finalPlotArea);
+            var gridLines = BuildGridLinesGeometry(entries, finalPlotArea, options);
 
             AssertLayoutInvariants(finalPlotArea, axisTitleBands, legendGeometry);
 
@@ -1941,7 +1941,8 @@ namespace Graphing.Controls.Presentation
 
         private static GridLinesGeometry BuildGridLinesGeometry(
             IReadOnlyList<AxisLayoutEntry> axisEntries,
-            PlotAreaLayout plotArea)
+            PlotAreaLayout plotArea,
+            GraphPresentationOptions options)
         {
             var verticalLines = new List<GridLineGeometry>();
             var horizontalLines = new List<GridLineGeometry>();
@@ -2007,6 +2008,7 @@ namespace Graphing.Controls.Presentation
 
                 // Vertical grid lines from X-axis ticks in domain space, bound to the X-axis entry.
                 if (hasYDomain &&
+                    options.IsAxisGridLinesVisible(axis.AxisId) &&
                     axis.Orientation == AxisOrientation.Horizontal &&
                     (entry.Side == AxisSide.Bottom || entry.Side == AxisSide.Top))
                 {
@@ -2030,6 +2032,7 @@ namespace Graphing.Controls.Presentation
 
                 // Horizontal grid lines from Y-axis ticks in domain space, bound to their source Y-axis entry.
                 if (hasXDomain &&
+                    options.IsAxisGridLinesVisible(axis.AxisId) &&
                     axis.Orientation == AxisOrientation.Vertical &&
                     (entry.Side == AxisSide.Left || entry.Side == AxisSide.Right))
                 {

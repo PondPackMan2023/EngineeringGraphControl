@@ -55,6 +55,10 @@ namespace Graphing.TestHarness
             this.graphControl = new Graphing.Controls.EngineeringGraphControl();
             this.buttonScenarioC = new System.Windows.Forms.Button();
             this.buttonScenarioD = new System.Windows.Forms.Button();
+            this.checkBoxElevationGrid = new System.Windows.Forms.CheckBox();
+            this.checkBoxPressureGrid = new System.Windows.Forms.CheckBox();
+            this.checkBoxTimeGrid = new System.Windows.Forms.CheckBox();
+            this.checkBoxPressure2Grid = new System.Windows.Forms.CheckBox();
             this.groupBoxUnits.SuspendLayout();
             this.groupBoxSeriesAxesVisibility.SuspendLayout();
             this.groupBoxLegend.SuspendLayout();
@@ -67,10 +71,10 @@ namespace Graphing.TestHarness
             this.groupBoxUnits.Controls.Add(this.buttonElevation);
             this.groupBoxUnits.Controls.Add(this.buttonTime);
             this.groupBoxUnits.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.groupBoxUnits.Location = new System.Drawing.Point(12, 389);
+            this.groupBoxUnits.Location = new System.Drawing.Point(12, 341);
             this.groupBoxUnits.Name = "groupBoxUnits";
             this.groupBoxUnits.Size = new System.Drawing.Size(224, 49);
-            this.groupBoxUnits.TabIndex = 3;
+            this.groupBoxUnits.TabIndex = 10;
             this.groupBoxUnits.TabStop = false;
             this.groupBoxUnits.Text = "Units";
             // 
@@ -111,7 +115,7 @@ namespace Graphing.TestHarness
             // 
             this.buttonScenarioA.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonScenarioA.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonScenarioA.Location = new System.Drawing.Point(688, 12);
+            this.buttonScenarioA.Location = new System.Drawing.Point(672, 12);
             this.buttonScenarioA.Name = "buttonScenarioA";
             this.buttonScenarioA.Size = new System.Drawing.Size(67, 25);
             this.buttonScenarioA.TabIndex = 1;
@@ -123,7 +127,7 @@ namespace Graphing.TestHarness
             // 
             this.buttonScenarioB.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonScenarioB.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonScenarioB.Location = new System.Drawing.Point(688, 43);
+            this.buttonScenarioB.Location = new System.Drawing.Point(672, 43);
             this.buttonScenarioB.Name = "buttonScenarioB";
             this.buttonScenarioB.Size = new System.Drawing.Size(67, 25);
             this.buttonScenarioB.TabIndex = 2;
@@ -135,16 +139,20 @@ namespace Graphing.TestHarness
             // 
             this.groupBoxSeriesAxesVisibility.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxPressure2Grid);
+            this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxTimeGrid);
+            this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxPressureGrid);
+            this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxElevationGrid);
             this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxPressure);
             this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxHGL);
             this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxPressureYAxis);
             this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxElevationYAxis);
             this.groupBoxSeriesAxesVisibility.Controls.Add(this.checkBoxXAxis);
             this.groupBoxSeriesAxesVisibility.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.groupBoxSeriesAxesVisibility.Location = new System.Drawing.Point(242, 389);
+            this.groupBoxSeriesAxesVisibility.Location = new System.Drawing.Point(242, 341);
             this.groupBoxSeriesAxesVisibility.Name = "groupBoxSeriesAxesVisibility";
-            this.groupBoxSeriesAxesVisibility.Size = new System.Drawing.Size(440, 49);
-            this.groupBoxSeriesAxesVisibility.TabIndex = 4;
+            this.groupBoxSeriesAxesVisibility.Size = new System.Drawing.Size(424, 108);
+            this.groupBoxSeriesAxesVisibility.TabIndex = 11;
             this.groupBoxSeriesAxesVisibility.TabStop = false;
             this.groupBoxSeriesAxesVisibility.Text = "Axes and Series Visibility";
             // 
@@ -223,7 +231,7 @@ namespace Graphing.TestHarness
             // textBoxTitle
             // 
             this.textBoxTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxTitle.Location = new System.Drawing.Point(688, 192);
+            this.textBoxTitle.Location = new System.Drawing.Point(672, 192);
             this.textBoxTitle.Multiline = true;
             this.textBoxTitle.Name = "textBoxTitle";
             this.textBoxTitle.Size = new System.Drawing.Size(100, 25);
@@ -233,7 +241,7 @@ namespace Graphing.TestHarness
             // textBoxSubTitle
             // 
             this.textBoxSubTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxSubTitle.Location = new System.Drawing.Point(688, 223);
+            this.textBoxSubTitle.Location = new System.Drawing.Point(672, 223);
             this.textBoxSubTitle.Multiline = true;
             this.textBoxSubTitle.Name = "textBoxSubTitle";
             this.textBoxSubTitle.Size = new System.Drawing.Size(100, 25);
@@ -244,7 +252,7 @@ namespace Graphing.TestHarness
             // 
             this.buttonApplyTitles.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonApplyTitles.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonApplyTitles.Location = new System.Drawing.Point(688, 254);
+            this.buttonApplyTitles.Location = new System.Drawing.Point(672, 254);
             this.buttonApplyTitles.Name = "buttonApplyTitles";
             this.buttonApplyTitles.Size = new System.Drawing.Size(67, 25);
             this.buttonApplyTitles.TabIndex = 7;
@@ -259,10 +267,10 @@ namespace Graphing.TestHarness
             this.checkBoxResizeChart.Checked = true;
             this.checkBoxResizeChart.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxResizeChart.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxResizeChart.Location = new System.Drawing.Point(688, 413);
+            this.checkBoxResizeChart.Location = new System.Drawing.Point(672, 431);
             this.checkBoxResizeChart.Name = "checkBoxResizeChart";
             this.checkBoxResizeChart.Size = new System.Drawing.Size(92, 18);
-            this.checkBoxResizeChart.TabIndex = 8;
+            this.checkBoxResizeChart.TabIndex = 9;
             this.checkBoxResizeChart.Text = "Resize Chart";
             this.checkBoxResizeChart.UseVisualStyleBackColor = true;
             this.checkBoxResizeChart.CheckedChanged += new System.EventHandler(this.checkBoxResizeChart_CheckedChanged);
@@ -276,10 +284,10 @@ namespace Graphing.TestHarness
             this.groupBoxLegend.Controls.Add(this.radioButtonLeft);
             this.groupBoxLegend.Controls.Add(this.radioButtonBottom);
             this.groupBoxLegend.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.groupBoxLegend.Location = new System.Drawing.Point(688, 285);
+            this.groupBoxLegend.Location = new System.Drawing.Point(672, 296);
             this.groupBoxLegend.Name = "groupBoxLegend";
             this.groupBoxLegend.Size = new System.Drawing.Size(100, 122);
-            this.groupBoxLegend.TabIndex = 9;
+            this.groupBoxLegend.TabIndex = 8;
             this.groupBoxLegend.TabStop = false;
             // 
             // checkBoxShowLegend
@@ -291,7 +299,7 @@ namespace Graphing.TestHarness
             this.checkBoxShowLegend.Location = new System.Drawing.Point(6, -2);
             this.checkBoxShowLegend.Name = "checkBoxShowLegend";
             this.checkBoxShowLegend.Size = new System.Drawing.Size(68, 18);
-            this.checkBoxShowLegend.TabIndex = 10;
+            this.checkBoxShowLegend.TabIndex = 0;
             this.checkBoxShowLegend.Text = "Legend";
             this.checkBoxShowLegend.UseVisualStyleBackColor = true;
             this.checkBoxShowLegend.CheckedChanged += new System.EventHandler(this.checkBoxShowLegend_CheckedChanged);
@@ -303,7 +311,7 @@ namespace Graphing.TestHarness
             this.radioButtonRight.Location = new System.Drawing.Point(6, 90);
             this.radioButtonRight.Name = "radioButtonRight";
             this.radioButtonRight.Size = new System.Drawing.Size(56, 18);
-            this.radioButtonRight.TabIndex = 3;
+            this.radioButtonRight.TabIndex = 4;
             this.radioButtonRight.Text = "Right";
             this.radioButtonRight.UseVisualStyleBackColor = true;
             this.radioButtonRight.CheckedChanged += new System.EventHandler(this.radioButtonRight_CheckedChanged);
@@ -315,7 +323,7 @@ namespace Graphing.TestHarness
             this.radioButtonTop.Location = new System.Drawing.Point(6, 66);
             this.radioButtonTop.Name = "radioButtonTop";
             this.radioButtonTop.Size = new System.Drawing.Size(50, 18);
-            this.radioButtonTop.TabIndex = 2;
+            this.radioButtonTop.TabIndex = 3;
             this.radioButtonTop.Text = "Top";
             this.radioButtonTop.UseVisualStyleBackColor = true;
             this.radioButtonTop.CheckedChanged += new System.EventHandler(this.radioButtonTop_CheckedChanged);
@@ -327,7 +335,7 @@ namespace Graphing.TestHarness
             this.radioButtonLeft.Location = new System.Drawing.Point(6, 42);
             this.radioButtonLeft.Name = "radioButtonLeft";
             this.radioButtonLeft.Size = new System.Drawing.Size(49, 18);
-            this.radioButtonLeft.TabIndex = 1;
+            this.radioButtonLeft.TabIndex = 2;
             this.radioButtonLeft.Text = "Left";
             this.radioButtonLeft.UseVisualStyleBackColor = true;
             this.radioButtonLeft.CheckedChanged += new System.EventHandler(this.radioButtonLeft_CheckedChanged);
@@ -340,7 +348,7 @@ namespace Graphing.TestHarness
             this.radioButtonBottom.Location = new System.Drawing.Point(6, 19);
             this.radioButtonBottom.Name = "radioButtonBottom";
             this.radioButtonBottom.Size = new System.Drawing.Size(64, 18);
-            this.radioButtonBottom.TabIndex = 0;
+            this.radioButtonBottom.TabIndex = 1;
             this.radioButtonBottom.TabStop = true;
             this.radioButtonBottom.Text = "Bottom";
             this.radioButtonBottom.UseVisualStyleBackColor = true;
@@ -353,17 +361,17 @@ namespace Graphing.TestHarness
             | System.Windows.Forms.AnchorStyles.Right)));
             this.graphControl.Location = new System.Drawing.Point(12, 12);
             this.graphControl.Name = "graphControl";
-            this.graphControl.Size = new System.Drawing.Size(670, 371);
+            this.graphControl.Size = new System.Drawing.Size(654, 323);
             this.graphControl.TabIndex = 0;
             // 
             // buttonScenarioC
             // 
             this.buttonScenarioC.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonScenarioC.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonScenarioC.Location = new System.Drawing.Point(688, 74);
+            this.buttonScenarioC.Location = new System.Drawing.Point(672, 74);
             this.buttonScenarioC.Name = "buttonScenarioC";
             this.buttonScenarioC.Size = new System.Drawing.Size(67, 25);
-            this.buttonScenarioC.TabIndex = 10;
+            this.buttonScenarioC.TabIndex = 3;
             this.buttonScenarioC.Text = "Scenario C";
             this.buttonScenarioC.UseVisualStyleBackColor = true;
             this.buttonScenarioC.Click += new System.EventHandler(this.buttonScenarioC_Click);
@@ -372,17 +380,73 @@ namespace Graphing.TestHarness
             // 
             this.buttonScenarioD.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonScenarioD.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonScenarioD.Location = new System.Drawing.Point(688, 105);
+            this.buttonScenarioD.Location = new System.Drawing.Point(672, 105);
             this.buttonScenarioD.Name = "buttonScenarioD";
             this.buttonScenarioD.Size = new System.Drawing.Size(67, 25);
-            this.buttonScenarioD.TabIndex = 11;
+            this.buttonScenarioD.TabIndex = 4;
             this.buttonScenarioD.Text = "Scenario D";
             this.buttonScenarioD.UseVisualStyleBackColor = true;
             this.buttonScenarioD.Click += new System.EventHandler(this.buttonScenarioD_Click);
             // 
+            // checkBoxElevationGrid
+            // 
+            this.checkBoxElevationGrid.AutoSize = true;
+            this.checkBoxElevationGrid.Checked = true;
+            this.checkBoxElevationGrid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxElevationGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxElevationGrid.Location = new System.Drawing.Point(89, 48);
+            this.checkBoxElevationGrid.Name = "checkBoxElevationGrid";
+            this.checkBoxElevationGrid.Size = new System.Drawing.Size(98, 18);
+            this.checkBoxElevationGrid.TabIndex = 6;
+            this.checkBoxElevationGrid.Text = "Elevation Grid";
+            this.checkBoxElevationGrid.UseVisualStyleBackColor = true;
+            this.checkBoxElevationGrid.CheckedChanged += new System.EventHandler(this.checkBoxElevationGrid_CheckedChanged);
+            // 
+            // checkBoxPressureGrid
+            // 
+            this.checkBoxPressureGrid.AutoSize = true;
+            this.checkBoxPressureGrid.Checked = true;
+            this.checkBoxPressureGrid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxPressureGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxPressureGrid.Location = new System.Drawing.Point(197, 48);
+            this.checkBoxPressureGrid.Name = "checkBoxPressureGrid";
+            this.checkBoxPressureGrid.Size = new System.Drawing.Size(95, 18);
+            this.checkBoxPressureGrid.TabIndex = 7;
+            this.checkBoxPressureGrid.Text = "Pressure Grid";
+            this.checkBoxPressureGrid.UseVisualStyleBackColor = true;
+            this.checkBoxPressureGrid.CheckedChanged += new System.EventHandler(this.checkBoxPressureGrid_CheckedChanged);
+            // 
+            // checkBoxTimeGrid
+            // 
+            this.checkBoxTimeGrid.AutoSize = true;
+            this.checkBoxTimeGrid.Checked = true;
+            this.checkBoxTimeGrid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxTimeGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxTimeGrid.Location = new System.Drawing.Point(6, 49);
+            this.checkBoxTimeGrid.Name = "checkBoxTimeGrid";
+            this.checkBoxTimeGrid.Size = new System.Drawing.Size(77, 18);
+            this.checkBoxTimeGrid.TabIndex = 5;
+            this.checkBoxTimeGrid.Text = "Time Grid";
+            this.checkBoxTimeGrid.UseVisualStyleBackColor = true;
+            this.checkBoxTimeGrid.CheckedChanged += new System.EventHandler(this.checkBoxTimeGrid_CheckedChanged);
+            // 
+            // checkBoxPressure2Grid
+            // 
+            this.checkBoxPressure2Grid.AutoSize = true;
+            this.checkBoxPressure2Grid.Checked = true;
+            this.checkBoxPressure2Grid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxPressure2Grid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxPressure2Grid.Location = new System.Drawing.Point(298, 48);
+            this.checkBoxPressure2Grid.Name = "checkBoxPressure2Grid";
+            this.checkBoxPressure2Grid.Size = new System.Drawing.Size(110, 18);
+            this.checkBoxPressure2Grid.TabIndex = 8;
+            this.checkBoxPressure2Grid.Text = "Pressure (2) Grid";
+            this.checkBoxPressure2Grid.UseVisualStyleBackColor = true;
+            this.checkBoxPressure2Grid.CheckedChanged += new System.EventHandler(this.checkBoxPressure2Grid_CheckedChanged);
+            // 
             // MainForm
             // 
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(784, 461);
             this.Controls.Add(this.buttonScenarioD);
             this.Controls.Add(this.buttonScenarioC);
             this.Controls.Add(this.groupBoxLegend);
@@ -435,5 +499,9 @@ namespace Graphing.TestHarness
         private System.Windows.Forms.CheckBox checkBoxShowLegend;
         private System.Windows.Forms.Button buttonScenarioC;
         private System.Windows.Forms.Button buttonScenarioD;
+        private System.Windows.Forms.CheckBox checkBoxTimeGrid;
+        private System.Windows.Forms.CheckBox checkBoxPressureGrid;
+        private System.Windows.Forms.CheckBox checkBoxElevationGrid;
+        private System.Windows.Forms.CheckBox checkBoxPressure2Grid;
     }
 }

@@ -102,6 +102,19 @@ namespace Graphing.TestHarness
 
         private HashSet<AxisId> hiddenAxes = new HashSet<AxisId>();
         private HashSet<SeriesId> hiddenSeries = new HashSet<SeriesId>();
+        private HashSet<AxisId> hiddenGridLines = new HashSet<AxisId>();
+
+        private void ShowHideGridLines(AxisId axisId, bool hide)
+        {
+            if (hide)
+            {
+                hiddenGridLines.Add(axisId);
+            }
+            else
+            {
+                hiddenGridLines.Remove(axisId);
+            }
+        }
 
         private void ShowHideAxis(AxisId axisId, bool hide)
         {
@@ -154,12 +167,17 @@ namespace Graphing.TestHarness
             ShowHideAxis(new AxisId("elevation"), !checkBoxElevationYAxis.Checked);
             ShowHideAxis(new AxisId("pressure"), !checkBoxPressureYAxis.Checked);
 
+            ShowHideGridLines(new AxisId("time"), !checkBoxTimeGrid.Checked);
+            ShowHideGridLines(new AxisId("elevation"), !checkBoxElevationGrid.Checked);
+            ShowHideGridLines(new AxisId("pressure"), !checkBoxPressureGrid.Checked);
+            ShowHideGridLines(new AxisId("pressure2"), !checkBoxPressure2Grid.Checked);
+
             ShowHideSeries(new SeriesId("pressure-126"), !checkBoxPressure.Checked);
             ShowHideSeries(new SeriesId("hgl-126"), !checkBoxHGL.Checked);
 
             return new GraphPresentationOptions(hiddenAxisIds: hiddenAxes.ToArray(),
-                hiddenSeriesIds: hiddenSeries.ToArray(), graphTitle: textBoxTitle.Text,
-                graphSubtitle: textBoxSubTitle.Text, resizeChart: checkBoxResizeChart.Checked,
+                hiddenSeriesIds: hiddenSeries.ToArray(), hiddenAxisGridLineIds: hiddenGridLines.ToArray(),
+                graphTitle: textBoxTitle.Text, graphSubtitle: textBoxSubTitle.Text, resizeChart: checkBoxResizeChart.Checked,
                 legendPlacement: legend);
         }
 
@@ -237,6 +255,26 @@ namespace Graphing.TestHarness
         }
 
         private void checkBoxShowLegend_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxTimeGrid_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxElevationGrid_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxPressureGrid_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyOptions();
+        }
+
+        private void checkBoxPressure2Grid_CheckedChanged(object sender, EventArgs e)
         {
             ApplyOptions();
         }
