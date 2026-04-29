@@ -2144,7 +2144,7 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void Layout_AxisEndpointInsets_AutoMode_AppliesToAllAxes()
+        public void Layout_AxisEndpointInsets_AutoMode_AppliesOnlyToVerticalAxes()
         {
             var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Left);
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -2155,7 +2155,7 @@ namespace Graphing.Tests
             var bottom = entries.Single(e => e.Side == PresentationAxisSide.Bottom);
             var left = entries.Single(e => e.Side == PresentationAxisSide.Left);
 
-            Assert.That(bottom.TickEndpointInset, Is.GreaterThan(0d));
+            Assert.That(bottom.TickEndpointInset, Is.EqualTo(0d).Within(1e-12));
             Assert.That(left.TickEndpointInset, Is.GreaterThan(0d));
         }
 
@@ -2184,10 +2184,11 @@ namespace Graphing.Tests
                 axisEndpointInsetFixedValue: fixedInset);
             var presentation = new GraphPresentationModel(snapshot, options);
 
-            for (var i = 0; i < presentation.Layout.Axes.Count; i++)
-            {
-                Assert.That(presentation.Layout.Axes[i].TickEndpointInset, Is.EqualTo(fixedInset).Within(1e-12));
-            }
+            var bottom = presentation.Layout.Axes.Single(e => e.Side == PresentationAxisSide.Bottom);
+            var left = presentation.Layout.Axes.Single(e => e.Side == PresentationAxisSide.Left);
+
+            Assert.That(bottom.TickEndpointInset, Is.EqualTo(0d).Within(1e-12));
+            Assert.That(left.TickEndpointInset, Is.EqualTo(fixedInset).Within(1e-12));
         }
 
         [Test]

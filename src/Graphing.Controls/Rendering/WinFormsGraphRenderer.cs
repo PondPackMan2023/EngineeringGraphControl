@@ -1,9 +1,10 @@
+using Graphing.Controls.Presentation;
+using Graphing.Controls.Rendering.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using Graphing.Controls.Presentation;
-using Graphing.Controls.Rendering.Geometry;
 
 namespace Graphing.Controls.Rendering
 {
@@ -465,13 +466,17 @@ namespace Graphing.Controls.Rendering
             var axisY = plotRect.Bottom;
             g.DrawLine(AxisPen, plotRect.Left, axisY, plotRect.Right, axisY);
 
-            // Only suppress the last label if it would overflow the physical plot area.
-            var maxLabelRight = plotRect.Right;
-
             var clip = g.ClipBounds;
             if (sideBandRect.HasValue)
             {
-                g.SetClip(sideBandRect.Value, System.Drawing.Drawing2D.CombineMode.Intersect);
+                // Allow labels to extend left/right, but still clip vertically
+                var relaxed = new RectangleF(
+                    clip.Left,                    // allow full horizontal extent
+                    sideBandRect.Value.Top,       // keep vertical bounds
+                    clip.Width,
+                    sideBandRect.Value.Height);
+
+                g.SetClip(relaxed, CombineMode.Intersect);
             }
 
             var ticks = axis.Ticks;
@@ -486,13 +491,16 @@ namespace Graphing.Controls.Rendering
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
-                        var labelSize = g.MeasureString(tick.Label, TickFont);
-                        var labelRight = deviceX + (labelSize.Width / 2f);
-                        if (i == ticks.Count - 1 && labelRight > maxLabelRight)
+                        // X-axis note:
+                        // The first tick label is allowed to render beyond the axis origin (to the left of the Y-axis).
+                        // The last tick label is intentionally always suppressed (WaterGEMS-consistent).
+                        // X-axis geometry is never inset or adjusted to accommodate tick labels.
+                        if (i == ticks.Count - 1)
                         {
                             continue;
                         }
 
+                        var labelSize = g.MeasureString(tick.Label, TickFont);
                         var x = deviceX - labelSize.Width / 2f;
                         var y = axisY + TickLength + TickLabelOffset;
                         if (sideBandRect.HasValue)
@@ -666,14 +674,12 @@ namespace Graphing.Controls.Rendering
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
-                        var labelSize = g.MeasureString(tick.Label, TickFont);
-                        var labelLeft = deviceX - (labelSize.Width / 2f);
-                        var labelRight = deviceX + (labelSize.Width / 2f);
-                        if (labelLeft < plotRect.Left || labelRight > plotRect.Right)
+                        if (i == ticks.Count - 1)
                         {
                             continue;
                         }
 
+                        var labelSize = g.MeasureString(tick.Label, TickFont);
                         var x = deviceX - labelSize.Width / 2f;
                         var y = axisY - TickLength - TickLabelOffset - TickFont.Height;
                         if (sideBandRect.HasValue)
