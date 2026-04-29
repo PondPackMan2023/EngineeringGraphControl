@@ -941,10 +941,12 @@ namespace Graphing.Tests
 
             var presentation = new GraphPresentationModel(snapshot, options);
             var title = presentation.Layout.Title;
+            var plotArea = presentation.Layout.PlotArea;
 
-            Assert.That(title.BottomLeft.X, Is.EqualTo(EdgePaddingBandConst).Within(1e-12));
-            Assert.That(title.TopRight.X, Is.EqualTo(1d - EdgePaddingBandConst).Within(1e-12));
-            Assert.That(title.BottomLeft.Y, Is.GreaterThan(presentation.Layout.PlotArea.TopRight.Y));
+            Assert.That(title.BottomLeft.X, Is.EqualTo(plotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(title.TopRight.X, Is.EqualTo(plotArea.TopRight.X).Within(1e-12));
+            Assert.That(title.TopRight.X - title.BottomLeft.X, Is.EqualTo(plotArea.TopRight.X - plotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(title.BottomLeft.Y, Is.GreaterThan(plotArea.TopRight.Y));
             Assert.That(title.TopRight.Y, Is.GreaterThan(title.BottomLeft.Y));
         }
 
@@ -960,8 +962,84 @@ namespace Graphing.Tests
             var subtitle = presentation.Layout.Subtitle;
             var plotArea = presentation.Layout.PlotArea;
 
+            Assert.That(subtitle.BottomLeft.X, Is.EqualTo(plotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(subtitle.TopRight.X, Is.EqualTo(plotArea.TopRight.X).Within(1e-12));
+            Assert.That(subtitle.TopRight.X - subtitle.BottomLeft.X, Is.EqualTo(plotArea.TopRight.X - plotArea.BottomLeft.X).Within(1e-12));
             Assert.That(subtitle.TopRight.Y, Is.LessThan(title.BottomLeft.Y), "Subtitle should be below title");
             Assert.That(subtitle.BottomLeft.Y, Is.EqualTo(plotArea.TopRight.Y).Within(1e-12).Or.GreaterThan(plotArea.TopRight.Y), "Subtitle should align with or be above plot area");
+        }
+
+        [Test]
+        public void Layout_TitleAndSubtitle_RecenterWhenPlotAreaWidthChangesFromAxisFormatting()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxisShort = new AxisModel(
+                new AxisId("y-axis"),
+                ModelAxisOrientation.Y,
+                ModelAxisSide.Left,
+                unit,
+                "m",
+                new NumericFormatter("fmt-short", registry, "F0"));
+            var yAxisLong = new AxisModel(
+                new AxisId("y-axis"),
+                ModelAxisOrientation.Y,
+                ModelAxisSide.Left,
+                unit,
+                "m",
+                new NumericFormatter("fmt-long", registry, "F6"));
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Pressure", "p", unit, new[] { 1.123456d, 2.234567d, 3.345678d });
+
+            var shortModel = new GraphModel(
+                new[] { xAxis, yAxisShort },
+                new[] { new GraphSeriesModel(new SeriesId("s1"), "S1", SeriesType.Line, xField, yField, xAxis, yAxisShort) });
+            var longModel = new GraphModel(
+                new[] { xAxis, yAxisLong },
+                new[] { new GraphSeriesModel(new SeriesId("s1"), "S1", SeriesType.Line, xField, yField, xAxis, yAxisLong) });
+
+            var options = new GraphPresentationOptions(graphTitle: "Title", graphSubtitle: "Subtitle", hiddenSeriesIds: new[] { new SeriesId("s1") });
+            var shortPresentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(shortModel), options);
+            var longPresentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(longModel), options);
+
+            Assert.That(longPresentation.Layout.PlotArea.BottomLeft.X,
+                Is.GreaterThan(shortPresentation.Layout.PlotArea.BottomLeft.X),
+                "Longer tick formatting should reduce plot width by increasing the protected left band.");
+
+            AssertTitleAndSubtitleAlignToPlotArea(shortPresentation);
+            AssertTitleAndSubtitleAlignToPlotArea(longPresentation);
+        }
+
+        [TestCase(LegendPlacement.Left)]
+        [TestCase(LegendPlacement.Right)]
+        public void Layout_TitleAndSubtitle_AlignToPlotArea_WhenLegendIsOnSide(LegendPlacement placement)
+        {
+            var model = placement == LegendPlacement.Left
+                ? CreateModel(seriesType: SeriesType.Line)
+                : CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Right);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Title", graphSubtitle: "Subtitle", legendPlacement: placement);
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            AssertTitleAndSubtitleAlignToPlotArea(presentation);
+        }
+
+        [TestCase(LegendPlacement.Top)]
+        [TestCase(LegendPlacement.Bottom)]
+        public void Layout_TitleAndSubtitle_AlignToPlotArea_WhenLegendIsAboveOrBelow(LegendPlacement placement)
+        {
+            var model = placement == LegendPlacement.Top
+                ? CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Top, yAxisSide: ModelAxisSide.Left)
+                : CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(graphTitle: "Title", graphSubtitle: "Subtitle", legendPlacement: placement);
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            AssertTitleAndSubtitleAlignToPlotArea(presentation);
         }
 
         [Test]
@@ -1011,6 +1089,24 @@ namespace Graphing.Tests
                 Is.LessThan(presentationVisible.Layout.PlotArea.BottomLeft.X),
                 "Left plot area bound should move left when the left axis is hidden.");
             Assert.That(presentationHidden.Layout.PlotArea.BottomLeft.X, Is.EqualTo(EdgePaddingBandConst).Within(1e-12));
+        }
+
+        private static void AssertTitleAndSubtitleAlignToPlotArea(GraphPresentationModel presentation)
+        {
+            var plotArea = presentation.Layout.PlotArea;
+            var title = presentation.Layout.Title;
+            var subtitle = presentation.Layout.Subtitle;
+
+            Assert.That(title, Is.Not.Null);
+            Assert.That(subtitle, Is.Not.Null);
+
+            Assert.That(title.BottomLeft.X, Is.EqualTo(plotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(title.TopRight.X, Is.EqualTo(plotArea.TopRight.X).Within(1e-12));
+            Assert.That(title.TopRight.X - title.BottomLeft.X, Is.EqualTo(plotArea.TopRight.X - plotArea.BottomLeft.X).Within(1e-12));
+
+            Assert.That(subtitle.BottomLeft.X, Is.EqualTo(plotArea.BottomLeft.X).Within(1e-12));
+            Assert.That(subtitle.TopRight.X, Is.EqualTo(plotArea.TopRight.X).Within(1e-12));
+            Assert.That(subtitle.TopRight.X - subtitle.BottomLeft.X, Is.EqualTo(plotArea.TopRight.X - plotArea.BottomLeft.X).Within(1e-12));
         }
 
         [Test]

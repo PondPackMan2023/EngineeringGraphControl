@@ -526,11 +526,11 @@ namespace Graphing.Controls.Presentation
 
             // Title and subtitle are immutable chart chrome: anchored once from basePlotArea, never adjusted for legend.
             var titleGeometry = titleExists
-                ? BuildTitleGeometry(options.GraphTitle, titleTopY, titleBandHeight, leftEdgePadding, rightEdgePadding)
+                    ? BuildTitleGeometry(options.GraphTitle, titleTopY, titleBandHeight, finalPlotArea)
                 : null;
 
             var subtitleGeometry = subtitleExists
-                ? BuildSubtitleGeometry(options.GraphSubtitle, titleGeometry, finalPlotArea, subtitleBandHeight, leftEdgePadding, rightEdgePadding)
+                    ? BuildSubtitleGeometry(options.GraphSubtitle, titleGeometry, finalPlotArea, subtitleBandHeight)
                 : null;
 
             var axisTitleBands = BuildAxisTitleBandsGeometry(
