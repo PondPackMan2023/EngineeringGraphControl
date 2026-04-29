@@ -53,6 +53,8 @@ namespace Graphing.TestHarness
             this.radioButtonLeft = new System.Windows.Forms.RadioButton();
             this.radioButtonBottom = new System.Windows.Forms.RadioButton();
             this.graphControl = new Graphing.Controls.EngineeringGraphControl();
+            this.buttonScenarioC = new System.Windows.Forms.Button();
+            this.buttonScenarioD = new System.Windows.Forms.Button();
             this.groupBoxUnits.SuspendLayout();
             this.groupBoxSeriesAxesVisibility.SuspendLayout();
             this.groupBoxLegend.SuspendLayout();
@@ -221,20 +223,20 @@ namespace Graphing.TestHarness
             // textBoxTitle
             // 
             this.textBoxTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxTitle.Location = new System.Drawing.Point(688, 85);
+            this.textBoxTitle.Location = new System.Drawing.Point(688, 192);
             this.textBoxTitle.Multiline = true;
             this.textBoxTitle.Name = "textBoxTitle";
-            this.textBoxTitle.Size = new System.Drawing.Size(100, 86);
+            this.textBoxTitle.Size = new System.Drawing.Size(100, 25);
             this.textBoxTitle.TabIndex = 5;
             this.textBoxTitle.Text = "Title";
             // 
             // textBoxSubTitle
             // 
             this.textBoxSubTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxSubTitle.Location = new System.Drawing.Point(688, 177);
+            this.textBoxSubTitle.Location = new System.Drawing.Point(688, 223);
             this.textBoxSubTitle.Multiline = true;
             this.textBoxSubTitle.Name = "textBoxSubTitle";
-            this.textBoxSubTitle.Size = new System.Drawing.Size(100, 71);
+            this.textBoxSubTitle.Size = new System.Drawing.Size(100, 25);
             this.textBoxSubTitle.TabIndex = 6;
             this.textBoxSubTitle.Text = "Subtitle";
             // 
@@ -354,9 +356,35 @@ namespace Graphing.TestHarness
             this.graphControl.Size = new System.Drawing.Size(670, 371);
             this.graphControl.TabIndex = 0;
             // 
+            // buttonScenarioC
+            // 
+            this.buttonScenarioC.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonScenarioC.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonScenarioC.Location = new System.Drawing.Point(688, 74);
+            this.buttonScenarioC.Name = "buttonScenarioC";
+            this.buttonScenarioC.Size = new System.Drawing.Size(67, 25);
+            this.buttonScenarioC.TabIndex = 10;
+            this.buttonScenarioC.Text = "Scenario C";
+            this.buttonScenarioC.UseVisualStyleBackColor = true;
+            this.buttonScenarioC.Click += new System.EventHandler(this.buttonScenarioC_Click);
+            // 
+            // buttonScenarioD
+            // 
+            this.buttonScenarioD.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonScenarioD.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonScenarioD.Location = new System.Drawing.Point(688, 105);
+            this.buttonScenarioD.Name = "buttonScenarioD";
+            this.buttonScenarioD.Size = new System.Drawing.Size(67, 25);
+            this.buttonScenarioD.TabIndex = 11;
+            this.buttonScenarioD.Text = "Scenario D";
+            this.buttonScenarioD.UseVisualStyleBackColor = true;
+            this.buttonScenarioD.Click += new System.EventHandler(this.buttonScenarioD_Click);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.buttonScenarioD);
+            this.Controls.Add(this.buttonScenarioC);
             this.Controls.Add(this.groupBoxLegend);
             this.Controls.Add(this.checkBoxResizeChart);
             this.Controls.Add(this.buttonApplyTitles);
@@ -405,5 +433,7 @@ namespace Graphing.TestHarness
         private System.Windows.Forms.RadioButton radioButtonLeft;
         private System.Windows.Forms.RadioButton radioButtonBottom;
         private System.Windows.Forms.CheckBox checkBoxShowLegend;
+        private System.Windows.Forms.Button buttonScenarioC;
+        private System.Windows.Forms.Button buttonScenarioD;
     }
 }

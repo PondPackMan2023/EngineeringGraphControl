@@ -83,9 +83,11 @@ namespace Graphing.Controls.Presentation
             options = options ?? new GraphPresentationOptions();
             measurementInput = measurementInput ?? new DefaultLayoutMeasurementInput();
             var seriesContexts = BuildSeriesGeometry(snapshot, options);
-            _series = BuildSeriesList(seriesContexts);
             _axes = BuildAxisGeometry(snapshot, seriesContexts, options);
-            _layout = BuildLayoutGeometry(_axes, _series, options, measurementInput);
+            var initialSeriesList = BuildSeriesList(seriesContexts);
+            _layout = BuildLayoutGeometry(_axes, initialSeriesList, options, measurementInput);
+            BindSeriesAxisEntries(seriesContexts, _layout.Axes);
+            _series = initialSeriesList;
             _semantics = BuildSemanticModel(snapshot, seriesContexts, _axes, options);
         }
 
@@ -194,7 +196,7 @@ namespace Graphing.Controls.Presentation
                 var title = axisSnapshot.Title;
                 var formatter = ResolveAxisFormatter(axisSnapshot);
                 var linePoints = BuildAxisLine(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation);
-                var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation, formatter, axisSnapshot.Unit);
+                var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, formatter, axisSnapshot.Unit);
 
                 result.Add(
                     new AxisPresentationGeometry(
@@ -340,7 +342,6 @@ namespace Graphing.Controls.Presentation
         private static IReadOnlyList<AxisTickPresentation> BuildAxisTicks(
             double? minimumValue,
             double? maximumValue,
-            AxisOrientation orientation,
             NumericFormatter formatter,
             UnitRegistry.Unit unit)
         {
@@ -356,10 +357,7 @@ namespace Graphing.Controls.Presentation
             for (var index = 0; index < tickValues.Count; index++)
             {
                 var value = tickValues[index];
-                var anchor = orientation == AxisOrientation.Horizontal
-                    ? new GeometryPoint3D(value, 0d, 0d)
-                    : new GeometryPoint3D(0d, value, 0d);
-                ticks.Add(new AxisTickPresentation(value, anchor, FormatAxisLabel(formatter, value)));
+                ticks.Add(new AxisTickPresentation(value, FormatAxisLabel(formatter, value)));
             }
 
             return new ReadOnlyCollection<AxisTickPresentation>(ticks);
@@ -994,10 +992,8 @@ namespace Graphing.Controls.Presentation
                 ? BuildSubtitleGeometry(options.GraphSubtitle, titleGeometry, finalPlotArea, subtitleBandHeight, leftEdgePadding, rightEdgePadding)
                 : null;
 
-            var entriesWithInsetAnchors = ApplyEndpointInsetsToTickAnchors(entries);
-
             var axisTitleBands = BuildAxisTitleBandsGeometry(
-                entriesWithInsetAnchors,
+                entries,
                 finalPlotArea,
                 leftAxisBandWidth,
                 rightAxisBandWidth,
@@ -1021,7 +1017,7 @@ namespace Graphing.Controls.Presentation
                 topTickBandThickness);
 
             // Create grid lines geometry
-            var gridLines = BuildGridLinesGeometry(entriesWithInsetAnchors, finalPlotArea);
+            var gridLines = BuildGridLinesGeometry(entries, finalPlotArea);
 
             AssertLayoutInvariants(finalPlotArea, axisTitleBands, legendGeometry);
 
@@ -1033,7 +1029,7 @@ namespace Graphing.Controls.Presentation
 
             return new GraphLayoutModel(
                 finalPlotArea,
-                entriesWithInsetAnchors,
+                entries,
                 series,
                 titleGeometry,
                 subtitleGeometry,
@@ -1056,92 +1052,6 @@ namespace Graphing.Controls.Presentation
             }
 
             return new ReadOnlyCollection<AxisTickPresentation>(result);
-        }
-
-        private static IReadOnlyList<AxisLayoutEntry> ApplyEndpointInsetsToTickAnchors(IReadOnlyList<AxisLayoutEntry> entries)
-        {
-            var adjustedEntries = new List<AxisLayoutEntry>(entries.Count);
-
-            for (var i = 0; i < entries.Count; i++)
-            {
-                var entry = entries[i];
-                    // The TickEndpointInset is specified in canvas-normalized [0,1] space.
-                    // Tick anchors are in axis-span [0,1] space. For stacked axes whose span
-                    // covers only a fraction of the plot height, the same normalized inset value
-                    // maps to fewer device pixels. Scale by 1/spanFraction so that the physical
-                    // pixel inset is constant regardless of span height.
-                    var spanFraction = entry.NormalizedSpanEnd - entry.NormalizedSpanStart;
-                    var scaledInset = spanFraction > 1e-9
-                        ? Math.Min(0.49, entry.TickEndpointInset / spanFraction)
-                        : entry.TickEndpointInset;
-                    var adjustedAxis = ApplyEndpointInsetToAxisTicks(entry.Axis, scaledInset);
-                adjustedEntries.Add(new AxisLayoutEntry(
-                    adjustedAxis,
-                    entry.Side,
-                    entry.SideIndex,
-                    entry.NormalizedSpanStart,
-                    entry.NormalizedSpanEnd,
-                    entry.TickEndpointInset));
-            }
-
-            return new ReadOnlyCollection<AxisLayoutEntry>(adjustedEntries);
-        }
-
-        private static AxisPresentationGeometry ApplyEndpointInsetToAxisTicks(
-            AxisPresentationGeometry axis,
-            double endpointInset)
-        {
-            if (axis == null)
-            {
-                return null;
-            }
-
-            var ticks = axis.Ticks;
-            if (ticks == null || ticks.Count == 0 || !axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
-            {
-                return axis;
-            }
-
-            var inset = Clamp01(endpointInset);
-            var start = inset;
-            var end = 1d - inset;
-            if (end < start)
-            {
-                end = start;
-            }
-
-            var domainMin = axis.MinimumValue.Value;
-            var domainRange = axis.MaximumValue.Value - domainMin;
-            var adjustedTicks = new List<AxisTickPresentation>(ticks.Count);
-
-            for (var i = 0; i < ticks.Count; i++)
-            {
-                var tick = ticks[i];
-                var axisRelative = Math.Abs(domainRange) > double.Epsilon
-                    ? (tick.Value - domainMin) / domainRange
-                    : 0.5d;
-                axisRelative = Clamp01(axisRelative);
-                var insetAdjusted = start + (axisRelative * (end - start));
-
-                var anchor = axis.Orientation == AxisOrientation.Horizontal
-                    ? new GeometryPoint3D(insetAdjusted, 0d, 0d)
-                    : new GeometryPoint3D(0d, insetAdjusted, 0d);
-
-                adjustedTicks.Add(new AxisTickPresentation(tick.Value, anchor, tick.Label));
-            }
-
-            return new AxisPresentationGeometry(
-                axis.Identity,
-                axis.AxisId,
-                axis.Side,
-                axis.Orientation,
-                axis.Title,
-                axis.FormatterName,
-                axis.DisplayUnitLabel,
-                axis.MinimumValue,
-                axis.MaximumValue,
-                axis.LinePoints,
-                new ReadOnlyCollection<AxisTickPresentation>(adjustedTicks));
         }
 
         private static double GetMaxAxisTitleThickness(
@@ -1919,92 +1829,109 @@ namespace Graphing.Controls.Presentation
         {
             var verticalLines = new List<GridLineGeometry>();
             var horizontalLines = new List<GridLineGeometry>();
-
-            // Grid lines are rendered inside the plot rectangle. In this geometry,
-            // tick-derived positions remain normalized in plot-local space [0,1],
-            // and extents must always span the full plot-local bounds.
-            const double PlotLocalStart = 0d;
-            const double PlotLocalEnd = 1d;
+            var hasXDomain = false;
+            var hasYDomain = false;
+            var domainMinX = 0d;
+            var domainMaxX = 0d;
+            var domainMinY = 0d;
+            var domainMaxY = 0d;
+            var xAxisEntry = (AxisLayoutEntry)null;
+            var yAxisEntries = new List<AxisLayoutEntry>();
 
             for (var i = 0; i < axisEntries.Count; i++)
             {
                 var entry = axisEntries[i];
                 var axis = entry.Axis;
 
-                // Vertical grid lines from X-axis (Bottom/Top) ticks
-                if ((entry.Side == AxisSide.Bottom || entry.Side == AxisSide.Top) &&
-                    axis.Orientation == AxisOrientation.Horizontal)
+                if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
                 {
-                    if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+                    continue;
+                }
+
+                if (axis.Orientation == AxisOrientation.Horizontal &&
+                    (entry.Side == AxisSide.Bottom || entry.Side == AxisSide.Top))
+                {
+                    if (!hasXDomain)
                     {
-                        continue;
+                        hasXDomain = true;
+                        xAxisEntry = entry;
+                        domainMinX = axis.MinimumValue.Value;
+                        domainMaxX = axis.MaximumValue.Value;
                     }
-
-                    var domainMin = axis.MinimumValue.Value;
-                    var domainMax = axis.MaximumValue.Value;
-                    var domainRange = domainMax - domainMin;
-
-                    var ticks = axis.Ticks;
-                    for (var tickIndex = 0; tickIndex < ticks.Count; tickIndex++)
+                    else
                     {
-                        var tick = ticks[tickIndex];
-                        // Normalize domain value to [0, 1] within axis bounds
-                        var normalizedX = Math.Abs(domainRange) > double.Epsilon
-                            ? (tick.Value - domainMin) / domainRange
-                            : 0.5;
-
-                        // Clip to plot-local bounds.
-                        if (normalizedX >= PlotLocalStart && normalizedX <= PlotLocalEnd)
-                        {
-                            verticalLines.Add(new GridLineGeometry(
-                                AxisOrientation.Vertical,
-                                new GeometryPoint3D(normalizedX, PlotLocalStart, 0d),
-                                new GeometryPoint3D(normalizedX, PlotLocalEnd, 0d)));
-                        }
+                        domainMinX = Math.Min(domainMinX, axis.MinimumValue.Value);
+                        domainMaxX = Math.Max(domainMaxX, axis.MaximumValue.Value);
                     }
                 }
 
-                // Horizontal grid lines from Y-axis (Left/Right) ticks
-                if ((entry.Side == AxisSide.Left || entry.Side == AxisSide.Right) &&
-                    axis.Orientation == AxisOrientation.Vertical)
+                if (axis.Orientation == AxisOrientation.Vertical &&
+                    (entry.Side == AxisSide.Left || entry.Side == AxisSide.Right))
                 {
-                    if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
+                    if (!hasYDomain)
                     {
-                        continue;
+                        hasYDomain = true;
+                        domainMinY = axis.MinimumValue.Value;
+                        domainMaxY = axis.MaximumValue.Value;
+                    }
+                    else
+                    {
+                        domainMinY = Math.Min(domainMinY, axis.MinimumValue.Value);
+                        domainMaxY = Math.Max(domainMaxY, axis.MaximumValue.Value);
                     }
 
-                    var domainMin = axis.MinimumValue.Value;
-                    var domainMax = axis.MaximumValue.Value;
-                    var domainRange = domainMax - domainMin;
-                    var spanStart = entry.NormalizedSpanStart;
-                    var spanEnd = entry.NormalizedSpanEnd;
-                    var spanHeight = spanEnd - spanStart;
+                    yAxisEntries.Add(entry);
+                }
+            }
 
-                    if (spanHeight <= 0d)
-                    {
-                        continue;
-                    }
+            for (var i = 0; i < axisEntries.Count; i++)
+            {
+                var entry = axisEntries[i];
+                var axis = entry.Axis;
 
+                // Vertical grid lines from X-axis ticks in domain space, bound to the X-axis entry.
+                if (hasYDomain &&
+                    axis.Orientation == AxisOrientation.Horizontal &&
+                    (entry.Side == AxisSide.Bottom || entry.Side == AxisSide.Top))
+                {
                     var ticks = axis.Ticks;
                     for (var tickIndex = 0; tickIndex < ticks.Count; tickIndex++)
                     {
-                        var tick = ticks[tickIndex];
-                        // Normalize domain value to [0,1] within the owning axis domain,
-                        // then map into this axis' allocated vertical span.
-                        var axisRelativeY = Math.Abs(domainRange) > double.Epsilon
-                            ? (tick.Value - domainMin) / domainRange
-                            : 0.5;
-
-                        var normalizedY = spanStart + (axisRelativeY * spanHeight);
-
-                        // Clip to the owning axis span so lines do not bleed into other stacked bands.
-                        if (normalizedY >= spanStart && normalizedY <= spanEnd)
+                        var x = ticks[tickIndex].Value;
+                        if (x < axis.MinimumValue.Value || x > axis.MaximumValue.Value)
                         {
-                            horizontalLines.Add(new GridLineGeometry(
-                                AxisOrientation.Horizontal,
-                                new GeometryPoint3D(PlotLocalStart, normalizedY, 0d),
-                                new GeometryPoint3D(PlotLocalEnd, normalizedY, 0d)));
+                            continue;
                         }
+
+                        var line = new GridLineGeometry(
+                            AxisOrientation.Vertical,
+                            new GeometryPoint3D(x, domainMinY, 0d),
+                            new GeometryPoint3D(x, domainMaxY, 0d),
+                            xAxisEntry);
+                        verticalLines.Add(line);
+                    }
+                }
+
+                // Horizontal grid lines from Y-axis ticks in domain space, bound to their source Y-axis entry.
+                if (hasXDomain &&
+                    axis.Orientation == AxisOrientation.Vertical &&
+                    (entry.Side == AxisSide.Left || entry.Side == AxisSide.Right))
+                {
+                    var ticks = axis.Ticks;
+                    for (var tickIndex = 0; tickIndex < ticks.Count; tickIndex++)
+                    {
+                        var y = ticks[tickIndex].Value;
+                        if (y < axis.MinimumValue.Value || y > axis.MaximumValue.Value)
+                        {
+                            continue;
+                        }
+
+                        var line = new GridLineGeometry(
+                            AxisOrientation.Horizontal,
+                            new GeometryPoint3D(domainMinX, y, 0d),
+                            new GeometryPoint3D(domainMaxX, y, 0d),
+                            entry);
+                        horizontalLines.Add(line);
                     }
                 }
             }
@@ -2259,6 +2186,42 @@ namespace Graphing.Controls.Presentation
                 }
 
                 return isSubtitle ? SubtitleHeight : TitleHeight;
+            }
+        }
+
+        private static void BindSeriesAxisEntries(
+            IReadOnlyList<SeriesGeometryContext> seriesContexts,
+            IReadOnlyList<AxisLayoutEntry> layoutAxes)
+        {
+            var axisLookup = new Dictionary<string, AxisLayoutEntry>(StringComparer.Ordinal);
+
+            for (var i = 0; i < layoutAxes.Count; i++)
+            {
+                var entry = layoutAxes[i];
+                var axisId = entry.Axis.AxisId;
+                if (!string.IsNullOrEmpty(axisId) && !axisLookup.ContainsKey(axisId))
+                {
+                    axisLookup[axisId] = entry;
+                }
+            }
+
+            for (var i = 0; i < seriesContexts.Count; i++)
+            {
+                var context = seriesContexts[i];
+                var xAxisId = context.Source.XAxisId;
+                var yAxisId = context.Source.YAxisId;
+
+                if (!string.IsNullOrEmpty(xAxisId))
+                {
+                    axisLookup.TryGetValue(xAxisId, out var xEntry);
+                    context.Geometry.XAxisEntry = xEntry;
+                }
+
+                if (!string.IsNullOrEmpty(yAxisId))
+                {
+                    axisLookup.TryGetValue(yAxisId, out var yEntry);
+                    context.Geometry.YAxisEntry = yEntry;
+                }
             }
         }
 

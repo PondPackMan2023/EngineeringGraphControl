@@ -1079,17 +1079,21 @@ namespace Graphing.Tests
             Assert.That(verticalLines.Count, Is.GreaterThan(0),
                 "Should have vertical grid lines from X-axis ticks");
 
-            // Verify vertical lines span the plot area height
-            var plotArea = presentation.Layout.PlotArea;
+            var yEntries = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+            var expectedMinY = yEntries.Min(e => e.Axis.MinimumValue.Value);
+            var expectedMaxY = yEntries.Max(e => e.Axis.MaximumValue.Value);
+
             for (var i = 0; i < verticalLines.Count; i++)
             {
                 var line = verticalLines[i];
                 Assert.That(line.Orientation, Is.EqualTo(PresentationAxisOrientation.Vertical),
                     "Lines should be vertical");
-                Assert.That(line.Start.Y, Is.EqualTo(0d).Within(1e-12),
-                    "Line should start at plot-local bottom bound");
-                Assert.That(line.End.Y, Is.EqualTo(1d).Within(1e-12),
-                    "Line should end at plot-local top bound");
+                Assert.That(line.Start.Y, Is.EqualTo(expectedMinY).Within(1e-12),
+                    "Vertical grid line should start at Y-domain minimum.");
+                Assert.That(line.End.Y, Is.EqualTo(expectedMaxY).Within(1e-12),
+                    "Vertical grid line should end at Y-domain maximum.");
             }
         }
 
@@ -1104,17 +1108,21 @@ namespace Graphing.Tests
             Assert.That(horizontalLines.Count, Is.GreaterThan(0),
                 "Should have horizontal grid lines from Y-axis ticks");
 
-            // Verify horizontal lines span the plot area width
-            var plotArea = presentation.Layout.PlotArea;
+            var xEntries = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Horizontal)
+                .ToArray();
+            var expectedMinX = xEntries.Min(e => e.Axis.MinimumValue.Value);
+            var expectedMaxX = xEntries.Max(e => e.Axis.MaximumValue.Value);
+
             for (var i = 0; i < horizontalLines.Count; i++)
             {
                 var line = horizontalLines[i];
                 Assert.That(line.Orientation, Is.EqualTo(PresentationAxisOrientation.Horizontal),
                     "Lines should be horizontal");
-                Assert.That(line.Start.X, Is.EqualTo(0d).Within(1e-12),
-                    "Line should start at plot-local left bound");
-                Assert.That(line.End.X, Is.EqualTo(1d).Within(1e-12),
-                    "Line should end at plot-local right bound");
+                Assert.That(line.Start.X, Is.EqualTo(expectedMinX).Within(1e-12),
+                    "Horizontal grid line should start at X-domain minimum.");
+                Assert.That(line.End.X, Is.EqualTo(expectedMaxX).Within(1e-12),
+                    "Horizontal grid line should end at X-domain maximum.");
             }
         }
 
@@ -1125,79 +1133,106 @@ namespace Graphing.Tests
             var snapshot = new GraphSnapshotBuilder().Build(model);
             var presentation = new GraphPresentationModel(snapshot);
 
+            var xTickValues = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Horizontal)
+                .SelectMany(a => a.Axis.Ticks.Select(t => t.Value))
+                .ToArray();
+            var yTickValues = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Vertical)
+                .SelectMany(a => a.Axis.Ticks.Select(t => t.Value))
+                .ToArray();
+
             var verticalLines = presentation.Layout.GridLines.VerticalLines;
             var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
 
-            // Verify vertical lines are at normalized positions corresponding to tick values
             for (var i = 0; i < verticalLines.Count; i++)
             {
                 var line = verticalLines[i];
-                Assert.That(line.Start.X, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
-                Assert.That(line.Start.X, Is.LessThanOrEqualTo(1d).Within(1e-12));
+                Assert.That(xTickValues.Any(v => Math.Abs(v - line.Start.X) <= 1e-12), Is.True,
+                    "Vertical line X must match an X-axis tick domain value.");
             }
 
-            // Verify horizontal lines are at normalized positions corresponding to tick values
             for (var i = 0; i < horizontalLines.Count; i++)
             {
                 var line = horizontalLines[i];
-                Assert.That(line.Start.Y, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
-                Assert.That(line.Start.Y, Is.LessThanOrEqualTo(1d).Within(1e-12));
+                Assert.That(yTickValues.Any(v => Math.Abs(v - line.Start.Y) <= 1e-12), Is.True,
+                    "Horizontal line Y must match a Y-axis tick domain value.");
             }
         }
 
         [Test]
-        public void Layout_GridLines_AreClippedToPlotArea()
+        public void Layout_GridLines_StayWithinAxisDomainExtents()
         {
             var model = CreateModel(seriesType: SeriesType.Line);
             var snapshot = new GraphSnapshotBuilder().Build(model);
             var presentation = new GraphPresentationModel(snapshot);
 
+            var xEntries = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Horizontal)
+                .ToArray();
+            var yEntries = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+
+            var minX = xEntries.Min(e => e.Axis.MinimumValue.Value);
+            var maxX = xEntries.Max(e => e.Axis.MaximumValue.Value);
+            var minY = yEntries.Min(e => e.Axis.MinimumValue.Value);
+            var maxY = yEntries.Max(e => e.Axis.MaximumValue.Value);
+
             var verticalLines = presentation.Layout.GridLines.VerticalLines;
             var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
 
-            // All vertical line X coordinates should be within plot-local bounds
             for (var i = 0; i < verticalLines.Count; i++)
             {
                 var line = verticalLines[i];
-                Assert.That(line.Start.X, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
-                Assert.That(line.Start.X, Is.LessThanOrEqualTo(1d).Within(1e-12));
+                Assert.That(line.Start.X, Is.GreaterThanOrEqualTo(minX).Within(1e-12));
+                Assert.That(line.Start.X, Is.LessThanOrEqualTo(maxX).Within(1e-12));
+                Assert.That(line.Start.Y, Is.EqualTo(minY).Within(1e-12));
+                Assert.That(line.End.Y, Is.EqualTo(maxY).Within(1e-12));
             }
 
-            // All horizontal line Y coordinates should be within plot-local bounds
             for (var i = 0; i < horizontalLines.Count; i++)
             {
                 var line = horizontalLines[i];
-                Assert.That(line.Start.Y, Is.GreaterThanOrEqualTo(0d).Within(1e-12));
-                Assert.That(line.Start.Y, Is.LessThanOrEqualTo(1d).Within(1e-12));
+                Assert.That(line.Start.Y, Is.GreaterThanOrEqualTo(minY).Within(1e-12));
+                Assert.That(line.Start.Y, Is.LessThanOrEqualTo(maxY).Within(1e-12));
+                Assert.That(line.Start.X, Is.EqualTo(minX).Within(1e-12));
+                Assert.That(line.End.X, Is.EqualTo(maxX).Within(1e-12));
             }
         }
 
         [Test]
-        public void Layout_GridLines_TouchPlotAreaBorderWithoutInset()
+        public void GridLines_AreDomainRelative_NotPlotNormalized()
         {
-            var model = CreateModel(seriesType: SeriesType.Line);
-            var snapshot = new GraphSnapshotBuilder().Build(model);
-            var presentation = new GraphPresentationModel(snapshot);
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-domain"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-domain"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
 
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 10d, 20d, 30d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 100d, 200d, 300d });
+            var series = new GraphSeriesModel(new SeriesId("1"), "s", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
             var verticalLines = presentation.Layout.GridLines.VerticalLines;
-            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
 
             Assert.That(verticalLines.Count, Is.GreaterThan(0));
-            Assert.That(horizontalLines.Count, Is.GreaterThan(0));
+
+            var xTicks = presentation.Layout.Axes
+                .Where(a => a.Axis.Orientation == PresentationAxisOrientation.Horizontal)
+                .SelectMany(a => a.Axis.Ticks.Select(t => t.Value))
+                .ToArray();
 
             for (var i = 0; i < verticalLines.Count; i++)
             {
-                var line = verticalLines[i];
-                Assert.That(line.Start.Y, Is.EqualTo(0d).Within(1e-12));
-                Assert.That(line.End.Y, Is.EqualTo(1d).Within(1e-12));
+                var x = verticalLines[i].Start.X;
+                Assert.That(xTicks.Any(v => Math.Abs(v - x) <= 1e-12), Is.True,
+                    "Vertical grid line must use domain tick values, not plot-normalized coordinates.");
             }
 
-            for (var i = 0; i < horizontalLines.Count; i++)
-            {
-                var line = horizontalLines[i];
-                Assert.That(line.Start.X, Is.EqualTo(0d).Within(1e-12));
-                Assert.That(line.End.X, Is.EqualTo(1d).Within(1e-12));
-            }
+            // Domain is [10,30], so normalized [0,1] values are invalid except if equal to tick values by coincidence.
+            Assert.That(verticalLines.Any(l => l.Start.X > 1d), Is.True,
+                "At least one vertical grid line should prove domain-space emission for non-[0,1] domains.");
         }
 
         [Test]
@@ -1235,32 +1270,21 @@ namespace Graphing.Tests
             for (var axisIndex = 0; axisIndex < leftAxisEntries.Length; axisIndex++)
             {
                 var entry = leftAxisEntries[axisIndex];
-                var spanStart = entry.NormalizedSpanStart;
-                var spanEnd = entry.NormalizedSpanEnd;
-                var domainMin = entry.Axis.MinimumValue.Value;
-                var domainMax = entry.Axis.MaximumValue.Value;
-                var domainRange = domainMax - domainMin;
-
                 for (var tickIndex = 0; tickIndex < entry.Axis.Ticks.Count; tickIndex++)
                 {
                     var tick = entry.Axis.Ticks[tickIndex];
-                    var axisRelative = Math.Abs(domainRange) > double.Epsilon
-                        ? (tick.Value - domainMin) / domainRange
-                        : 0.5;
-                    var expectedY = spanStart + (axisRelative * (spanEnd - spanStart));
-
                     var hasMatch = horizontalLines.Any(line =>
-                        Math.Abs(line.Start.Y - expectedY) <= 1e-12 &&
-                        Math.Abs(line.End.Y - expectedY) <= 1e-12);
+                        Math.Abs(line.Start.Y - tick.Value) <= 1e-12 &&
+                        Math.Abs(line.End.Y - tick.Value) <= 1e-12);
 
                     Assert.That(hasMatch, Is.True,
-                        "Horizontal line should align to tick within the owning axis span.");
+                        "Horizontal line should align to the source axis tick domain value.");
                 }
             }
         }
 
         [Test]
-        public void Layout_GridLines_StackedYAxes_HorizontalLinesRemainWithinOwningSpans()
+        public void Layout_GridLines_StackedYAxes_HorizontalLinesStayWithinAxisDomains()
         {
             var presentation = CreatePresentationWithLeftAxisCount(3);
             var leftAxisEntries = presentation.Layout.Axes
@@ -1274,12 +1298,12 @@ namespace Graphing.Tests
             for (var i = 0; i < horizontalLines.Count; i++)
             {
                 var y = horizontalLines[i].Start.Y;
-                var coveredBySomeAxisSpan = leftAxisEntries.Any(entry =>
-                    y >= entry.NormalizedSpanStart - 1e-12 &&
-                    y <= entry.NormalizedSpanEnd + 1e-12);
+                var coveredBySomeAxisDomain = leftAxisEntries.Any(entry =>
+                    y >= entry.Axis.MinimumValue.Value - 1e-12 &&
+                    y <= entry.Axis.MaximumValue.Value + 1e-12);
 
-                Assert.That(coveredBySomeAxisSpan, Is.True,
-                    "Horizontal grid line should not bleed outside stacked axis spans.");
+                Assert.That(coveredBySomeAxisDomain, Is.True,
+                    "Horizontal grid line should stay within at least one owning Y-axis domain.");
             }
         }
 
@@ -1288,16 +1312,49 @@ namespace Graphing.Tests
         {
             var presentation = CreatePresentationWithLeftAxisCount(1);
             var leftEntry = presentation.Layout.Axes.Single(a => a.Side == PresentationAxisSide.Left);
+            var xEntry = presentation.Layout.Axes.Single(a => a.Axis.Orientation == PresentationAxisOrientation.Horizontal);
             var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
 
             Assert.That(horizontalLines.Count, Is.EqualTo(leftEntry.Axis.Ticks.Count));
 
             for (var i = 0; i < horizontalLines.Count; i++)
             {
-                Assert.That(horizontalLines[i].Start.X, Is.EqualTo(0d).Within(1e-12));
-                Assert.That(horizontalLines[i].End.X, Is.EqualTo(1d).Within(1e-12));
-                Assert.That(horizontalLines[i].Start.Y, Is.GreaterThanOrEqualTo(leftEntry.NormalizedSpanStart).Within(1e-12));
-                Assert.That(horizontalLines[i].Start.Y, Is.LessThanOrEqualTo(leftEntry.NormalizedSpanEnd).Within(1e-12));
+                Assert.That(horizontalLines[i].Start.X, Is.EqualTo(xEntry.Axis.MinimumValue.Value).Within(1e-12));
+                Assert.That(horizontalLines[i].End.X, Is.EqualTo(xEntry.Axis.MaximumValue.Value).Within(1e-12));
+                Assert.That(horizontalLines[i].Start.Y, Is.GreaterThanOrEqualTo(leftEntry.Axis.MinimumValue.Value).Within(1e-12));
+                Assert.That(horizontalLines[i].Start.Y, Is.LessThanOrEqualTo(leftEntry.Axis.MaximumValue.Value).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void GridLines_UseCorrectAxisLayoutEntry()
+        {
+            var presentation = CreatePresentationWithLeftAxisCount(2);
+            var xAxis = presentation.Layout.Axes.First(a => a.Axis.Orientation == PresentationAxisOrientation.Horizontal);
+            var yAxes = presentation.Layout.Axes.Where(a => a.Axis.Orientation == PresentationAxisOrientation.Vertical).ToArray();
+
+            var verticalLines = presentation.Layout.GridLines.VerticalLines;
+            var horizontalLines = presentation.Layout.GridLines.HorizontalLines;
+
+            Assert.That(verticalLines.Count, Is.GreaterThan(0), "Should have vertical grid lines.");
+            for (var i = 0; i < verticalLines.Count; i++)
+            {
+                var line = verticalLines[i];
+                Assert.That(line.AxisEntry, Is.Not.Null, "Vertical grid line must bind to an axis entry.");
+                Assert.That(line.AxisEntry.Axis.Orientation, Is.EqualTo(PresentationAxisOrientation.Horizontal),
+                    "Vertical grid line must bind to an X-axis entry.");
+            }
+
+            Assert.That(horizontalLines.Count, Is.GreaterThan(0), "Should have horizontal grid lines.");
+            for (var i = 0; i < horizontalLines.Count; i++)
+            {
+                var line = horizontalLines[i];
+                Assert.That(line.AxisEntry, Is.Not.Null, "Horizontal grid line must bind to an axis entry.");
+                Assert.That(line.AxisEntry.Axis.Orientation, Is.EqualTo(PresentationAxisOrientation.Vertical),
+                    "Horizontal grid line must bind to a Y-axis entry.");
+                var boundAxisId = line.AxisEntry.Axis.AxisId;
+                Assert.That(yAxes.Any(a => a.Axis.AxisId == boundAxisId), Is.True,
+                    "Horizontal grid line must bind to one of the source Y-axis entries.");
             }
         }
 
@@ -2043,7 +2100,7 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void Layout_AxisEndpointInsets_AutoMode_ShiftsTickAnchorsInward()
+        public void Layout_AxisEndpointInsets_AutoMode_LeavesTickValuesAtDomainEndpoints()
         {
             var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Left);
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -2056,14 +2113,19 @@ namespace Graphing.Tests
             Assert.That(bottomAxis.Ticks.Count, Is.GreaterThanOrEqualTo(2));
             Assert.That(leftAxis.Ticks.Count, Is.GreaterThanOrEqualTo(2));
 
-            Assert.That(bottomAxis.Ticks[0].AnchorPoint.X, Is.GreaterThan(0d));
-            Assert.That(bottomAxis.Ticks[bottomAxis.Ticks.Count - 1].AnchorPoint.X, Is.LessThan(1d));
-            Assert.That(leftAxis.Ticks[0].AnchorPoint.Y, Is.GreaterThan(0d));
-            Assert.That(leftAxis.Ticks[leftAxis.Ticks.Count - 1].AnchorPoint.Y, Is.LessThan(1d));
+            Assert.That(bottomAxis.MinimumValue.HasValue, Is.True);
+            Assert.That(bottomAxis.MaximumValue.HasValue, Is.True);
+            Assert.That(leftAxis.MinimumValue.HasValue, Is.True);
+            Assert.That(leftAxis.MaximumValue.HasValue, Is.True);
+
+            Assert.That(bottomAxis.Ticks[0].Value, Is.EqualTo(bottomAxis.MinimumValue.Value).Within(1e-12));
+            Assert.That(bottomAxis.Ticks[bottomAxis.Ticks.Count - 1].Value, Is.EqualTo(bottomAxis.MaximumValue.Value).Within(1e-12));
+            Assert.That(leftAxis.Ticks[0].Value, Is.EqualTo(leftAxis.MinimumValue.Value).Within(1e-12));
+            Assert.That(leftAxis.Ticks[leftAxis.Ticks.Count - 1].Value, Is.EqualTo(leftAxis.MaximumValue.Value).Within(1e-12));
         }
 
         [Test]
-        public void Layout_AxisEndpointInsets_AutoMode_KeepsVerticalTickAnchorsSymmetric()
+        public void Layout_AxisEndpointInsets_AutoMode_KeepsVerticalTickValuesSymmetric()
         {
             var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Left);
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -2072,14 +2134,16 @@ namespace Graphing.Tests
 
             var leftAxis = presentation.Layout.Axes.Single(e => e.Side == PresentationAxisSide.Left).Axis;
             Assert.That(leftAxis.Ticks.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(leftAxis.MinimumValue.HasValue, Is.True);
+            Assert.That(leftAxis.MaximumValue.HasValue, Is.True);
 
-            var minAnchor = leftAxis.Ticks[0].AnchorPoint.Y;
-            var maxAnchor = leftAxis.Ticks[leftAxis.Ticks.Count - 1].AnchorPoint.Y;
-            Assert.That(minAnchor + maxAnchor, Is.EqualTo(1d).Within(1e-12));
+            var minTick = leftAxis.Ticks[0].Value;
+            var maxTick = leftAxis.Ticks[leftAxis.Ticks.Count - 1].Value;
+            Assert.That(minTick + maxTick, Is.EqualTo(leftAxis.MinimumValue.Value + leftAxis.MaximumValue.Value).Within(1e-12));
         }
 
         [Test]
-        public void Layout_AxisEndpointInsets_NoneMode_KeepsTickAnchorsAtFullSpanEndpoints()
+        public void Layout_AxisEndpointInsets_NoneMode_LeavesTickValuesAtDomainEndpoints()
         {
             var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Bottom, yAxisSide: ModelAxisSide.Left);
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -2089,10 +2153,15 @@ namespace Graphing.Tests
             var bottomAxis = presentation.Layout.Axes.Single(e => e.Side == PresentationAxisSide.Bottom).Axis;
             var leftAxis = presentation.Layout.Axes.Single(e => e.Side == PresentationAxisSide.Left).Axis;
 
-            Assert.That(bottomAxis.Ticks[0].AnchorPoint.X, Is.EqualTo(0d).Within(1e-12));
-            Assert.That(bottomAxis.Ticks[bottomAxis.Ticks.Count - 1].AnchorPoint.X, Is.EqualTo(1d).Within(1e-12));
-            Assert.That(leftAxis.Ticks[0].AnchorPoint.Y, Is.EqualTo(0d).Within(1e-12));
-            Assert.That(leftAxis.Ticks[leftAxis.Ticks.Count - 1].AnchorPoint.Y, Is.EqualTo(1d).Within(1e-12));
+            Assert.That(bottomAxis.MinimumValue.HasValue, Is.True);
+            Assert.That(bottomAxis.MaximumValue.HasValue, Is.True);
+            Assert.That(leftAxis.MinimumValue.HasValue, Is.True);
+            Assert.That(leftAxis.MaximumValue.HasValue, Is.True);
+
+            Assert.That(bottomAxis.Ticks[0].Value, Is.EqualTo(bottomAxis.MinimumValue.Value).Within(1e-12));
+            Assert.That(bottomAxis.Ticks[bottomAxis.Ticks.Count - 1].Value, Is.EqualTo(bottomAxis.MaximumValue.Value).Within(1e-12));
+            Assert.That(leftAxis.Ticks[0].Value, Is.EqualTo(leftAxis.MinimumValue.Value).Within(1e-12));
+            Assert.That(leftAxis.Ticks[leftAxis.Ticks.Count - 1].Value, Is.EqualTo(leftAxis.MaximumValue.Value).Within(1e-12));
         }
 
         [Test]
@@ -2146,7 +2215,177 @@ namespace Graphing.Tests
             Assert.That(narrowWidth, Is.GreaterThanOrEqualTo(wideWidth),
                 "Legend width should not shrink when vertical wrapping requires additional columns.");
         }
-        
+
+        // ── Option A: Explicit Series-to-Axis Binding ─────────────────────────
+
+        [Test]
+        public void SeriesAxisBinding_SingleSeries_HasBoundXAndYAxisEntries()
+        {
+            var model = CreateModel(seriesType: SeriesType.Line);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(1));
+            Assert.That(presentation.Series[0].XAxisEntry, Is.Not.Null,
+                "Series should have a bound X-axis entry.");
+            Assert.That(presentation.Series[0].YAxisEntry, Is.Not.Null,
+                "Series should have a bound Y-axis entry.");
+            Assert.That(presentation.Series[0].XAxisEntry.Axis.AxisId, Is.EqualTo("x-axis"));
+            Assert.That(presentation.Series[0].YAxisEntry.Axis.AxisId, Is.EqualTo("y-axis"));
+        }
+
+        [Test]
+        public void SeriesAxisBinding_RightYAxis_SpansFullPlotHeight()
+        {
+            // A series bound to a right Y-axis must use a span of [0, 1] (full plot height).
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
+
+            var series = new GraphSeriesModel(new SeriesId("1"), "right-series", SeriesType.Line, xField, yField, xAxis, yRight);
+            var model = new GraphModel(new[] { xAxis, yRight }, new[] { series });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(1));
+            var yEntry = presentation.Series[0].YAxisEntry;
+            Assert.That(yEntry, Is.Not.Null);
+            Assert.That(yEntry.Side, Is.EqualTo(PresentationAxisSide.Right));
+            Assert.That(yEntry.NormalizedSpanStart, Is.EqualTo(0d).Within(1e-12),
+                "Right Y-axis span should start at 0 (full plot height).");
+            Assert.That(yEntry.NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12),
+                "Right Y-axis span should end at 1 (full plot height).");
+        }
+
+        [Test]
+        public void SeriesAxisBinding_MixedLeftAndRightAxes_EachSeriesUsesCorrectEntry()
+        {
+            // Two stacked left Y-axes and one right Y-axis; each series must bind to its declared axis.
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft1 = new AxisModel(new AxisId("y-left-1"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yLeft2 = new AxisModel(new AxisId("y-left-2"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField1 = new TestFieldDefinition("Y1", "y1", unit, new[] { 10d, 20d, 30d });
+            var yField2 = new TestFieldDefinition("Y2", "y2", unit, new[] { 100d, 200d, 300d });
+            var yFieldR = new TestFieldDefinition("YR", "yr", unit, new[] { 1000d, 2000d, 3000d });
+
+            var s1 = new GraphSeriesModel(new SeriesId("1"), "left1-series", SeriesType.Line, xField, yField1, xAxis, yLeft1);
+            var s2 = new GraphSeriesModel(new SeriesId("2"), "left2-series", SeriesType.Line, xField, yField2, xAxis, yLeft2);
+            var s3 = new GraphSeriesModel(new SeriesId("3"), "right-series", SeriesType.Line, xField, yFieldR, xAxis, yRight);
+
+            var model = new GraphModel(new[] { xAxis, yLeft1, yLeft2, yRight }, new[] { s1, s2, s3 });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(3));
+
+            var left1Entry = presentation.Series[0].YAxisEntry;
+            var left2Entry = presentation.Series[1].YAxisEntry;
+            var rightEntry = presentation.Series[2].YAxisEntry;
+
+            Assert.That(left1Entry, Is.Not.Null);
+            Assert.That(left2Entry, Is.Not.Null);
+            Assert.That(rightEntry, Is.Not.Null);
+
+            Assert.That(left1Entry.Axis.AxisId, Is.EqualTo("y-left-1"));
+            Assert.That(left2Entry.Axis.AxisId, Is.EqualTo("y-left-2"));
+            Assert.That(rightEntry.Axis.AxisId, Is.EqualTo("y-right"));
+
+            // Stacked left axes must not span full height (two axes share the vertical space).
+            Assert.That(left1Entry.NormalizedSpanEnd - left1Entry.NormalizedSpanStart,
+                Is.LessThan(1d - 1e-12),
+                "Stacked left axis should not span the full plot height.");
+            Assert.That(left2Entry.NormalizedSpanEnd - left2Entry.NormalizedSpanStart,
+                Is.LessThan(1d - 1e-12),
+                "Stacked left axis should not span the full plot height.");
+
+            // Right axis must span full height.
+            Assert.That(rightEntry.NormalizedSpanStart, Is.EqualTo(0d).Within(1e-12));
+            Assert.That(rightEntry.NormalizedSpanEnd, Is.EqualTo(1d).Within(1e-12));
+        }
+
+        [Test]
+        public void SeriesAxisBinding_AxisIdentityEnforced_IgnoresDataRangeOverlap()
+        {
+            // Two series whose Y data would both fit within the other axis's range;
+            // each must be bound to its declared axis, not to the closest-range axis.
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            // Both series use identical Y data — a heuristic would match either axis.
+            var ySharedField = new TestFieldDefinition("Y", "y", unit, new[] { 5d, 10d, 15d });
+
+            var sLeft = new GraphSeriesModel(new SeriesId("1"), "left-series", SeriesType.Line, xField, ySharedField, xAxis, yLeft);
+            var sRight = new GraphSeriesModel(new SeriesId("2"), "right-series", SeriesType.Line, xField, ySharedField, xAxis, yRight);
+
+            var model = new GraphModel(new[] { xAxis, yLeft, yRight }, new[] { sLeft, sRight });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(2));
+
+            var leftSeriesYEntry = presentation.Series[0].YAxisEntry;
+            var rightSeriesYEntry = presentation.Series[1].YAxisEntry;
+
+            Assert.That(leftSeriesYEntry, Is.Not.Null);
+            Assert.That(rightSeriesYEntry, Is.Not.Null);
+
+            Assert.That(leftSeriesYEntry.Axis.AxisId, Is.EqualTo("y-left"),
+                "Series declared on left axis must be bound to left axis, regardless of data range overlap.");
+            Assert.That(rightSeriesYEntry.Axis.AxisId, Is.EqualTo("y-right"),
+                "Series declared on right axis must be bound to right axis, regardless of data range overlap.");
+
+            Assert.That(leftSeriesYEntry.Side, Is.EqualTo(PresentationAxisSide.Left));
+            Assert.That(rightSeriesYEntry.Side, Is.EqualTo(PresentationAxisSide.Right));
+        }
+
+        [Test]
+        public void SeriesAxisBinding_StackedLeftAxes_EachSeriesBindsToItsOwnSpan()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft1 = new AxisModel(new AxisId("y-left-1"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yLeft2 = new AxisModel(new AxisId("y-left-2"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yLeft3 = new AxisModel(new AxisId("y-left-3"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+
+            var s1 = new GraphSeriesModel(new SeriesId("1"), "s1", SeriesType.Line, xField,
+                new TestFieldDefinition("Y1", "y1", unit, new[] { 1d, 2d, 3d }), xAxis, yLeft1);
+            var s2 = new GraphSeriesModel(new SeriesId("2"), "s2", SeriesType.Line, xField,
+                new TestFieldDefinition("Y2", "y2", unit, new[] { 10d, 20d, 30d }), xAxis, yLeft2);
+            var s3 = new GraphSeriesModel(new SeriesId("3"), "s3", SeriesType.Line, xField,
+                new TestFieldDefinition("Y3", "y3", unit, new[] { 100d, 200d, 300d }), xAxis, yLeft3);
+
+            var model = new GraphModel(new[] { xAxis, yLeft1, yLeft2, yLeft3 }, new[] { s1, s2, s3 });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(3));
+
+            var e1 = presentation.Series[0].YAxisEntry;
+            var e2 = presentation.Series[1].YAxisEntry;
+            var e3 = presentation.Series[2].YAxisEntry;
+
+            Assert.That(e1.Axis.AxisId, Is.EqualTo("y-left-1"));
+            Assert.That(e2.Axis.AxisId, Is.EqualTo("y-left-2"));
+            Assert.That(e3.Axis.AxisId, Is.EqualTo("y-left-3"));
+
+            // All three stacked axes must have distinct, non-overlapping spans.
+            Assert.That(e1.NormalizedSpanStart, Is.Not.EqualTo(e2.NormalizedSpanStart).Within(1e-12));
+            Assert.That(e2.NormalizedSpanStart, Is.Not.EqualTo(e3.NormalizedSpanStart).Within(1e-12));
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);

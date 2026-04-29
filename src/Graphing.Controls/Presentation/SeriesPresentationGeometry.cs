@@ -29,7 +29,18 @@ namespace Graphing.Controls.Presentation
         public SeriesType SeriesType { get; }
         public SeriesConnectivityIntent ConnectivityIntent { get; }
         public IReadOnlyList<GeometryPoint3D> Points { get; }
-
         public Color SeriesColor { get; }
+
+        /// <summary>
+        /// The resolved X-axis layout entry for this series, bound by the presentation model.
+        /// Null if the series did not declare an X axis ID or the axis was not found in the layout.
+        /// </summary>
+        public AxisLayoutEntry XAxisEntry { get; internal set; }
+
+        /// <summary>
+        /// The resolved Y-axis layout entry for this series, bound by the presentation model.
+        /// Null if the series did not declare a Y axis ID or the axis was not found in the layout.
+        /// </summary>
+        public AxisLayoutEntry YAxisEntry { get; internal set; }
     }
 }
