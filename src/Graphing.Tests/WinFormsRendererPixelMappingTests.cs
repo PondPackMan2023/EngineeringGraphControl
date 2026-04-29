@@ -8,6 +8,7 @@ using Graphing.Controls.Rendering;
 using Graphing.Controls.Snapshot;
 using NUnit.Framework;
 using UnitRegistry;
+using UnitRegistry.Formatting;
 using ModelAxisOrientation = Graphing.Controls.Models.AxisOrientation;
 using ModelAxisSide = Graphing.Controls.Models.AxisSide;
 using PresentationAxisSide = Graphing.Controls.Presentation.AxisSide;
@@ -220,7 +221,7 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void AxisInsets_PreserveEndTickVisibility()
+        public void XAxisTicks_AlignWithPlotBounds_WhenEndpointInsetModeIsFixed()
         {
             const double inset = 0.05;
             var unit = Units.Length.Meter;
@@ -242,14 +243,61 @@ namespace Graphing.Tests
                 var axisRect = ComputeAxisRectForEntry(plotRect, bottomEntry);
                 var axisY = (int)Math.Round(axisRect.Bottom);
 
-                Assert.That(axisRect.Left, Is.GreaterThan(plotRect.Left));
-                Assert.That(axisRect.Right, Is.LessThan(plotRect.Right));
+                Assert.That(bottomEntry.TickEndpointInset, Is.EqualTo(0d).Within(1e-12));
+                Assert.That(axisRect.Left, Is.EqualTo(plotRect.Left).Within(1.0));
+                Assert.That(axisRect.Right, Is.EqualTo(plotRect.Right).Within(1.0));
 
                 Assert.That(HasColorNear2D(bmp, (int)Math.Round(axisRect.Left), axisY, Color.Black), Is.True,
-                    "First bottom-axis end tick should render at the inset start position.");
+                    "First bottom-axis tick should render at the plot-left / Y-axis intersection.");
                 Assert.That(HasColorNear2D(bmp, (int)Math.Round(axisRect.Right), axisY, Color.Black), Is.True,
-                    "Last bottom-axis end tick should render at the inset end position.");
+                    "Last bottom-axis tick should render at the plot-right endpoint.");
             }
+        }
+
+        [Test]
+        public void XAxisGeometry_DoesNotShift_WhenTickLabelLengthChanges()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+            var formatterShort = new NumericFormatter("fmt-short", registry, "F0");
+            var formatterLong = new NumericFormatter("fmt-long", registry, "F6");
+
+            GraphPresentationModel BuildPresentation(NumericFormatter formatter)
+            {
+                var xAxis = new AxisModel(new AxisId("x"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", formatter);
+                var yAxis = new AxisModel(new AxisId("y"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+                var xField = new TestFieldDef("X", "x", unit, new double[] { 0d, 0.5d, 1d });
+                var yField = new TestFieldDef("Y", "y", unit, new double[] { 0d, 50d, 100d });
+                var series = new GraphSeriesModel(new SeriesId("1"), "s", SeriesType.Line, xField, yField, xAxis, yAxis);
+                var model = new GraphModel(new IAxisModel[] { xAxis, yAxis }, new IGraphSeriesModel[] { series });
+                return new GraphPresentationModel(
+                    new GraphSnapshotBuilder().Build(model),
+                    new GraphPresentationOptions(axisEndpointInsetMode: AxisEndpointInsetMode.Fixed, axisEndpointInsetFixedValue: 0.05));
+            }
+
+            var shortPresentation = BuildPresentation(formatterShort);
+            var longPresentation = BuildPresentation(formatterLong);
+            var deviceBounds = new Rectangle(0, 0, W, H);
+
+            var shortPlotRect = ComputePlotRect(deviceBounds, shortPresentation);
+            var longPlotRect = ComputePlotRect(deviceBounds, longPresentation);
+            var shortBottomEntry = shortPresentation.Layout.Axes.Single(a => a.Side == PresentationAxisSide.Bottom);
+            var longBottomEntry = longPresentation.Layout.Axes.Single(a => a.Side == PresentationAxisSide.Bottom);
+            var shortAxisRect = ComputeAxisRectForEntry(shortPlotRect, shortBottomEntry);
+            var longAxisRect = ComputeAxisRectForEntry(longPlotRect, longBottomEntry);
+            var shortAxis = shortBottomEntry.Axis;
+            var longAxis = longBottomEntry.Axis;
+
+            Assert.That(shortBottomEntry.TickEndpointInset, Is.EqualTo(0d).Within(1e-12));
+            Assert.That(longBottomEntry.TickEndpointInset, Is.EqualTo(0d).Within(1e-12));
+            Assert.That(shortAxisRect.Left, Is.EqualTo(longAxisRect.Left).Within(1.0));
+            Assert.That(shortAxisRect.Right, Is.EqualTo(longAxisRect.Right).Within(1.0));
+            Assert.That(
+                DomainToDeviceX(shortAxis.Ticks[0].Value, shortAxis.MinimumValue.Value, shortAxis.MaximumValue.Value, shortAxisRect),
+                Is.EqualTo(DomainToDeviceX(longAxis.Ticks[0].Value, longAxis.MinimumValue.Value, longAxis.MaximumValue.Value, longAxisRect)).Within(1.0));
+            Assert.That(
+                DomainToDeviceX(shortAxis.Ticks[shortAxis.Ticks.Count - 1].Value, shortAxis.MinimumValue.Value, shortAxis.MaximumValue.Value, shortAxisRect),
+                Is.EqualTo(DomainToDeviceX(longAxis.Ticks[longAxis.Ticks.Count - 1].Value, longAxis.MinimumValue.Value, longAxis.MaximumValue.Value, longAxisRect)).Within(1.0));
         }
 
         [Test]
@@ -627,6 +675,22 @@ namespace Graphing.Tests
 
             var t = (domainValue - domainMin) / range;
             return axisRect.Bottom - (float)(t * axisRect.Height);
+        }
+
+        private static float DomainToDeviceX(
+            double domainValue,
+            double domainMin,
+            double domainMax,
+            RectangleF axisRect)
+        {
+            var range = domainMax - domainMin;
+            if (Math.Abs(range) < double.Epsilon)
+            {
+                return axisRect.Left + axisRect.Width / 2f;
+            }
+
+            var t = (domainValue - domainMin) / range;
+            return axisRect.Left + (float)(t * axisRect.Width);
         }
 
         private static bool HasColorNear(Bitmap bmp, int x, int y, Color expected)

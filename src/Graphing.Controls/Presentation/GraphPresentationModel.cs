@@ -1088,6 +1088,11 @@ namespace Graphing.Controls.Presentation
                 return 0d;
             }
 
+            if (axis.Side != AxisSide.Left && axis.Side != AxisSide.Right)
+            {
+                return 0d;
+            }
+
             if (options.AxisEndpointInsetMode == AxisEndpointInsetMode.None)
             {
                 return 0d;
@@ -1099,9 +1104,7 @@ namespace Graphing.Controls.Presentation
             }
 
             var representativeExtent = measurementInput.MeasureAxisEndpointLabelExtent(axis.Side, axis.Ticks);
-            var factor = axis.Side == AxisSide.Left || axis.Side == AxisSide.Right
-                ? VerticalAxisEndpointInsetAutoFactor
-                : HorizontalAxisEndpointInsetAutoFactor;
+            var factor = VerticalAxisEndpointInsetAutoFactor;
 
             return Math.Max(0d, representativeExtent * factor);
         }
