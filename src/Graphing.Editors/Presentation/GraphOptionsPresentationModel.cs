@@ -103,7 +103,7 @@ namespace Graphing.Editors.Presentation
             foreach (var axis in graphModel.Axes)
             {
                 var isVisible = !existingOptions.HiddenAxisIds.Contains(axis.Id);
-                var item = new AxisItemEditorModel(axis.Id)
+                var item = new AxisItemEditorModel(axis.Id, axis.Side)
                 {
                     IsVisible = isVisible,
                     HasTitleOverride = false,

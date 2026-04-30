@@ -7,6 +7,7 @@ namespace Graphing.Editors.EditorModels
     public class AxisItemEditorModel
     {
         public AxisId AxisId { get; }
+        public AxisSide Side { get; }
 
         public bool IsVisible { get; set; }
 
@@ -22,9 +23,10 @@ namespace Graphing.Editors.EditorModels
 
         public Unit DisplayUnit { get; set; }
 
-        public AxisItemEditorModel(AxisId axisId)
+        public AxisItemEditorModel(AxisId axisId, AxisSide side)
         {
             AxisId = axisId ?? throw new ArgumentNullException(nameof(axisId));
+            Side = side;
         }
     }
 }
