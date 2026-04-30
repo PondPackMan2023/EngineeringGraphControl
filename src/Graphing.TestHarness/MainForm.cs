@@ -1,5 +1,6 @@
 using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
+using Graphing.Editors;
 using Graphing.TestHarness.Libraries;
 using Graphing.TestHarness.Scenarios;
 using System;
@@ -277,6 +278,12 @@ namespace Graphing.TestHarness
         private void checkBoxPressure2Grid_CheckedChanged(object sender, EventArgs e)
         {
             ApplyOptions();
+        }
+
+        private void buttonOptions_Click(object sender, EventArgs e)
+        {
+            var options = EngineeringGraphOptionsEditorForm.OpenOptions(graphControl.GraphModel, graphControl.ActiveOptions, this);
+            graphControl.SetGraphSource(graphControl.GraphModel, options);
         }
     }
 }

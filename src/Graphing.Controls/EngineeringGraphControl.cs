@@ -44,6 +44,17 @@ namespace Graphing.Controls
             }
         }
 
+        public GraphPresentationOptions ActiveOptions
+        {
+            get
+            {
+                lock (_activePresentationOptions)
+                {
+                    return _activePresentationOptions;
+                }
+            }
+        }
+
         public IGraphModel GraphModel => _graphModel;
 
         public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)

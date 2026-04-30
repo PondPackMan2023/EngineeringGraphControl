@@ -22,4 +22,7 @@
   <Project Path="src/Graphing.Controls/Graphing.Controls.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="src/Graphing.Editors/Graphing.Editors.csproj">
+    <Platform Project="x64" />
+  </Project>
 </Solution>
