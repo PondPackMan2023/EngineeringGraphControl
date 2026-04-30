@@ -1,8 +1,9 @@
-using System;
-using System.Windows.Forms;
+using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
 using Graphing.Editors.Controls;
 using Graphing.Editors.Presentation;
+using System;
+using System.Windows.Forms;
 
 namespace Graphing.Editors
 {
@@ -21,6 +22,35 @@ namespace Graphing.Editors
         {
             _presentationModel = presentationModel ?? throw new ArgumentNullException(nameof(presentationModel));
             InitializeComponent();
+        }
+
+        public static GraphPresentationOptions OpenOptions(IGraphModel graphModel,
+            GraphPresentationOptions existingOptions, IWin32Window ownerWindow = null)
+        {
+            if (graphModel == null)
+                throw new ArgumentNullException(nameof(graphModel));
+
+            if (existingOptions == null)
+                throw new ArgumentNullException(nameof(existingOptions));
+
+            var presentationModel =
+                new GraphOptionsPresentationModel(graphModel, existingOptions);
+
+            using (var dialog =
+                   new EngineeringGraphOptionsEditorForm(presentationModel))
+            {
+                var result = ownerWindow != null
+                    ? dialog.ShowDialog(ownerWindow)
+                    : dialog.ShowDialog();
+
+                if (result == DialogResult.OK)
+                {
+                    return dialog.ResultOptions;
+                }
+
+                // Cancel → return original options unchanged
+                return existingOptions;
+            }
         }
 
         private void EngineeringGraphOptionsEditorForm_Load(object sender, System.EventArgs e)

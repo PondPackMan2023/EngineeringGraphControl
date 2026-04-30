@@ -37,6 +37,10 @@ namespace Graphing.TestHarness
             this.buttonScenarioA = new System.Windows.Forms.Button();
             this.buttonScenarioB = new System.Windows.Forms.Button();
             this.groupBoxSeriesAxesVisibility = new System.Windows.Forms.GroupBox();
+            this.checkBoxPressure2Grid = new System.Windows.Forms.CheckBox();
+            this.checkBoxTimeGrid = new System.Windows.Forms.CheckBox();
+            this.checkBoxPressureGrid = new System.Windows.Forms.CheckBox();
+            this.checkBoxElevationGrid = new System.Windows.Forms.CheckBox();
             this.checkBoxPressure = new System.Windows.Forms.CheckBox();
             this.checkBoxHGL = new System.Windows.Forms.CheckBox();
             this.checkBoxPressureYAxis = new System.Windows.Forms.CheckBox();
@@ -55,10 +59,7 @@ namespace Graphing.TestHarness
             this.graphControl = new Graphing.Controls.EngineeringGraphControl();
             this.buttonScenarioC = new System.Windows.Forms.Button();
             this.buttonScenarioD = new System.Windows.Forms.Button();
-            this.checkBoxElevationGrid = new System.Windows.Forms.CheckBox();
-            this.checkBoxPressureGrid = new System.Windows.Forms.CheckBox();
-            this.checkBoxTimeGrid = new System.Windows.Forms.CheckBox();
-            this.checkBoxPressure2Grid = new System.Windows.Forms.CheckBox();
+            this.buttonOptions = new System.Windows.Forms.Button();
             this.groupBoxUnits.SuspendLayout();
             this.groupBoxSeriesAxesVisibility.SuspendLayout();
             this.groupBoxLegend.SuspendLayout();
@@ -155,6 +156,62 @@ namespace Graphing.TestHarness
             this.groupBoxSeriesAxesVisibility.TabIndex = 11;
             this.groupBoxSeriesAxesVisibility.TabStop = false;
             this.groupBoxSeriesAxesVisibility.Text = "Axes and Series Visibility";
+            // 
+            // checkBoxPressure2Grid
+            // 
+            this.checkBoxPressure2Grid.AutoSize = true;
+            this.checkBoxPressure2Grid.Checked = true;
+            this.checkBoxPressure2Grid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxPressure2Grid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxPressure2Grid.Location = new System.Drawing.Point(298, 48);
+            this.checkBoxPressure2Grid.Name = "checkBoxPressure2Grid";
+            this.checkBoxPressure2Grid.Size = new System.Drawing.Size(110, 18);
+            this.checkBoxPressure2Grid.TabIndex = 8;
+            this.checkBoxPressure2Grid.Text = "Pressure (2) Grid";
+            this.checkBoxPressure2Grid.UseVisualStyleBackColor = true;
+            this.checkBoxPressure2Grid.CheckedChanged += new System.EventHandler(this.checkBoxPressure2Grid_CheckedChanged);
+            // 
+            // checkBoxTimeGrid
+            // 
+            this.checkBoxTimeGrid.AutoSize = true;
+            this.checkBoxTimeGrid.Checked = true;
+            this.checkBoxTimeGrid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxTimeGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxTimeGrid.Location = new System.Drawing.Point(6, 49);
+            this.checkBoxTimeGrid.Name = "checkBoxTimeGrid";
+            this.checkBoxTimeGrid.Size = new System.Drawing.Size(77, 18);
+            this.checkBoxTimeGrid.TabIndex = 5;
+            this.checkBoxTimeGrid.Text = "Time Grid";
+            this.checkBoxTimeGrid.UseVisualStyleBackColor = true;
+            this.checkBoxTimeGrid.CheckedChanged += new System.EventHandler(this.checkBoxTimeGrid_CheckedChanged);
+            // 
+            // checkBoxPressureGrid
+            // 
+            this.checkBoxPressureGrid.AutoSize = true;
+            this.checkBoxPressureGrid.Checked = true;
+            this.checkBoxPressureGrid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxPressureGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxPressureGrid.Location = new System.Drawing.Point(197, 48);
+            this.checkBoxPressureGrid.Name = "checkBoxPressureGrid";
+            this.checkBoxPressureGrid.Size = new System.Drawing.Size(95, 18);
+            this.checkBoxPressureGrid.TabIndex = 7;
+            this.checkBoxPressureGrid.Text = "Pressure Grid";
+            this.checkBoxPressureGrid.UseVisualStyleBackColor = true;
+            this.checkBoxPressureGrid.CheckedChanged += new System.EventHandler(this.checkBoxPressureGrid_CheckedChanged);
+            // 
+            // checkBoxElevationGrid
+            // 
+            this.checkBoxElevationGrid.AutoSize = true;
+            this.checkBoxElevationGrid.Checked = true;
+            this.checkBoxElevationGrid.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxElevationGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxElevationGrid.Location = new System.Drawing.Point(89, 48);
+            this.checkBoxElevationGrid.Name = "checkBoxElevationGrid";
+            this.checkBoxElevationGrid.Size = new System.Drawing.Size(98, 18);
+            this.checkBoxElevationGrid.TabIndex = 6;
+            this.checkBoxElevationGrid.Text = "Elevation Grid";
+            this.checkBoxElevationGrid.UseVisualStyleBackColor = true;
+            this.checkBoxElevationGrid.CheckedChanged += new System.EventHandler(this.checkBoxElevationGrid_CheckedChanged);
             // 
             // checkBoxPressure
             // 
@@ -388,65 +445,22 @@ namespace Graphing.TestHarness
             this.buttonScenarioD.UseVisualStyleBackColor = true;
             this.buttonScenarioD.Click += new System.EventHandler(this.buttonScenarioD_Click);
             // 
-            // checkBoxElevationGrid
+            // buttonOptions
             // 
-            this.checkBoxElevationGrid.AutoSize = true;
-            this.checkBoxElevationGrid.Checked = true;
-            this.checkBoxElevationGrid.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxElevationGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxElevationGrid.Location = new System.Drawing.Point(89, 48);
-            this.checkBoxElevationGrid.Name = "checkBoxElevationGrid";
-            this.checkBoxElevationGrid.Size = new System.Drawing.Size(98, 18);
-            this.checkBoxElevationGrid.TabIndex = 6;
-            this.checkBoxElevationGrid.Text = "Elevation Grid";
-            this.checkBoxElevationGrid.UseVisualStyleBackColor = true;
-            this.checkBoxElevationGrid.CheckedChanged += new System.EventHandler(this.checkBoxElevationGrid_CheckedChanged);
-            // 
-            // checkBoxPressureGrid
-            // 
-            this.checkBoxPressureGrid.AutoSize = true;
-            this.checkBoxPressureGrid.Checked = true;
-            this.checkBoxPressureGrid.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxPressureGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxPressureGrid.Location = new System.Drawing.Point(197, 48);
-            this.checkBoxPressureGrid.Name = "checkBoxPressureGrid";
-            this.checkBoxPressureGrid.Size = new System.Drawing.Size(95, 18);
-            this.checkBoxPressureGrid.TabIndex = 7;
-            this.checkBoxPressureGrid.Text = "Pressure Grid";
-            this.checkBoxPressureGrid.UseVisualStyleBackColor = true;
-            this.checkBoxPressureGrid.CheckedChanged += new System.EventHandler(this.checkBoxPressureGrid_CheckedChanged);
-            // 
-            // checkBoxTimeGrid
-            // 
-            this.checkBoxTimeGrid.AutoSize = true;
-            this.checkBoxTimeGrid.Checked = true;
-            this.checkBoxTimeGrid.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxTimeGrid.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxTimeGrid.Location = new System.Drawing.Point(6, 49);
-            this.checkBoxTimeGrid.Name = "checkBoxTimeGrid";
-            this.checkBoxTimeGrid.Size = new System.Drawing.Size(77, 18);
-            this.checkBoxTimeGrid.TabIndex = 5;
-            this.checkBoxTimeGrid.Text = "Time Grid";
-            this.checkBoxTimeGrid.UseVisualStyleBackColor = true;
-            this.checkBoxTimeGrid.CheckedChanged += new System.EventHandler(this.checkBoxTimeGrid_CheckedChanged);
-            // 
-            // checkBoxPressure2Grid
-            // 
-            this.checkBoxPressure2Grid.AutoSize = true;
-            this.checkBoxPressure2Grid.Checked = true;
-            this.checkBoxPressure2Grid.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxPressure2Grid.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxPressure2Grid.Location = new System.Drawing.Point(298, 48);
-            this.checkBoxPressure2Grid.Name = "checkBoxPressure2Grid";
-            this.checkBoxPressure2Grid.Size = new System.Drawing.Size(110, 18);
-            this.checkBoxPressure2Grid.TabIndex = 8;
-            this.checkBoxPressure2Grid.Text = "Pressure (2) Grid";
-            this.checkBoxPressure2Grid.UseVisualStyleBackColor = true;
-            this.checkBoxPressure2Grid.CheckedChanged += new System.EventHandler(this.checkBoxPressure2Grid_CheckedChanged);
+            this.buttonOptions.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.buttonOptions.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonOptions.Location = new System.Drawing.Point(12, 424);
+            this.buttonOptions.Name = "buttonOptions";
+            this.buttonOptions.Size = new System.Drawing.Size(67, 25);
+            this.buttonOptions.TabIndex = 12;
+            this.buttonOptions.Text = "Options";
+            this.buttonOptions.UseVisualStyleBackColor = true;
+            this.buttonOptions.Click += new System.EventHandler(this.buttonOptions_Click);
             // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(784, 461);
+            this.Controls.Add(this.buttonOptions);
             this.Controls.Add(this.buttonScenarioD);
             this.Controls.Add(this.buttonScenarioC);
             this.Controls.Add(this.groupBoxLegend);
@@ -503,5 +517,6 @@ namespace Graphing.TestHarness
         private System.Windows.Forms.CheckBox checkBoxPressureGrid;
         private System.Windows.Forms.CheckBox checkBoxElevationGrid;
         private System.Windows.Forms.CheckBox checkBoxPressure2Grid;
+        private System.Windows.Forms.Button buttonOptions;
     }
 }

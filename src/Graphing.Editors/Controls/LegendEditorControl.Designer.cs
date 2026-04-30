@@ -15,7 +15,6 @@ namespace Graphing.Editors.Controls
 
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             this._showLegendCheckBox = new System.Windows.Forms.CheckBox();
             this._placementLabel = new System.Windows.Forms.Label();
             this._topRadioButton = new System.Windows.Forms.RadioButton();
@@ -27,9 +26,10 @@ namespace Graphing.Editors.Controls
             // _showLegendCheckBox
             // 
             this._showLegendCheckBox.AutoSize = true;
-            this._showLegendCheckBox.Location = new System.Drawing.Point(12, 12);
+            this._showLegendCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this._showLegendCheckBox.Location = new System.Drawing.Point(10, 10);
             this._showLegendCheckBox.Name = "_showLegendCheckBox";
-            this._showLegendCheckBox.Size = new System.Drawing.Size(92, 19);
+            this._showLegendCheckBox.Size = new System.Drawing.Size(98, 18);
             this._showLegendCheckBox.TabIndex = 0;
             this._showLegendCheckBox.Text = "Show Legend";
             this._showLegendCheckBox.UseVisualStyleBackColor = true;
@@ -37,18 +37,19 @@ namespace Graphing.Editors.Controls
             // _placementLabel
             // 
             this._placementLabel.AutoSize = true;
-            this._placementLabel.Location = new System.Drawing.Point(12, 42);
+            this._placementLabel.Location = new System.Drawing.Point(10, 36);
             this._placementLabel.Name = "_placementLabel";
-            this._placementLabel.Size = new System.Drawing.Size(59, 15);
+            this._placementLabel.Size = new System.Drawing.Size(57, 13);
             this._placementLabel.TabIndex = 1;
             this._placementLabel.Text = "Placement";
             // 
             // _topRadioButton
             // 
             this._topRadioButton.AutoSize = true;
-            this._topRadioButton.Location = new System.Drawing.Point(12, 64);
+            this._topRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this._topRadioButton.Location = new System.Drawing.Point(10, 55);
             this._topRadioButton.Name = "_topRadioButton";
-            this._topRadioButton.Size = new System.Drawing.Size(45, 19);
+            this._topRadioButton.Size = new System.Drawing.Size(50, 18);
             this._topRadioButton.TabIndex = 2;
             this._topRadioButton.TabStop = true;
             this._topRadioButton.Text = "Top";
@@ -57,9 +58,10 @@ namespace Graphing.Editors.Controls
             // _bottomRadioButton
             // 
             this._bottomRadioButton.AutoSize = true;
-            this._bottomRadioButton.Location = new System.Drawing.Point(12, 89);
+            this._bottomRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this._bottomRadioButton.Location = new System.Drawing.Point(10, 77);
             this._bottomRadioButton.Name = "_bottomRadioButton";
-            this._bottomRadioButton.Size = new System.Drawing.Size(67, 19);
+            this._bottomRadioButton.Size = new System.Drawing.Size(64, 18);
             this._bottomRadioButton.TabIndex = 3;
             this._bottomRadioButton.TabStop = true;
             this._bottomRadioButton.Text = "Bottom";
@@ -68,9 +70,10 @@ namespace Graphing.Editors.Controls
             // _leftRadioButton
             // 
             this._leftRadioButton.AutoSize = true;
-            this._leftRadioButton.Location = new System.Drawing.Point(12, 114);
+            this._leftRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this._leftRadioButton.Location = new System.Drawing.Point(10, 99);
             this._leftRadioButton.Name = "_leftRadioButton";
-            this._leftRadioButton.Size = new System.Drawing.Size(43, 19);
+            this._leftRadioButton.Size = new System.Drawing.Size(49, 18);
             this._leftRadioButton.TabIndex = 4;
             this._leftRadioButton.TabStop = true;
             this._leftRadioButton.Text = "Left";
@@ -79,9 +82,10 @@ namespace Graphing.Editors.Controls
             // _rightRadioButton
             // 
             this._rightRadioButton.AutoSize = true;
-            this._rightRadioButton.Location = new System.Drawing.Point(12, 139);
+            this._rightRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this._rightRadioButton.Location = new System.Drawing.Point(10, 120);
             this._rightRadioButton.Name = "_rightRadioButton";
-            this._rightRadioButton.Size = new System.Drawing.Size(54, 19);
+            this._rightRadioButton.Size = new System.Drawing.Size(56, 18);
             this._rightRadioButton.TabIndex = 5;
             this._rightRadioButton.TabStop = true;
             this._rightRadioButton.Text = "Right";
@@ -89,7 +93,7 @@ namespace Graphing.Editors.Controls
             // 
             // LegendEditorControl
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this._rightRadioButton);
             this.Controls.Add(this._leftRadioButton);
@@ -98,9 +102,10 @@ namespace Graphing.Editors.Controls
             this.Controls.Add(this._placementLabel);
             this.Controls.Add(this._showLegendCheckBox);
             this.Name = "LegendEditorControl";
-            this.Size = new System.Drawing.Size(546, 346);
+            this.Size = new System.Drawing.Size(468, 300);
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
         private System.Windows.Forms.CheckBox _showLegendCheckBox;
