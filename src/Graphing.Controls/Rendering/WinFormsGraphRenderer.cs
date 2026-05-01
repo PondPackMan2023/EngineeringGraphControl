@@ -543,7 +543,7 @@ namespace Graphing.Controls.Rendering
             }
 
             var ticks = axis.Ticks;
-            var step = ComputeTickLabelStep(g, ticks, sideBandRect, AxisSide.Left);
+            const int step = 1;
             try
             {
                 for (var i = 0; i < ticks.Count; i++)
@@ -603,7 +603,7 @@ namespace Graphing.Controls.Rendering
             }
 
             var ticks = axis.Ticks;
-            var step = ComputeTickLabelStep(g, ticks, sideBandRect, AxisSide.Right);
+            const int step = 1;
             try
             {
                 for (var i = 0; i < ticks.Count; i++)

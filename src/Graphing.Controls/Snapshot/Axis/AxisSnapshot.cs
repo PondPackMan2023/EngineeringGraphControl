@@ -23,6 +23,9 @@ namespace Graphing.Controls.Snapshot
         private readonly IReadOnlyList<IFieldSnapshot> _fields;
         private readonly double? _minimumValue;
         private readonly double? _maximumValue;
+        private readonly double? _increment;
+        private readonly bool _isAutoIncrement;
+        private readonly int _majorTickStride;
         private readonly string _title;
 
         /// <summary>
@@ -102,6 +105,30 @@ namespace Graphing.Controls.Snapshot
         }
 
         /// <summary>
+        /// Tick increment to use when realizing axis ticks.
+        /// </summary>
+        public double? Increment
+        {
+            get { return _increment; }
+        }
+
+        /// <summary>
+        /// Indicates whether increment was auto-calculated.
+        /// </summary>
+        public bool IsAutoIncrement
+        {
+            get { return _isAutoIncrement; }
+        }
+
+        /// <summary>
+        /// Number of minor tick intervals between consecutive major tick labels.
+        /// </summary>
+        public int MajorTickStride
+        {
+            get { return _majorTickStride; }
+        }
+
+        /// <summary>
         /// Display title for the axis, combining contributing field label with the axis display unit.
         /// </summary>
         public string Title
@@ -123,6 +150,9 @@ namespace Graphing.Controls.Snapshot
         /// <param name="fields">Contributing field snapshots.</param>
         /// <param name="minimumValue">Minimum numeric value across contributing fields.</param>
         /// <param name="maximumValue">Maximum numeric value across contributing fields.</param>
+        /// <param name="increment">Tick increment used to realize axis ticks.</param>
+        /// <param name="isAutoIncrement">Whether increment was auto-calculated.</param>
+        /// <param name="title">Display title for the axis derived from formatter and unit labels.</param>
         public AxisSnapshot(
             string axisId,
             AxisOrientation orientation,
@@ -134,7 +164,11 @@ namespace Graphing.Controls.Snapshot
             bool isAutoRange,
             IEnumerable<IFieldSnapshot> fields,
             double? minimumValue,
-            double? maximumValue)
+            double? maximumValue,
+            double? increment,
+            bool isAutoIncrement,
+            int majorTickStride,
+            string title)
         {
             _axisId = axisId;
             _orientation = orientation;
@@ -149,49 +183,10 @@ namespace Graphing.Controls.Snapshot
             );
             _minimumValue = minimumValue;
             _maximumValue = maximumValue;
-            _title = BuildTitle(_fields, displayUnitLabel);
-        }
-
-        private static string BuildTitle(IReadOnlyList<IFieldSnapshot> fields, string displayUnitLabel)
-        {
-            string baseLabel = null;
-            if (fields != null)
-            {
-                for (var i = 0; i < fields.Count; i++)
-                {
-                    var field = fields[i];
-                    if (field == null) continue;
-                    if (!string.IsNullOrWhiteSpace(field.Label))
-                    {
-                        baseLabel = field.Label;
-                        break;
-                    }
-                }
-                if (baseLabel == null)
-                {
-                    for (var i = 0; i < fields.Count; i++)
-                    {
-                        var field = fields[i];
-                        if (field != null && !string.IsNullOrWhiteSpace(field.Name))
-                        {
-                            baseLabel = field.Name;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(baseLabel))
-            {
-                return string.Empty;
-            }
-
-            if (!string.IsNullOrWhiteSpace(displayUnitLabel))
-            {
-                return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} ({1})", baseLabel, displayUnitLabel);
-            }
-
-            return baseLabel;
+            _increment = increment;
+            _isAutoIncrement = isAutoIncrement;
+            _majorTickStride = majorTickStride > 0 ? majorTickStride : 1;
+            _title = title ?? string.Empty;
         }
     }
 }

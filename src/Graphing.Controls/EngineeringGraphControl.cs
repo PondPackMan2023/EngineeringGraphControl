@@ -65,7 +65,7 @@ namespace Graphing.Controls
                 _graphModel = graphModel;
                 var nextSnapshot = graphModel == null
                     ? null
-                    : snapshotBuilder.Build(graphModel);
+                    : snapshotBuilder.Build(graphModel, options);
 
                 TryInstallSnapshotAndPresentation(nextSnapshot, options);
             }

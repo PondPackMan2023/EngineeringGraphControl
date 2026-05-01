@@ -326,7 +326,7 @@ namespace Graphing.Editors.Controls
                     _incrementTextBox.Text = selected.Increment.ToString(CultureInfo.CurrentCulture);
 
                     var unitText = selected.DisplayUnit != null && selected.DisplayUnit.Id != null
-                        ? selected.DisplayUnit.Id.ToString()
+                        ? selected.DisplayUnit.Label
                         : string.Empty;
                     _minimumUnitLabel.Text = unitText;
                     _maximumUnitLabel.Text = unitText;

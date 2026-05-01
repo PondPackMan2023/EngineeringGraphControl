@@ -98,7 +98,14 @@ namespace Graphing.Controls.Presentation
                 var title = axisSnapshot.Title;
                 var formatter = ResolveAxisFormatter(axisSnapshot);
                 var linePoints = BuildAxisLine(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, orientation);
-                var ticks = BuildAxisTicks(axisSnapshot.MinimumValue, axisSnapshot.MaximumValue, formatter, axisSnapshot.Unit);
+                var ticks = BuildAxisTicks(
+                    axisSnapshot.MinimumValue,
+                    axisSnapshot.MaximumValue,
+                    axisSnapshot.Increment,
+                    formatter,
+                    axisSnapshot.Unit,
+                    orientation,
+                    axisSnapshot.MajorTickStride);
 
                 result.Add(
                     new AxisPresentationGeometry(
@@ -111,6 +118,7 @@ namespace Graphing.Controls.Presentation
                         axisSnapshot.DisplayUnitLabel,
                         axisSnapshot.MinimumValue,
                         axisSnapshot.MaximumValue,
+                        axisSnapshot.MajorTickStride,
                         linePoints,
                         ticks));
             }
@@ -242,17 +250,34 @@ namespace Graphing.Controls.Presentation
         private static IReadOnlyList<AxisTickPresentation> BuildAxisTicks(
             double? minimumValue,
             double? maximumValue,
+            double? increment,
             NumericFormatter formatter,
-            UnitRegistry.Unit unit)
+            UnitRegistry.Unit unit,
+            AxisOrientation orientation,
+            int majorTickStride)
         {
             var ticks = new List<AxisTickPresentation>();
 
-            if (!minimumValue.HasValue || !maximumValue.HasValue)
+            if (!minimumValue.HasValue || !maximumValue.HasValue || !increment.HasValue || increment.Value <= 0d)
             {
                 return new ReadOnlyCollection<AxisTickPresentation>(ticks);
             }
 
-            var tickValues = BuildTickValues(minimumValue.Value, maximumValue.Value);
+            _ = unit;
+
+            var stride = majorTickStride > 0 ? majorTickStride : 1;
+            var tickIncrement = increment.Value;
+            if (orientation == AxisOrientation.Vertical)
+            {
+                tickIncrement = increment.Value * stride;
+            }
+
+            if (tickIncrement <= 0d)
+            {
+                return new ReadOnlyCollection<AxisTickPresentation>(ticks);
+            }
+
+            var tickValues = BuildTickValues(minimumValue.Value, maximumValue.Value, tickIncrement);
 
             for (var index = 0; index < tickValues.Count; index++)
             {
@@ -263,20 +288,50 @@ namespace Graphing.Controls.Presentation
             return new ReadOnlyCollection<AxisTickPresentation>(ticks);
         }
 
-        private static IReadOnlyList<double> BuildTickValues(double minimumValue, double maximumValue)
+        private static IReadOnlyList<double> BuildTickValues(double minimumValue, double maximumValue, double increment)
         {
             if (minimumValue == maximumValue)
             {
                 return new ReadOnlyCollection<double>(new List<double> { minimumValue });
             }
 
-            const int TickCount = 5;
-            var ticks = new List<double>(TickCount);
-            var increment = (maximumValue - minimumValue) / (TickCount - 1);
+            var ticks = new List<double>();
+            var current = minimumValue;
+            var maxStepCount = 1000;
+            var stepCount = 0;
 
-            for (var index = 0; index < TickCount; index++)
+            while (current <= maximumValue + (increment * 0.5d) && stepCount < maxStepCount)
             {
-                ticks.Add(minimumValue + (increment * index));
+                var value = current;
+                if (value > maximumValue && value - maximumValue <= increment * 0.5d)
+                {
+                    value = maximumValue;
+                }
+
+                ticks.Add(value);
+                current += increment;
+                stepCount++;
+            }
+
+            if (ticks.Count == 0)
+            {
+                ticks.Add(minimumValue);
+                if (maximumValue != minimumValue)
+                {
+                    ticks.Add(maximumValue);
+                }
+            }
+            else
+            {
+                var last = ticks[ticks.Count - 1];
+                if (Math.Abs(last - maximumValue) > increment * 0.5d)
+                {
+                    ticks.Add(maximumValue);
+                }
+                else
+                {
+                    ticks[ticks.Count - 1] = maximumValue;
+                }
             }
 
             return new ReadOnlyCollection<double>(ticks);

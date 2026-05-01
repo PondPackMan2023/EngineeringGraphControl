@@ -29,15 +29,18 @@ namespace Graphing.Editors.Controls
             this._minimumTextBox = new System.Windows.Forms.TextBox();
             this._fixedRangeRadioButton = new System.Windows.Forms.RadioButton();
             this._autoRangeRadioButton = new System.Windows.Forms.RadioButton();
-            this._rangeLabel = new System.Windows.Forms.Label();
             this._titleTextBox = new System.Windows.Forms.TextBox();
             this._hasTitleOverrideCheckBox = new System.Windows.Forms.CheckBox();
             this._isVisibleCheckBox = new System.Windows.Forms.CheckBox();
+            this.groupBoxRange = new System.Windows.Forms.GroupBox();
+            this.groupBoxIncrement = new System.Windows.Forms.GroupBox();
             ((System.ComponentModel.ISupportInitialize)(this._splitContainer)).BeginInit();
             this._splitContainer.Panel1.SuspendLayout();
             this._splitContainer.Panel2.SuspendLayout();
             this._splitContainer.SuspendLayout();
             this._rightPanel.SuspendLayout();
+            this.groupBoxRange.SuspendLayout();
+            this.groupBoxIncrement.SuspendLayout();
             this.SuspendLayout();
             // 
             // _splitContainer
@@ -69,18 +72,8 @@ namespace Graphing.Editors.Controls
             // 
             // _rightPanel
             // 
-            this._rightPanel.Controls.Add(this._incrementUnitLabel);
-            this._rightPanel.Controls.Add(this._incrementTextBox);
-            this._rightPanel.Controls.Add(this._fixedIncrementRadioButton);
-            this._rightPanel.Controls.Add(this._autoIncrementRadioButton);
-            this._rightPanel.Controls.Add(this._incrementLabel);
-            this._rightPanel.Controls.Add(this._maximumUnitLabel);
-            this._rightPanel.Controls.Add(this._minimumUnitLabel);
-            this._rightPanel.Controls.Add(this._maximumTextBox);
-            this._rightPanel.Controls.Add(this._minimumTextBox);
-            this._rightPanel.Controls.Add(this._fixedRangeRadioButton);
-            this._rightPanel.Controls.Add(this._autoRangeRadioButton);
-            this._rightPanel.Controls.Add(this._rangeLabel);
+            this._rightPanel.Controls.Add(this.groupBoxIncrement);
+            this._rightPanel.Controls.Add(this.groupBoxRange);
             this._rightPanel.Controls.Add(this._titleTextBox);
             this._rightPanel.Controls.Add(this._hasTitleOverrideCheckBox);
             this._rightPanel.Controls.Add(this._isVisibleCheckBox);
@@ -93,26 +86,26 @@ namespace Graphing.Editors.Controls
             // _incrementUnitLabel
             // 
             this._incrementUnitLabel.AutoSize = true;
-            this._incrementUnitLabel.Location = new System.Drawing.Point(204, 232);
+            this._incrementUnitLabel.Location = new System.Drawing.Point(161, 55);
             this._incrementUnitLabel.Name = "_incrementUnitLabel";
             this._incrementUnitLabel.Size = new System.Drawing.Size(0, 13);
-            this._incrementUnitLabel.TabIndex = 14;
+            this._incrementUnitLabel.TabIndex = 4;
             // 
             // _incrementTextBox
             // 
-            this._incrementTextBox.Location = new System.Drawing.Point(111, 230);
+            this._incrementTextBox.Location = new System.Drawing.Point(66, 50);
             this._incrementTextBox.Name = "_incrementTextBox";
             this._incrementTextBox.Size = new System.Drawing.Size(89, 20);
-            this._incrementTextBox.TabIndex = 13;
+            this._incrementTextBox.TabIndex = 3;
             // 
             // _fixedIncrementRadioButton
             // 
             this._fixedIncrementRadioButton.AutoSize = true;
             this._fixedIncrementRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._fixedIncrementRadioButton.Location = new System.Drawing.Point(61, 207);
+            this._fixedIncrementRadioButton.Location = new System.Drawing.Point(65, 19);
             this._fixedIncrementRadioButton.Name = "_fixedIncrementRadioButton";
             this._fixedIncrementRadioButton.Size = new System.Drawing.Size(56, 18);
-            this._fixedIncrementRadioButton.TabIndex = 11;
+            this._fixedIncrementRadioButton.TabIndex = 1;
             this._fixedIncrementRadioButton.TabStop = true;
             this._fixedIncrementRadioButton.Text = "Fixed";
             this._fixedIncrementRadioButton.UseVisualStyleBackColor = true;
@@ -121,10 +114,10 @@ namespace Graphing.Editors.Controls
             // 
             this._autoIncrementRadioButton.AutoSize = true;
             this._autoIncrementRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._autoIncrementRadioButton.Location = new System.Drawing.Point(10, 207);
+            this._autoIncrementRadioButton.Location = new System.Drawing.Point(6, 19);
             this._autoIncrementRadioButton.Name = "_autoIncrementRadioButton";
             this._autoIncrementRadioButton.Size = new System.Drawing.Size(53, 18);
-            this._autoIncrementRadioButton.TabIndex = 10;
+            this._autoIncrementRadioButton.TabIndex = 0;
             this._autoIncrementRadioButton.TabStop = true;
             this._autoIncrementRadioButton.Text = "Auto";
             this._autoIncrementRadioButton.UseVisualStyleBackColor = true;
@@ -133,50 +126,50 @@ namespace Graphing.Editors.Controls
             // 
             this._incrementLabel.AutoSize = true;
             this._incrementLabel.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._incrementLabel.Location = new System.Drawing.Point(10, 232);
+            this._incrementLabel.Location = new System.Drawing.Point(3, 53);
             this._incrementLabel.Name = "_incrementLabel";
             this._incrementLabel.Size = new System.Drawing.Size(54, 13);
-            this._incrementLabel.TabIndex = 12;
+            this._incrementLabel.TabIndex = 2;
             this._incrementLabel.Text = "Increment";
             // 
             // _maximumUnitLabel
             // 
             this._maximumUnitLabel.AutoSize = true;
-            this._maximumUnitLabel.Location = new System.Drawing.Point(204, 172);
+            this._maximumUnitLabel.Location = new System.Drawing.Point(101, 78);
             this._maximumUnitLabel.Name = "_maximumUnitLabel";
             this._maximumUnitLabel.Size = new System.Drawing.Size(0, 13);
-            this._maximumUnitLabel.TabIndex = 9;
+            this._maximumUnitLabel.TabIndex = 5;
             // 
             // _minimumUnitLabel
             // 
             this._minimumUnitLabel.AutoSize = true;
-            this._minimumUnitLabel.Location = new System.Drawing.Point(204, 146);
+            this._minimumUnitLabel.Location = new System.Drawing.Point(101, 52);
             this._minimumUnitLabel.Name = "_minimumUnitLabel";
             this._minimumUnitLabel.Size = new System.Drawing.Size(0, 13);
-            this._minimumUnitLabel.TabIndex = 7;
+            this._minimumUnitLabel.TabIndex = 3;
             // 
             // _maximumTextBox
             // 
-            this._maximumTextBox.Location = new System.Drawing.Point(111, 169);
+            this._maximumTextBox.Location = new System.Drawing.Point(6, 75);
             this._maximumTextBox.Name = "_maximumTextBox";
             this._maximumTextBox.Size = new System.Drawing.Size(89, 20);
-            this._maximumTextBox.TabIndex = 8;
+            this._maximumTextBox.TabIndex = 4;
             // 
             // _minimumTextBox
             // 
-            this._minimumTextBox.Location = new System.Drawing.Point(111, 144);
+            this._minimumTextBox.Location = new System.Drawing.Point(6, 49);
             this._minimumTextBox.Name = "_minimumTextBox";
             this._minimumTextBox.Size = new System.Drawing.Size(89, 20);
-            this._minimumTextBox.TabIndex = 6;
+            this._minimumTextBox.TabIndex = 2;
             // 
             // _fixedRangeRadioButton
             // 
             this._fixedRangeRadioButton.AutoSize = true;
             this._fixedRangeRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._fixedRangeRadioButton.Location = new System.Drawing.Point(61, 121);
+            this._fixedRangeRadioButton.Location = new System.Drawing.Point(65, 19);
             this._fixedRangeRadioButton.Name = "_fixedRangeRadioButton";
             this._fixedRangeRadioButton.Size = new System.Drawing.Size(56, 18);
-            this._fixedRangeRadioButton.TabIndex = 5;
+            this._fixedRangeRadioButton.TabIndex = 1;
             this._fixedRangeRadioButton.TabStop = true;
             this._fixedRangeRadioButton.Text = "Fixed";
             this._fixedRangeRadioButton.UseVisualStyleBackColor = true;
@@ -185,23 +178,13 @@ namespace Graphing.Editors.Controls
             // 
             this._autoRangeRadioButton.AutoSize = true;
             this._autoRangeRadioButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._autoRangeRadioButton.Location = new System.Drawing.Point(10, 121);
+            this._autoRangeRadioButton.Location = new System.Drawing.Point(6, 19);
             this._autoRangeRadioButton.Name = "_autoRangeRadioButton";
             this._autoRangeRadioButton.Size = new System.Drawing.Size(53, 18);
-            this._autoRangeRadioButton.TabIndex = 4;
+            this._autoRangeRadioButton.TabIndex = 0;
             this._autoRangeRadioButton.TabStop = true;
             this._autoRangeRadioButton.Text = "Auto";
             this._autoRangeRadioButton.UseVisualStyleBackColor = true;
-            // 
-            // _rangeLabel
-            // 
-            this._rangeLabel.AutoSize = true;
-            this._rangeLabel.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._rangeLabel.Location = new System.Drawing.Point(10, 99);
-            this._rangeLabel.Name = "_rangeLabel";
-            this._rangeLabel.Size = new System.Drawing.Size(39, 13);
-            this._rangeLabel.TabIndex = 3;
-            this._rangeLabel.Text = "Range";
             // 
             // _titleTextBox
             // 
@@ -232,6 +215,37 @@ namespace Graphing.Editors.Controls
             this._isVisibleCheckBox.Text = "Visible";
             this._isVisibleCheckBox.UseVisualStyleBackColor = true;
             // 
+            // groupBoxRange
+            // 
+            this.groupBoxRange.Controls.Add(this._maximumUnitLabel);
+            this.groupBoxRange.Controls.Add(this._minimumUnitLabel);
+            this.groupBoxRange.Controls.Add(this._minimumTextBox);
+            this.groupBoxRange.Controls.Add(this._maximumTextBox);
+            this.groupBoxRange.Controls.Add(this._fixedRangeRadioButton);
+            this.groupBoxRange.Controls.Add(this._autoRangeRadioButton);
+            this.groupBoxRange.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.groupBoxRange.Location = new System.Drawing.Point(10, 94);
+            this.groupBoxRange.Name = "groupBoxRange";
+            this.groupBoxRange.Size = new System.Drawing.Size(219, 101);
+            this.groupBoxRange.TabIndex = 3;
+            this.groupBoxRange.TabStop = false;
+            this.groupBoxRange.Text = "Range";
+            // 
+            // groupBoxIncrement
+            // 
+            this.groupBoxIncrement.Controls.Add(this._incrementTextBox);
+            this.groupBoxIncrement.Controls.Add(this._incrementLabel);
+            this.groupBoxIncrement.Controls.Add(this._incrementUnitLabel);
+            this.groupBoxIncrement.Controls.Add(this._fixedIncrementRadioButton);
+            this.groupBoxIncrement.Controls.Add(this._autoIncrementRadioButton);
+            this.groupBoxIncrement.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.groupBoxIncrement.Location = new System.Drawing.Point(10, 201);
+            this.groupBoxIncrement.Name = "groupBoxIncrement";
+            this.groupBoxIncrement.Size = new System.Drawing.Size(219, 76);
+            this.groupBoxIncrement.TabIndex = 4;
+            this.groupBoxIncrement.TabStop = false;
+            this.groupBoxIncrement.Text = "Increment";
+            // 
             // AxesEditorControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -245,6 +259,10 @@ namespace Graphing.Editors.Controls
             this._splitContainer.ResumeLayout(false);
             this._rightPanel.ResumeLayout(false);
             this._rightPanel.PerformLayout();
+            this.groupBoxRange.ResumeLayout(false);
+            this.groupBoxRange.PerformLayout();
+            this.groupBoxIncrement.ResumeLayout(false);
+            this.groupBoxIncrement.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -255,7 +273,6 @@ namespace Graphing.Editors.Controls
         private System.Windows.Forms.CheckBox _isVisibleCheckBox;
         private System.Windows.Forms.CheckBox _hasTitleOverrideCheckBox;
         private System.Windows.Forms.TextBox _titleTextBox;
-        private System.Windows.Forms.Label _rangeLabel;
         private System.Windows.Forms.RadioButton _autoRangeRadioButton;
         private System.Windows.Forms.RadioButton _fixedRangeRadioButton;
         private System.Windows.Forms.TextBox _minimumTextBox;
@@ -267,5 +284,7 @@ namespace Graphing.Editors.Controls
         private System.Windows.Forms.RadioButton _fixedIncrementRadioButton;
         private System.Windows.Forms.TextBox _incrementTextBox;
         private System.Windows.Forms.Label _incrementUnitLabel;
+        private System.Windows.Forms.GroupBox groupBoxIncrement;
+        private System.Windows.Forms.GroupBox groupBoxRange;
     }
 }
