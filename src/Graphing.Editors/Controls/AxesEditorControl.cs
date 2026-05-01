@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Windows.Forms;
 using Graphing.Editors.EditorModels;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Editors.Controls
 {
@@ -46,11 +47,20 @@ namespace Graphing.Editors.Controls
             _autoRangeRadioButton.CheckedChanged += autoRangeRadioButton_CheckedChanged;
             _fixedRangeRadioButton.CheckedChanged += fixedRangeRadioButton_CheckedChanged;
             _minimumTextBox.TextChanged += minimumTextBox_TextChanged;
+            _minimumTextBox.Leave += minimumTextBox_Leave;
+            _minimumTextBox.Enter += numericTextBox_Enter;
+            _minimumTextBox.MouseUp += numericTextBox_MouseUp;
             _maximumTextBox.TextChanged += maximumTextBox_TextChanged;
+            _maximumTextBox.Leave += maximumTextBox_Leave;
+            _maximumTextBox.Enter += numericTextBox_Enter;
+            _maximumTextBox.MouseUp += numericTextBox_MouseUp;
 
             _autoIncrementRadioButton.CheckedChanged += autoIncrementRadioButton_CheckedChanged;
             _fixedIncrementRadioButton.CheckedChanged += fixedIncrementRadioButton_CheckedChanged;
             _incrementTextBox.TextChanged += incrementTextBox_TextChanged;
+            _incrementTextBox.Leave += incrementTextBox_Leave;
+            _incrementTextBox.Enter += numericTextBox_Enter;
+            _incrementTextBox.MouseUp += numericTextBox_MouseUp;
         }
 
         private void BuildAxisDisplayLabels()
@@ -199,8 +209,9 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
+            var formatter = GetNumericFormatter(selected);
             double parsed;
-            if (double.TryParse(_minimumTextBox.Text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out parsed))
+            if (formatter.TryInterpret(_minimumTextBox.Text, out parsed))
             {
                 selected.Minimum = parsed;
             }
@@ -219,11 +230,28 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
+            var formatter = GetNumericFormatter(selected);
             double parsed;
-            if (double.TryParse(_maximumTextBox.Text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out parsed))
+            if (formatter.TryInterpret(_maximumTextBox.Text, out parsed))
             {
                 selected.Maximum = parsed;
             }
+        }
+
+        private void minimumTextBox_Leave(object sender, EventArgs e)
+        {
+            CommitNumericText(
+                _minimumTextBox,
+                axis => axis.Minimum,
+                (axis, value) => axis.Minimum = value);
+        }
+
+        private void maximumTextBox_Leave(object sender, EventArgs e)
+        {
+            CommitNumericText(
+                _maximumTextBox,
+                axis => axis.Maximum,
+                (axis, value) => axis.Maximum = value);
         }
 
         private void autoIncrementRadioButton_CheckedChanged(object sender, EventArgs e)
@@ -273,10 +301,35 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
+            var formatter = GetNumericFormatter(selected);
             double parsed;
-            if (double.TryParse(_incrementTextBox.Text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out parsed))
+            if (formatter.TryInterpret(_incrementTextBox.Text, out parsed))
             {
                 selected.Increment = parsed;
+            }
+        }
+
+        private void incrementTextBox_Leave(object sender, EventArgs e)
+        {
+            CommitNumericText(
+                _incrementTextBox,
+                axis => axis.Increment,
+                (axis, value) => axis.Increment = value);
+        }
+
+        private void numericTextBox_Enter(object sender, EventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                textBox.SelectAll();
+            }
+        }
+
+        private void numericTextBox_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (sender is TextBox textBox && textBox.SelectionLength == 0)
+            {
+                textBox.SelectAll();
             }
         }
 
@@ -316,14 +369,16 @@ namespace Graphing.Editors.Controls
                     _titleTextBox.Text = selected.Title ?? string.Empty;
                     _titleTextBox.Enabled = selected.HasTitleOverride;
 
+                    var formatter = GetNumericFormatter(selected);
+
                     _fixedRangeRadioButton.Checked = selected.HasFixedRange;
                     _autoRangeRadioButton.Checked = !selected.HasFixedRange;
-                    _minimumTextBox.Text = selected.Minimum.ToString(CultureInfo.CurrentCulture);
-                    _maximumTextBox.Text = selected.Maximum.ToString(CultureInfo.CurrentCulture);
+                    _minimumTextBox.Text = formatter.Format(selected.Minimum);
+                    _maximumTextBox.Text = formatter.Format(selected.Maximum);
 
                     _fixedIncrementRadioButton.Checked = selected.HasFixedIncrement;
                     _autoIncrementRadioButton.Checked = !selected.HasFixedIncrement;
-                    _incrementTextBox.Text = selected.Increment.ToString(CultureInfo.CurrentCulture);
+                    _incrementTextBox.Text = formatter.Format(selected.Increment);
 
                     var unitText = selected.DisplayUnit != null && selected.DisplayUnit.Id != null
                         ? selected.DisplayUnit.Label
@@ -356,6 +411,65 @@ namespace Graphing.Editors.Controls
         private AxisItemEditorModel GetSelectedAxis()
         {
             return _axesListBox.SelectedItem as AxisItemEditorModel;
+        }
+
+        private static NumericFormatter GetNumericFormatter(AxisItemEditorModel selected)
+        {
+            if (selected.NumericFormatter != null)
+            {
+                return selected.NumericFormatter;
+            }
+
+            var formatterLabel = selected.DisplayUnit != null ? selected.DisplayUnit.Label : "Axis";
+            selected.NumericFormatter = new NumericFormatter(
+                "axis-editor-fallback-" + (selected.AxisId != null ? selected.AxisId.Value : "axis"),
+                UnitRegistry.UnitsRegistry.Default,
+                formatterLabel,
+                "R",
+                CultureInfo.CurrentCulture);
+
+            return selected.NumericFormatter;
+        }
+
+        private void CommitNumericText(
+            TextBox textBox,
+            Func<AxisItemEditorModel, double> getCurrentValue,
+            Action<AxisItemEditorModel, double> setValue)
+        {
+            if (_isUpdatingUi)
+            {
+                return;
+            }
+
+            var selected = GetSelectedAxis();
+            if (selected == null)
+            {
+                return;
+            }
+
+            var formatter = GetNumericFormatter(selected);
+            double parsed;
+            if (formatter.TryInterpret(textBox.Text, out parsed))
+            {
+                setValue(selected, parsed);
+                SetTextWithoutUpdatingUi(textBox, formatter.Format(parsed));
+                return;
+            }
+
+            SetTextWithoutUpdatingUi(textBox, formatter.Format(getCurrentValue(selected)));
+        }
+
+        private void SetTextWithoutUpdatingUi(TextBox textBox, string text)
+        {
+            _isUpdatingUi = true;
+            try
+            {
+                textBox.Text = text;
+            }
+            finally
+            {
+                _isUpdatingUi = false;
+            }
         }
     }
 }

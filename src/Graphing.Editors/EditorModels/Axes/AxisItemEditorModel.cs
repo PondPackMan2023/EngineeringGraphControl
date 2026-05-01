@@ -1,6 +1,7 @@
 using System;
 using Graphing.Controls.Models;
 using UnitRegistry;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Editors.EditorModels
 {
@@ -22,6 +23,8 @@ namespace Graphing.Editors.EditorModels
         public double Increment { get; set; }
 
         public Unit DisplayUnit { get; set; }
+
+        public NumericFormatter NumericFormatter { get; set; }
 
         public AxisItemEditorModel(AxisId axisId, AxisSide side)
         {

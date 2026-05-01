@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
 using Graphing.Controls.Snapshot;
 using Graphing.Editors.EditorModels;
 using UnitRegistry;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Editors.Presentation
 {
@@ -185,7 +187,8 @@ namespace Graphing.Editors.Presentation
                     Maximum = maximum,
                     HasFixedIncrement = false,
                     Increment = increment,
-                    DisplayUnit = axis.Unit
+                    DisplayUnit = axis.Unit,
+                    NumericFormatter = axis.NumericFormatter ?? CreateFallbackNumericFormatter(axis)
                 };
 
                 // Load axis overrides if they exist
@@ -224,6 +227,20 @@ namespace Graphing.Editors.Presentation
             }
 
             return lookup;
+        }
+
+        private static NumericFormatter CreateFallbackNumericFormatter(IAxisModel axis)
+        {
+            var formatterLabel = string.IsNullOrWhiteSpace(axis.UnitLabel)
+                ? axis.Side.ToString()
+                : axis.UnitLabel;
+
+            return new NumericFormatter(
+                "axis-editor-fallback-" + axis.Id.Value,
+                UnitsRegistry.Default,
+                formatterLabel,
+                "R",
+                CultureInfo.CurrentCulture);
         }
 
         private static LegendEditorModel ConstructLegendEditorModel(GraphPresentationOptions existingOptions)
