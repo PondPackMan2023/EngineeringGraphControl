@@ -259,8 +259,8 @@ namespace Graphing.Tests
         {
             var unit = Units.Length.Meter;
             var registry = UnitsRegistry.Default;
-            var formatterShort = new NumericFormatter("fmt-short", registry, "F0");
-            var formatterLong = new NumericFormatter("fmt-long", registry, "F6");
+            var formatterShort = new NumericFormatter("fmt-short", registry, "X", "F0");
+            var formatterLong = new NumericFormatter("fmt-long", registry, "X", "F6");
 
             GraphPresentationModel BuildPresentation(NumericFormatter formatter)
             {
@@ -518,10 +518,10 @@ namespace Graphing.Tests
             var plotRect = ComputePlotRect(new Rectangle(0, 0, W, H), presentation);
             var axisRect = ComputeAxisRectForEntry(plotRect, yEntry);
 
-            var tickValue = yPresentationAxis.Ticks[2].Value;
+            var tickValue = yPresentationAxis.Ticks[0].Value;
             var horizontalGrid = presentation.Layout.GridLines.HorizontalLines
                 .Single(l => l.AxisEntry.Axis.AxisId == yPresentationAxis.AxisId && Math.Abs(l.Start.Y - tickValue) < 1e-12);
-            var seriesY = s.Points[1].Y;
+            var seriesY = s.Points[0].Y;
 
             var yFromTick = DomainToDeviceY(tickValue, yPresentationAxis.MinimumValue.Value, yPresentationAxis.MaximumValue.Value, axisRect);
             var yFromGrid = DomainToDeviceY(horizontalGrid.Start.Y, yPresentationAxis.MinimumValue.Value, yPresentationAxis.MaximumValue.Value, axisRect);
@@ -560,8 +560,8 @@ namespace Graphing.Tests
             var plotRect = ComputePlotRect(new Rectangle(0, 0, W, H), presentation);
             var rightAxisRect = ComputeAxisRectForEntry(plotRect, rightEntry);
 
-            var tickValue = rightAxis.Ticks[2].Value;
-            var seriesY = rightSeries.Points[1].Y;
+            var tickValue = rightAxis.Ticks[0].Value;
+            var seriesY = rightSeries.Points[0].Y;
 
             var yFromTick = DomainToDeviceY(tickValue, rightAxis.MinimumValue.Value, rightAxis.MaximumValue.Value, rightAxisRect);
             var yFromSeries = DomainToDeviceY(seriesY, rightAxis.MinimumValue.Value, rightAxis.MaximumValue.Value, rightAxisRect);

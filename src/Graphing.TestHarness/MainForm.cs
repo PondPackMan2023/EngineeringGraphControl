@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using UnitRegistry;
+using UnitRegistry.Formatting;
 
 namespace Graphing.TestHarness
 {
@@ -72,10 +73,10 @@ namespace Graphing.TestHarness
             Random rnd = new Random(DateTime.Now.Millisecond);
             var timeIndex = rnd.Next(0, allTimeUnits.Length - 1);
 
-            var formatter = NumericFormatterLibrary.GetTimeFormatter($"F{timeIndex + 1}");
+            NumericFormatterLibrary.ChangeFormat(FormatterId.Time_Extended, NumericFormat.Fixed(timeIndex + 1));
 
             var newTimeUnit = allTimeUnits[timeIndex];
-            var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("time"), newTimeUnit, formatter);
+            var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("time"), newTimeUnit, NumericFormatterLibrary.TimeFormatter);
             graphControl.SetGraphSource(graph, CreateOptions());
         }
 
@@ -85,8 +86,8 @@ namespace Graphing.TestHarness
             Random rnd = new Random(DateTime.Now.Millisecond);
             var elevationIndex = rnd.Next(0, allLengthUnits.Length - 1);
             var newLengthUnit = allLengthUnits[elevationIndex];
-            var formatter = NumericFormatterLibrary.GetElevationFormatter($"F{elevationIndex + 1}");
-            var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("elevation"), newLengthUnit, formatter);
+            NumericFormatterLibrary.ChangeFormat(FormatterId.Elevation, NumericFormat.Fixed(elevationIndex + 1));
+            var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("elevation"), newLengthUnit, NumericFormatterLibrary.ElevationFormatter);
             graphControl.SetGraphSource(graph, CreateOptions());
         }
 
@@ -96,8 +97,8 @@ namespace Graphing.TestHarness
             Random rnd = new Random(DateTime.Now.Millisecond);
             var pressureIndex = rnd.Next(0, allPressureUnits.Length - 1);
             var newPressureUnit = allPressureUnits[pressureIndex];
-            var formatter = NumericFormatterLibrary.GetPressureFormatter($"F{pressureIndex + 1}");
-            var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("pressure"), newPressureUnit, formatter);
+            NumericFormatterLibrary.ChangeFormat(FormatterId.Pressure, NumericFormat.Fixed(pressureIndex + 1));
+            var graph = graphControl.GraphModel.ChangeAxisUnitAndFormat(new AxisId("pressure"), newPressureUnit, NumericFormatterLibrary.PressureFormatter);
             graphControl.SetGraphSource(graph, CreateOptions());
         }
 
@@ -282,7 +283,8 @@ namespace Graphing.TestHarness
 
         private void buttonOptions_Click(object sender, EventArgs e)
         {
-            var options = EngineeringGraphOptionsEditorForm.OpenOptions(graphControl.GraphModel, graphControl.ActiveOptions, this);
+            var options = EngineeringGraphOptionsEditorForm.OpenOptions(graphControl.GraphModel,
+                graphControl.ActiveOptions, graphControl.ActiveSnapshot, this);
             graphControl.SetGraphSource(graphControl.GraphModel, options);
         }
     }

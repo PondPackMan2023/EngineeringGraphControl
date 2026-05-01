@@ -2,17 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Graphing.Controls.Models;
+using Graphing.Controls.Presentation;
 
 namespace Graphing.Controls.Snapshot
 {
     internal sealed class GraphSnapshotBuilder
     {
+        private const int DefaultDesiredTickCount = 5;
+        private const double MaxTemporalIntervals = 9d;
+
         public GraphSnapshotBuilder()
         {
 
         }
 
-        public IGraphSnapshot Build(IGraphModel graphModel)
+        public IGraphSnapshot Build(IGraphModel graphModel, GraphPresentationOptions options = null)
         {
             var axisLookup = BuildAxisLookup(graphModel);
 
@@ -52,7 +56,7 @@ namespace Graphing.Controls.Snapshot
                 }
             }
 
-            var axisSnapshots = BuildAxisSnapshots(graphModel, seriesSnapshots);
+            var axisSnapshots = BuildAxisSnapshots(graphModel, seriesSnapshots, options);
             return new GraphSnapshot(seriesSnapshots, axisSnapshots);
         }
 
@@ -121,7 +125,10 @@ namespace Graphing.Controls.Snapshot
                 formatter);
         }
 
-        private List<AxisSnapshot> BuildAxisSnapshots(IGraphModel graphModel, IReadOnlyList<SeriesSnapshot> seriesSnapshots)
+        private List<AxisSnapshot> BuildAxisSnapshots(
+            IGraphModel graphModel,
+            IReadOnlyList<SeriesSnapshot> seriesSnapshots,
+            GraphPresentationOptions options)
         {
             var axisSnapshots = new List<AxisSnapshot>();
             var axes = graphModel != null ? graphModel.Axes : null;
@@ -142,6 +149,8 @@ namespace Graphing.Controls.Snapshot
                 var contributingFields = new List<IFieldSnapshot>();
                 double? minimumValue = null;
                 double? maximumValue = null;
+                double? actualMinimumValue = null;
+                double? actualMaximumValue = null;
 
                 for (var seriesIndex = 0; seriesIndex < seriesSnapshots.Count; seriesIndex++)
                 {
@@ -153,6 +162,8 @@ namespace Graphing.Controls.Snapshot
                         {
                             contributingFields.Add(seriesSnapshot.XField);
                             UpdateBounds(ref minimumValue, ref maximumValue, seriesSnapshot.XField.Values);
+                            UpdateBounds(ref actualMinimumValue, ref actualMaximumValue, seriesSnapshot.XField.Values);
+                            UpdateMaximum(ref actualMaximumValue, seriesSnapshot.XField.Values);
                         }
                     }
 
@@ -162,9 +173,13 @@ namespace Graphing.Controls.Snapshot
                         {
                             contributingFields.Add(seriesSnapshot.YField);
                             UpdateBounds(ref minimumValue, ref maximumValue, seriesSnapshot.YField.Values);
+                            UpdateBounds(ref actualMinimumValue, ref actualMaximumValue, seriesSnapshot.YField.Values);
+                            UpdateMaximum(ref actualMaximumValue, seriesSnapshot.YField.Values);
                         }
                     }
                 }
+
+                var axisOverride = ResolveAxisOverrides(axis, options);
 
                 if (!axis.IsAutoRange)
                 {
@@ -179,7 +194,88 @@ namespace Graphing.Controls.Snapshot
                     }
                 }
 
+                if (axisOverride != null && axisOverride.HasFixedRange)
+                {
+                    minimumValue = axisOverride.Minimum;
+                    maximumValue = axisOverride.Maximum;
+                }
+
+                var hasUserRangeOverride = axisOverride != null && axisOverride.HasFixedRange;
+                var hasUserIncrementOverride = axisOverride != null && axisOverride.HasFixedIncrement && axisOverride.Increment > 0d;
+                var enforceMinimumZero = axisOverride != null && axisOverride.EnforceMinimumZero;
+                var enableDenseNumericYAxisTicks = options == null || options.EnableDenseNumericYAxisTicks;
+                var denseNumericYAxisExcludedDimensions = options != null
+                    ? options.DenseNumericYAxisExcludedDimensions
+                    : GraphPresentationOptions.CreateDefaultDenseNumericYAxisExcludedDimensions();
+
+                double? resolvedIncrement = null;
+                var isAutoIncrement = true;
+                var majorTickStride = 1;
+
+                if (hasUserIncrementOverride)
+                {
+                    resolvedIncrement = axisOverride.Increment;
+                    isAutoIncrement = false;
+                }
+                else if (minimumValue.HasValue && maximumValue.HasValue)
+                {
+                    var range = AxisRangeCalculator.Calculate(
+                        minimumValue.Value,
+                        maximumValue.Value,
+                        DefaultDesiredTickCount);
+
+                    resolvedIncrement = range.Increment;
+
+                    if (!hasUserRangeOverride)
+                    {
+                        minimumValue = range.Minimum;
+                        maximumValue = range.Maximum;
+                    }
+
+                    if (!hasUserRangeOverride
+                        && axis.Orientation == Graphing.Controls.Models.AxisOrientation.X
+                        && actualMaximumValue.HasValue
+                        && maximumValue.HasValue
+                        && maximumValue.Value > actualMaximumValue.Value)
+                    {
+                        maximumValue = actualMaximumValue.Value;
+                    }
+
+                    if (axis.Orientation == Graphing.Controls.Models.AxisOrientation.X
+                        && isAutoIncrement
+                        && minimumValue.HasValue
+                        && maximumValue.HasValue
+                        && IsTemporalAxis(axis))
+                    {
+                        resolvedIncrement = ApplyTemporalIncrementPolicy(
+                            resolvedIncrement,
+                            minimumValue.Value,
+                            maximumValue.Value,
+                            axis.Unit);
+                    }
+
+                    var yAxisPolicyResolution = AxisPolicyApplier.Apply(
+                        axis,
+                        contributingFields,
+                        actualMinimumValue,
+                        actualMaximumValue,
+                        minimumValue,
+                        maximumValue,
+                        resolvedIncrement,
+                        hasUserRangeOverride,
+                        hasUserIncrementOverride,
+                        enforceMinimumZero,
+                        enableDenseNumericYAxisTicks,
+                        denseNumericYAxisExcludedDimensions);
+
+                    minimumValue = yAxisPolicyResolution.Minimum;
+                    maximumValue = yAxisPolicyResolution.Maximum;
+                    resolvedIncrement = yAxisPolicyResolution.Increment;
+                    majorTickStride = yAxisPolicyResolution.MajorTickStride;
+                }
+
                 var sourceFormatter = axis.NumericFormatter;
+                var axisTitle = BuildAxisTitle(axis);
 
                 axisSnapshots.Add(
                     new AxisSnapshot(
@@ -193,10 +289,137 @@ namespace Graphing.Controls.Snapshot
                         axis.IsAutoRange,
                         contributingFields,
                         minimumValue,
-                        maximumValue));
+                        maximumValue,
+                        resolvedIncrement,
+                        isAutoIncrement,
+                        majorTickStride,
+                        axisTitle));
             }
 
             return axisSnapshots;
+        }
+
+        private static string BuildAxisTitle(IAxisModel axis)
+        {
+            if (axis == null)
+            {
+                return string.Empty;
+            }
+
+            var formatter = axis.NumericFormatter;
+            var label = formatter != null ? formatter.Label : null;
+
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                return string.Empty;
+            }
+
+            var unit = axis.Unit;
+            var unitLabel = unit != null ? unit.Label : null;
+
+            if (!string.IsNullOrWhiteSpace(unitLabel))
+            {
+                return string.Format(CultureInfo.InvariantCulture, "{0} ({1})", label, unitLabel);
+            }
+
+            return label;
+        }
+
+        private static AxisOverrides ResolveAxisOverrides(IAxisModel axis, GraphPresentationOptions options)
+        {
+            if (axis == null || axis.Id == null || options == null || options.AxisOverrides == null)
+            {
+                return null;
+            }
+
+            AxisOverrides axisOverride;
+            if (options.AxisOverrides.TryGetValue(axis.Id, out axisOverride))
+            {
+                return axisOverride;
+            }
+
+            return null;
+        }
+
+        private static bool IsTemporalAxis(IAxisModel axis)
+        {
+            return axis != null
+                && axis.Unit != null
+                && axis.Unit.Dimension == UnitRegistry.Dimensions.Time;
+        }
+
+        private static double? ApplyTemporalIncrementPolicy(double? increment, double minimumValue, double maximumValue, UnitRegistry.Unit unit)
+        {
+            if (!increment.HasValue || increment.Value <= 0d || unit == null)
+            {
+                return increment;
+            }
+
+            if (unit == UnitRegistry.Units.Time.Hours || unit == UnitRegistry.Units.Time.Hour)
+            {
+                return ApplyHoursIncrementPolicy(increment.Value, minimumValue, maximumValue);
+            }
+
+            if (unit == UnitRegistry.Units.Time.Minutes
+                || unit == UnitRegistry.Units.Time.Minute
+                || unit == UnitRegistry.Units.Time.Seconds
+                || unit == UnitRegistry.Units.Time.Second)
+            {
+                return ApplyMinutesSecondsIncrementPolicy(increment.Value, minimumValue, maximumValue);
+            }
+
+            return increment;
+        }
+
+        private static double ApplyHoursIncrementPolicy(double increment, double minimumValue, double maximumValue)
+        {
+            if (increment <= 4d)
+            {
+                return increment;
+            }
+
+            var adjusted = 6d;
+            var span = maximumValue - minimumValue;
+
+            while (span / adjusted > MaxTemporalIntervals)
+            {
+                adjusted *= 2d;
+            }
+
+            return adjusted;
+        }
+
+        private static double ApplyMinutesSecondsIncrementPolicy(double increment, double minimumValue, double maximumValue)
+        {
+            if (increment <= 3d)
+            {
+                return increment;
+            }
+
+            if (increment <= 4d)
+            {
+                return 3d;
+            }
+
+            if (increment <= 9d)
+            {
+                return 5d;
+            }
+
+            if (increment <= 14d)
+            {
+                return 10d;
+            }
+
+            var adjusted = 15d;
+            var span = maximumValue - minimumValue;
+
+            while (span / adjusted > MaxTemporalIntervals)
+            {
+                adjusted *= 2d;
+            }
+
+            return adjusted;
         }
 
         private static void UpdateBounds(ref double? minimumValue, ref double? maximumValue, Array values)
@@ -219,6 +442,29 @@ namespace Graphing.Controls.Snapshot
                 {
                     minimumValue = numericValue;
                 }
+
+                if (!maximumValue.HasValue || numericValue > maximumValue.Value)
+                {
+                    maximumValue = numericValue;
+                }
+            }
+        }
+
+        private static void UpdateMaximum(ref double? maximumValue, Array values)
+        {
+            if (values == null)
+            {
+                return;
+            }
+
+            foreach (var value in values)
+            {
+                if (value == null)
+                {
+                    continue;
+                }
+
+                var numericValue = Convert.ToDouble(value, CultureInfo.InvariantCulture);
 
                 if (!maximumValue.HasValue || numericValue > maximumValue.Value)
                 {

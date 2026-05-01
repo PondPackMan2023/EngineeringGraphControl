@@ -74,14 +74,17 @@ namespace Graphing.Tests
         public void AxisTitle_UpdatesWhenAxisUnitChanges()
         {
             var timeDimension = new Dimension("time");
-            var hoursUnit = new Unit("hr", timeDimension, 3600.0);
-            var secondsUnit = new Unit("s", timeDimension, 1.0);
+            var hoursUnit = new Unit("hr", timeDimension, 3600.0, "hr");
+            var secondsUnit = new Unit("s", timeDimension, 1.0, "s");
 
             var timeAxisId = new AxisId("time-axis");
             var valueAxisId = new AxisId("value-axis");
+            
+            var timeFormatter = new NumericFormatter("formatter-time", UnitsRegistry.Default, "Time", "F4");
+            var valueFormatter = new NumericFormatter("formatter-value", UnitsRegistry.Default, "Value", "F4");
 
-            var timeAxis = new AxisModel(timeAxisId, ModelAxisOrientation.X, ModelAxisSide.Bottom, hoursUnit, "hr", null);
-            var valueAxis = new AxisModel(valueAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, hoursUnit, "hr", null);
+            var timeAxis = new AxisModel(timeAxisId, ModelAxisOrientation.X, ModelAxisSide.Bottom, hoursUnit, "hr", timeFormatter);
+            var valueAxis = new AxisModel(valueAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, hoursUnit, "hr", valueFormatter);
 
             var timeField = new TestFieldDefinition("Time", "time", hoursUnit, new[] { 1d, 2d, 3d });
             var valueField = new TestFieldDefinition("Value", "value", hoursUnit, new[] { 10d, 20d, 30d });
@@ -108,8 +111,8 @@ namespace Graphing.Tests
             var model = CreateModel(seriesType: SeriesType.Line);
             var xAxisId = new AxisId("x-axis");
             var yAxisId = new AxisId("y-axis");
-            var formatterX = new NumericFormatter("formatter-x", UnitsRegistry.Default, "F1");
-            var formatterY = new NumericFormatter("formatter-y-2", UnitsRegistry.Default, "F3");
+            var formatterX = new NumericFormatter("formatter-x", UnitsRegistry.Default, "X", "F1");
+            var formatterY = new NumericFormatter("formatter-y-2", UnitsRegistry.Default, "Y", "F3");
 
             var originalXAxis = model.Axes.First(a => a.Id.Equals(xAxisId));
             var originalYAxis = model.Axes.First(a => a.Id.Equals(yAxisId));
@@ -133,12 +136,12 @@ namespace Graphing.Tests
         {
             var registry = UnitsRegistry.Default;
             var timeDimension = new Dimension("time");
-            var hoursUnit = new Unit("hr", timeDimension, 3600.0);
-            var secondsUnit = new Unit("s", timeDimension, 1.0);
+            var hoursUnit = new Unit("hr", timeDimension, 3600.0, "hr");
+            var secondsUnit = new Unit("s", timeDimension, 1.0, "s");
 
             var timeAxisId = new AxisId("time-axis");
             var valueAxisId = new AxisId("value-axis");
-            var formatter = new NumericFormatter("formatter-seconds", registry, "F4");
+            var formatter = new NumericFormatter("formatter-seconds", registry, "Time", "F4");
 
             var timeAxis = new AxisModel(timeAxisId, ModelAxisOrientation.X, ModelAxisSide.Bottom, hoursUnit, "hr", null);
             var valueAxis = new AxisModel(valueAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, hoursUnit, "hr", null);
@@ -172,7 +175,7 @@ namespace Graphing.Tests
         {
             var registry = UnitsRegistry.Default;
             var unit = Units.Length.Meter;
-            var formatter = new NumericFormatter("fmt-f4", registry, "F4");
+            var formatter = new NumericFormatter("fmt-f4", registry, "Y", "F4");
 
             var yAxisId = new AxisId("y-axis");
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
@@ -204,8 +207,8 @@ namespace Graphing.Tests
             var unit = Units.Length.Meter;
             var yAxisId = new AxisId("y-axis");
 
-            var formatterF2 = new NumericFormatter("fmt-f2", registry, "F2");
-            var formatterF6 = new NumericFormatter("fmt-f6", registry, "F6");
+            var formatterF2 = new NumericFormatter("fmt-f2", registry, "Y", "F2");
+            var formatterF6 = new NumericFormatter("fmt-f6", registry, "Y", "F6");
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
             var yAxisF2 = new AxisModel(yAxisId, ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatterF2);
@@ -241,8 +244,8 @@ namespace Graphing.Tests
             var invariantCulture = System.Globalization.CultureInfo.InvariantCulture;
             var germanCulture = new System.Globalization.CultureInfo("de-DE");
 
-            var formatterInvariant = new NumericFormatter("fmt-inv", registry, "F2", invariantCulture);
-            var formatterGerman = new NumericFormatter("fmt-de", registry, "F2", germanCulture);
+            var formatterInvariant = new NumericFormatter("fmt-inv", registry, "Y", "F2", invariantCulture);
+            var formatterGerman = new NumericFormatter("fmt-de", registry, "Y", "F2", germanCulture);
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
 
@@ -981,14 +984,14 @@ namespace Graphing.Tests
                 ModelAxisSide.Left,
                 unit,
                 "m",
-                new NumericFormatter("fmt-short", registry, "F0"));
+                new NumericFormatter("fmt-short", registry, "Y", "F0"));
             var yAxisLong = new AxisModel(
                 new AxisId("y-axis"),
                 ModelAxisOrientation.Y,
                 ModelAxisSide.Left,
                 unit,
                 "m",
-                new NumericFormatter("fmt-long", registry, "F6"));
+                new NumericFormatter("fmt-long", registry, "Y", "F6"));
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yField = new TestFieldDefinition("Pressure", "p", unit, new[] { 1.123456d, 2.234567d, 3.345678d });
@@ -1879,14 +1882,14 @@ namespace Graphing.Tests
                 ModelAxisSide.Left,
                 unit,
                 "m",
-                new NumericFormatter("fmt-short", registry, "F0"));
+                new NumericFormatter("fmt-short", registry, "Y", "F0"));
             var yAxisLong = new AxisModel(
                 new AxisId("y-long"),
                 ModelAxisOrientation.Y,
                 ModelAxisSide.Left,
                 unit,
                 "m",
-                new NumericFormatter("fmt-long", registry, "F6"));
+                new NumericFormatter("fmt-long", registry, "Y", "F6"));
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yFieldShort = new TestFieldDefinition("Pressure", "p", unit, new[] { 1d, 2d, 3d });
@@ -1917,8 +1920,8 @@ namespace Graphing.Tests
             var registry = UnitsRegistry.Default;
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
-            var leftAxis = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-left", registry, "F4"));
-            var rightAxis = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", new NumericFormatter("fmt-right", registry, "F4"));
+            var leftAxis = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-left", registry, "Y", "F4"));
+            var rightAxis = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", new NumericFormatter("fmt-right", registry, "Y", "F4"));
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var series = new System.Collections.Generic.List<IGraphSeriesModel>();
@@ -2063,8 +2066,8 @@ namespace Graphing.Tests
             var registry = UnitsRegistry.Default;
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
-            var leftAxis = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-left", registry, "F2"));
-            var rightAxis = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", new NumericFormatter("fmt-right", registry, "F2"));
+            var leftAxis = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-left", registry, "Y", "F2"));
+            var rightAxis = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", new NumericFormatter("fmt-right", registry, "Y", "F2"));
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yShort = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
@@ -2359,8 +2362,8 @@ namespace Graphing.Tests
             var registry = UnitsRegistry.Default;
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
-            var leftAxis = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-left", registry, "F2"));
-            var rightAxis = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", new NumericFormatter("fmt-right", registry, "F2"));
+            var leftAxis = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-left", registry, "Y", "F2"));
+            var rightAxis = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", new NumericFormatter("fmt-right", registry, "Y", "F2"));
 
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
@@ -2781,7 +2784,7 @@ namespace Graphing.Tests
         {
             var registry = UnitsRegistry.Default;
             var unit = Units.Length.Meter;
-            var formatter = new NumericFormatter("formatter-y", registry, "F2");
+            var formatter = new NumericFormatter("formatter-y", registry, "Y", "F2");
 
             var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, xAxisSide, unit, "m", null);
             var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, yAxisSide, unit, "m", formatter);

@@ -15,6 +15,7 @@ namespace Graphing.Controls.Presentation
             string displayUnitLabel,
             double? minimumValue,
             double? maximumValue,
+            int majorTickStride,
             IReadOnlyList<GeometryPoint3D> linePoints,
             IReadOnlyList<AxisTickPresentation> ticks)
         {
@@ -27,6 +28,7 @@ namespace Graphing.Controls.Presentation
             DisplayUnitLabel = displayUnitLabel;
             MinimumValue = minimumValue;
             MaximumValue = maximumValue;
+            MajorTickStride = majorTickStride > 0 ? majorTickStride : 1;
             LinePoints = linePoints;
             Ticks = ticks;
         }
@@ -40,6 +42,7 @@ namespace Graphing.Controls.Presentation
         public string DisplayUnitLabel { get; }
         public double? MinimumValue { get; }
         public double? MaximumValue { get; }
+        public int MajorTickStride { get; }
         public IReadOnlyList<GeometryPoint3D> LinePoints { get; }
         public IReadOnlyList<AxisTickPresentation> Ticks { get; }
     }

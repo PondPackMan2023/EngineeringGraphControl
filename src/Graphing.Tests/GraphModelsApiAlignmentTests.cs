@@ -82,15 +82,15 @@ namespace Graphing.Tests
         {
             var noneDimension = new Dimension("none");
             var unitlessDimension = new Dimension("unitless");
-            var unitNone = new Unit("none", noneDimension, 1.0);
-            var unitUnitless = new Unit("unitless", unitlessDimension, 1.0);
+            var unitNone = new Unit("none", noneDimension, 1.0, "");
+            var unitUnitless = new Unit("unitless", unitlessDimension, 1.0, "");
 
             var registry = new UnitsRegistry();
             registry.RegisterBaseUnit(unitNone);
             registry.RegisterBaseUnit(unitUnitless);
             registry.Freeze();
 
-            var formatter = new NumericFormatter("unitless-formatter", registry, "F2");
+            var formatter = new NumericFormatter("unitless-formatter", registry, " ", "F2");
 
             var noneField = new TestFieldDefinition("Point Count", "pointCount", unitNone, new[] { 1d, 2d, 3d });
             var unitlessField = new TestFieldDefinition("Efficiency", "efficiency", unitUnitless, new[] { 0.12, 0.34, 0.56 });
@@ -116,8 +116,8 @@ namespace Graphing.Tests
             var unit = Units.Length.Meter;
             var xAxisId = new AxisId("x");
             var yAxisId = new AxisId("y");
-            var xFormatter = new NumericFormatter("x-fmt", registry, "F1");
-            var yFormatter = new NumericFormatter("y-fmt", registry, "F2");
+            var xFormatter = new NumericFormatter("x-fmt", registry, " ", "F1");
+            var yFormatter = new NumericFormatter("y-fmt", registry, " ", "F2");
 
             var xAxis = new AxisModel(xAxisId, AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
             var yAxis = new AxisModel(yAxisId, AxisOrientation.Y, AxisSide.Left, unit, "m", null);
@@ -140,9 +140,9 @@ namespace Graphing.Tests
         {
             var registry = UnitsRegistry.Default;
             var timeDimension = new Dimension("time");
-            var hoursUnit = new Unit("hr", timeDimension, 3600.0);
-            var secondsUnit = new Unit("s", timeDimension, 1.0);
-            var formatter = new NumericFormatter("seconds-fmt", registry, "F3");
+            var hoursUnit = new Unit("hr", timeDimension, 3600.0, "hr");
+            var secondsUnit = new Unit("s", timeDimension, 1.0, "s");
+            var formatter = new NumericFormatter("seconds-fmt", registry, "Time", "F3");
 
             var xAxisId = new AxisId("x");
             var xAxis = new AxisModel(xAxisId, AxisOrientation.X, AxisSide.Bottom, hoursUnit, "hr", null);

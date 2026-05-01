@@ -1,5 +1,6 @@
 using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
+using Graphing.Controls.Snapshot;
 using Graphing.Editors.Controls;
 using Graphing.Editors.Presentation;
 using System;
@@ -25,7 +26,8 @@ namespace Graphing.Editors
         }
 
         public static GraphPresentationOptions OpenOptions(IGraphModel graphModel,
-            GraphPresentationOptions existingOptions, IWin32Window ownerWindow = null)
+            GraphPresentationOptions existingOptions, IGraphSnapshot graphSnapshot,
+            IWin32Window ownerWindow = null)
         {
             if (graphModel == null)
                 throw new ArgumentNullException(nameof(graphModel));
@@ -34,7 +36,7 @@ namespace Graphing.Editors
                 throw new ArgumentNullException(nameof(existingOptions));
 
             var presentationModel =
-                new GraphOptionsPresentationModel(graphModel, existingOptions);
+                new GraphOptionsPresentationModel(graphModel, existingOptions, graphSnapshot);
 
             using (var dialog =
                    new EngineeringGraphOptionsEditorForm(presentationModel))

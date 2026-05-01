@@ -65,6 +65,22 @@ namespace Graphing.Controls.Snapshot
         double? MaximumValue { get; }
 
         /// <summary>
+        /// Tick increment to use when realizing axis ticks.
+        /// </summary>
+        double? Increment { get; }
+
+        /// <summary>
+        /// Indicates whether increment was auto-calculated.
+        /// </summary>
+        bool IsAutoIncrement { get; }
+
+        /// <summary>
+        /// Number of minor tick intervals between consecutive major tick labels.
+        /// A stride of 1 means every minor tick is labeled; a stride of 5 means every 5th minor tick is labeled.
+        /// </summary>
+        int MajorTickStride { get; }
+
+        /// <summary>
         /// Display title for the axis, combining contributing field label with the axis display unit.
         /// </summary>
         string Title { get; }

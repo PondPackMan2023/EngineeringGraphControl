@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
@@ -5,56 +6,24 @@ namespace Graphing.TestHarness.Libraries
 {
     internal static class NumericFormatterLibrary
     {
-        private static NumericFormatter _timeFormatter;
-        private static NumericFormatter _elevationFormatter;
-        private static NumericFormatter _pressureFormatter;
+        private static FormatterRegistry _formatterRegistry = new FormatterRegistry();
 
-        internal static NumericFormatter DefaultTimeFormatter
+        static NumericFormatterLibrary()
         {
-            get
-            {
-                if (_timeFormatter == null)
-                    _timeFormatter = GetTimeFormatter();
-                return _timeFormatter;
-            }
+            _formatterRegistry.Register(new NumericFormatter(FormatterId.Time_Extended, UnitsRegistry.Default, "Time", NumericFormat.Fixed(2)));
+            _formatterRegistry.Register(new NumericFormatter(FormatterId.Elevation, UnitsRegistry.Default, "Elevation", NumericFormat.Fixed(2)));
+            _formatterRegistry.Register(new NumericFormatter(FormatterId.Pressure, UnitsRegistry.Default, "Pressure", NumericFormat.Fixed(2)));
         }
 
-        internal static NumericFormatter DefaultElevationFormatter
+        internal static void ChangeFormat(NumericFormatterId id, string formatSpecifier)
         {
-            get
-            {
-                if (_elevationFormatter == null)
-                    _elevationFormatter = GetElevationFormatter();
-                return _elevationFormatter;
-            }
+            _formatterRegistry.ChangeFormat(id, formatSpecifier);
         }
 
-        internal static NumericFormatter DefaultPressureFormatter
-        {
-            get
-            {
-                if (_pressureFormatter == null)
-                    _pressureFormatter = GetPressureFormatter();
-                return _pressureFormatter;
-            }
-        }
+        internal static NumericFormatter TimeFormatter => _formatterRegistry.Get(FormatterId.Time_Extended);
 
-        public static NumericFormatter GetElevationFormatter(string formatSpecifier = null)
-        {
-            return new NumericFormatter(new NumericFormatterId("elevation"),
-                UnitsRegistry.Default, formatSpecifier == null ? "G" : formatSpecifier);
-        }
+        internal static NumericFormatter ElevationFormatter => _formatterRegistry.Get(FormatterId.Elevation);
 
-        public static NumericFormatter GetPressureFormatter(string formatSpecifier = null)
-        {
-            return new NumericFormatter(new NumericFormatterId("pressure"),
-                UnitsRegistry.Default, formatSpecifier == null ? "G" : formatSpecifier);
-        }
-
-        public static NumericFormatter GetTimeFormatter(string formatSpecifier = null)
-        {
-            return new NumericFormatter(new NumericFormatterId("time"),
-                UnitsRegistry.Default, formatSpecifier == null ? "G" : formatSpecifier);
-        }
+        internal static NumericFormatter PressureFormatter => _formatterRegistry.Get(FormatterId.Pressure);
     }
 }
