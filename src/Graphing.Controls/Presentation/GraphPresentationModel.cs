@@ -20,7 +20,8 @@ namespace Graphing.Controls.Presentation
         private const double TitleSubtitleGap = 0.01;
         // Axis protected-band sizing estimates in normalized space.
         private const double AxisBandMinimum = 0.02;
-        private const double AxisTickMarkExtentEstimate = 0.008;
+        private const double AxisTickMarkExtentEstimate = 0.005;
+        private const double AxisTickMarkVerticalExtentEstimate = 0.015;
         private const double AxisTickLabelOffsetEstimate = 0.0045;
         private const double AxisTickLabelCharWidthEstimate = 0.007;
         private const double AxisTickLabelHeightEstimate = 0.022;

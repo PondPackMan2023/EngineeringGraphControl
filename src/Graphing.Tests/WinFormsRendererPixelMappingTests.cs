@@ -586,6 +586,99 @@ namespace Graphing.Tests
             Assert.That(yFromTick, Is.EqualTo(yFromSeries).Within(1e-6));
         }
 
+        [Test]
+        public void AxisTickGeometry_IsExplicitAndOrientationCorrect()
+        {
+            var unit = Units.Length.Meter;
+            var xBottom = new AxisModel(new AxisId("x-bottom"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDef("X", "x", unit, new double[] { 0d, 0.5d, 1d });
+            var yField = new TestFieldDef("Y", "y", unit, new double[] { 0d, 50d, 100d });
+            var leftSeries = new GraphSeriesModel(new SeriesId("left"), "left", SeriesType.Line, xField, yField, xBottom, yLeft);
+            var rightSeries = new GraphSeriesModel(new SeriesId("right"), "right", SeriesType.Line, xField, yField, xBottom, yRight);
+
+            var model = new GraphModel(
+                new IAxisModel[] { xBottom, yLeft, yRight },
+                new IGraphSeriesModel[] { leftSeries, rightSeries });
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+
+            var bottomAxis = presentation.Axes.Single(a => a.AxisId == "x-bottom");
+            var leftAxis = presentation.Axes.Single(a => a.AxisId == "y-left");
+            var rightAxis = presentation.Axes.Single(a => a.AxisId == "y-right");
+
+            Assert.That(bottomAxis.Ticks.Count, Is.GreaterThan(0));
+            Assert.That(leftAxis.Ticks.Count, Is.GreaterThan(0));
+            Assert.That(rightAxis.Ticks.Count, Is.GreaterThan(0));
+
+            for (var i = 0; i < bottomAxis.Ticks.Count; i++)
+            {
+                var tick = bottomAxis.Ticks[i];
+                var dx = tick.End.X - tick.Start.X;
+                var dy = tick.End.Y - tick.Start.Y;
+
+                Assert.That(Math.Abs(dx), Is.LessThanOrEqualTo(1e-12), "X-axis ticks must not have horizontal span.");
+                Assert.That(Math.Abs(dy), Is.GreaterThan(1e-12), "X-axis ticks must have non-zero vertical span.");
+            }
+
+            for (var i = 0; i < leftAxis.Ticks.Count; i++)
+            {
+                var tick = leftAxis.Ticks[i];
+                var dx = tick.End.X - tick.Start.X;
+                var dy = tick.End.Y - tick.Start.Y;
+
+                Assert.That(Math.Abs(dy), Is.LessThanOrEqualTo(1e-12), "Y-axis ticks must not have vertical span.");
+                Assert.That(dx, Is.LessThan(1e-12), "Left Y-axis ticks must point -X (away from plot).");
+            }
+
+            for (var i = 0; i < rightAxis.Ticks.Count; i++)
+            {
+                var tick = rightAxis.Ticks[i];
+                var dx = tick.End.X - tick.Start.X;
+                var dy = tick.End.Y - tick.Start.Y;
+
+                Assert.That(Math.Abs(dy), Is.LessThanOrEqualTo(1e-12), "Y-axis ticks must not have vertical span.");
+                Assert.That(dx, Is.GreaterThan(-1e-12), "Right Y-axis ticks must point +X (away from plot).");
+            }
+        }
+
+        [Test]
+        public void Renderer_Rerender_IsPixelDeterministic()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft = new AxisModel(new AxisId("y-left"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDef("X", "x", unit, new double[] { 0d, 0.5d, 1d });
+            var yField = new TestFieldDef("Y", "y", unit, new double[] { 0d, 50d, 100d });
+            var leftSeries = new GraphSeriesModel(new SeriesId("left"), "left", SeriesType.Line, xField, yField, xAxis, yLeft);
+            var rightSeries = new GraphSeriesModel(new SeriesId("right"), "right", SeriesType.Line, xField, yField, xAxis, yRight);
+
+            var model = new GraphModel(
+                new IAxisModel[] { xAxis, yLeft, yRight },
+                new IGraphSeriesModel[] { leftSeries, rightSeries });
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+            var renderer = new WinFormsGraphRenderer();
+            var bounds = new Rectangle(0, 0, W, H);
+
+            using (var first = new Bitmap(W, H))
+            using (var second = new Bitmap(W, H))
+            using (var g1 = Graphics.FromImage(first))
+            using (var g2 = Graphics.FromImage(second))
+            {
+                g1.Clear(Color.White);
+                g2.Clear(Color.White);
+
+                renderer.Render(g1, bounds, presentation);
+                renderer.Render(g2, bounds, presentation);
+
+                Assert.That(BitmapsAreEqual(first, second), Is.True,
+                    "Rendering the same presentation model twice should produce identical pixels.");
+            }
+        }
+
         private static RectangleF ComputePlotRect(Rectangle deviceBounds, GraphPresentationModel model)
         {
             var pa = model.Layout.PlotArea;
@@ -749,6 +842,32 @@ namespace Graphing.Tests
             }
 
             return false;
+        }
+
+        private static bool BitmapsAreEqual(Bitmap first, Bitmap second)
+        {
+            if (first == null || second == null)
+            {
+                return false;
+            }
+
+            if (first.Width != second.Width || first.Height != second.Height)
+            {
+                return false;
+            }
+
+            for (var x = 0; x < first.Width; x++)
+            {
+                for (var y = 0; y < first.Height; y++)
+                {
+                    if (first.GetPixel(x, y) != second.GetPixel(x, y))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private sealed class TestFieldDef : GraphFieldDefinitionBase

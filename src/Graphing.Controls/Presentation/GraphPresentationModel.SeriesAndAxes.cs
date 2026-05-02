@@ -104,6 +104,7 @@ namespace Graphing.Controls.Presentation
                     axisSnapshot.Increment,
                     formatter,
                     axisSnapshot.Unit,
+                    side,
                     orientation,
                     axisSnapshot.MajorTickStride);
 
@@ -253,6 +254,7 @@ namespace Graphing.Controls.Presentation
             double? increment,
             NumericFormatter formatter,
             UnitRegistry.Unit unit,
+            AxisSide side,
             AxisOrientation orientation,
             int majorTickStride)
         {
@@ -282,7 +284,9 @@ namespace Graphing.Controls.Presentation
             for (var index = 0; index < tickValues.Count; index++)
             {
                 var value = tickValues[index];
-                ticks.Add(new AxisTickPresentation(value, FormatAxisLabel(formatter, value)));
+                var start = BuildTickStart(value, orientation);
+                var end = BuildTickEnd(value, side, orientation);
+                ticks.Add(new AxisTickPresentation(value, FormatAxisLabel(formatter, value), start, end));
             }
 
             return new ReadOnlyCollection<AxisTickPresentation>(ticks);
@@ -335,6 +339,32 @@ namespace Graphing.Controls.Presentation
             }
 
             return new ReadOnlyCollection<double>(ticks);
+        }
+
+        private static GeometryPoint3D BuildTickStart(double value, AxisOrientation orientation)
+        {
+            if (orientation == AxisOrientation.Horizontal)
+            {
+                return new GeometryPoint3D(value, 0d, 0d);
+            }
+
+            return new GeometryPoint3D(0d, value, 0d);
+        }
+
+        private static GeometryPoint3D BuildTickEnd(double value, AxisSide side, AxisOrientation orientation)
+        {
+            if (orientation == AxisOrientation.Horizontal)
+            {
+                var yExtent = side == AxisSide.Top
+                    ? -AxisTickMarkVerticalExtentEstimate
+                    : AxisTickMarkVerticalExtentEstimate;
+                return new GeometryPoint3D(value, yExtent, 0d);
+            }
+
+            var xExtent = side == AxisSide.Right
+                ? AxisTickMarkExtentEstimate
+                : -AxisTickMarkExtentEstimate;
+            return new GeometryPoint3D(xExtent, value, 0d);
         }
 
         private static string FormatAxisLabel(NumericFormatter formatter, double value)

@@ -21,6 +21,30 @@ namespace Graphing.Controls.Rendering
         private const int TickLabelOffset = 3;
         private const int AxisTitleOffset = 6;
         private const float AxisLineWidth = 1f;
+
+        private static PointF MapHorizontalTickPointToDevice(
+            GeometryPoint3D point,
+            double domainMin,
+            double domainMax,
+            RectangleF axisRect,
+            float axisY)
+        {
+            var x = DomainToDeviceX(point.X, domainMin, domainMax, axisRect);
+            var y = axisY + (float)(point.Y * axisRect.Height);
+            return new PointF(x, y);
+        }
+
+        private static PointF MapVerticalTickPointToDevice(
+            GeometryPoint3D point,
+            double domainMin,
+            double domainMax,
+            RectangleF axisRect,
+            float axisX)
+        {
+            var x = axisX + (float)(point.X * axisRect.Width);
+            var y = DomainToDeviceY(point.Y, domainMin, domainMax, axisRect);
+            return new PointF(x, y);
+        }
         private const float SeriesLineWidth = 2.0f;
         private const float GridLineWidth = 0.5f;
         private const float LegendLineWidth = 1f;
@@ -486,8 +510,10 @@ namespace Graphing.Controls.Rendering
                 for (var i = 0; i < ticks.Count; i++)
                 {
                     var tick = ticks[i];
+                    var start = MapHorizontalTickPointToDevice(tick.Start, domainMin, domainMax, plotRect, axisY);
+                    var end = MapHorizontalTickPointToDevice(tick.End, domainMin, domainMax, plotRect, axisY);
                     var deviceX = DomainToDeviceX(tick.Value, domainMin, domainMax, plotRect);
-                    g.DrawLine(AxisPen, deviceX, axisY, deviceX, axisY + TickLength);
+                    g.DrawLine(AxisPen, start, end);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
@@ -502,7 +528,7 @@ namespace Graphing.Controls.Rendering
 
                         var labelSize = g.MeasureString(tick.Label, TickFont);
                         var x = deviceX - labelSize.Width / 2f;
-                        var y = axisY + TickLength + TickLabelOffset;
+                        var y = Math.Max(start.Y, end.Y) + TickLabelOffset;
                         if (sideBandRect.HasValue)
                         {
                             y = Math.Min(y, sideBandRect.Value.Bottom - labelSize.Height);
@@ -550,7 +576,9 @@ namespace Graphing.Controls.Rendering
                 {
                     var tick = ticks[i];
                     var deviceY = DomainToDeviceY(tick.Value, domainMin, domainMax, plotRect);
-                    g.DrawLine(AxisPen, axisX, deviceY, axisX + TickLength, deviceY);
+                    var start = MapVerticalTickPointToDevice(tick.Start, domainMin, domainMax, plotRect, axisX);
+                    var end = MapVerticalTickPointToDevice(tick.End, domainMin, domainMax, plotRect, axisX);
+                    g.DrawLine(AxisPen, start, end);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
@@ -561,7 +589,7 @@ namespace Graphing.Controls.Rendering
                         }
 
                         var labelSize = g.MeasureString(label, TickFont);
-                        var x = axisX - TickLength - TickLabelOffset - labelSize.Width;
+                        var x = Math.Min(start.X, end.X) - TickLabelOffset - labelSize.Width;
                         var y = deviceY - labelSize.Height / 2f;
                         if (sideBandRect.HasValue)
                         {
@@ -610,7 +638,9 @@ namespace Graphing.Controls.Rendering
                 {
                     var tick = ticks[i];
                     var deviceY = DomainToDeviceY(tick.Value, domainMin, domainMax, plotRect);
-                    g.DrawLine(AxisPen, axisX - TickLength, deviceY, axisX, deviceY);
+                    var start = MapVerticalTickPointToDevice(tick.Start, domainMin, domainMax, plotRect, axisX);
+                    var end = MapVerticalTickPointToDevice(tick.End, domainMin, domainMax, plotRect, axisX);
+                    g.DrawLine(AxisPen, start, end);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
@@ -621,7 +651,7 @@ namespace Graphing.Controls.Rendering
                         }
 
                         var labelSize = g.MeasureString(label, TickFont);
-                        var x = axisX + TickLength + TickLabelOffset;
+                        var x = Math.Max(start.X, end.X) + TickLabelOffset;
                         var y = deviceY - TickFont.Height / 2f;
                         if (sideBandRect.HasValue)
                         {
@@ -669,8 +699,10 @@ namespace Graphing.Controls.Rendering
                 for (var i = 0; i < ticks.Count; i++)
                 {
                     var tick = ticks[i];
+                    var start = MapHorizontalTickPointToDevice(tick.Start, domainMin, domainMax, plotRect, axisY);
+                    var end = MapHorizontalTickPointToDevice(tick.End, domainMin, domainMax, plotRect, axisY);
                     var deviceX = DomainToDeviceX(tick.Value, domainMin, domainMax, plotRect);
-                    g.DrawLine(AxisPen, deviceX, axisY - TickLength, deviceX, axisY);
+                    g.DrawLine(AxisPen, start, end);
 
                     if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
@@ -681,7 +713,7 @@ namespace Graphing.Controls.Rendering
 
                         var labelSize = g.MeasureString(tick.Label, TickFont);
                         var x = deviceX - labelSize.Width / 2f;
-                        var y = axisY - TickLength - TickLabelOffset - TickFont.Height;
+                        var y = Math.Min(start.Y, end.Y) - TickLabelOffset - TickFont.Height;
                         if (sideBandRect.HasValue)
                         {
                             y = Math.Max(y, sideBandRect.Value.Top);
