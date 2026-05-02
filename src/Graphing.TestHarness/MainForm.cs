@@ -2,6 +2,7 @@ using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
 using Graphing.Editors;
 using Graphing.TestHarness.Libraries;
+using Graphing.TestHarness.AxisUnits;
 using Graphing.TestHarness.Scenarios;
 using System;
 using System.Collections.Generic;
@@ -291,8 +292,55 @@ namespace Graphing.TestHarness
 
         private void graphControl_AxisContextRequested(object sender, Controls.Interaction.AxisInteractionMouseEventArgs e)
         {
-            Debug.WriteLine($"{nameof(graphControl_AxisContextRequested)}:\n\t{e.Descriptor.AxisId}\n\t{e.Descriptor.NumericFormatter.Label}");
-            MessageBox.Show(this, $"{nameof(graphControl_AxisContextRequested)}:\n\t{e.Descriptor.AxisId}\n\t{e.Descriptor.NumericFormatter.Label}", "Right-Click");
+            if (e == null || e.Descriptor == null)
+            {
+                return;
+            }
+
+            var menu = new ContextMenuStrip();
+            var item = new ToolStripMenuItem("Set Field Options...");
+            item.Click += (_, __) => ShowAxisUnitAndNumericFormatDialog(e.Descriptor);
+            menu.Items.Add(item);
+            menu.Show(graphControl, e.ClientPosition);
+        }
+
+        private void ShowAxisUnitAndNumericFormatDialog(AxisInteractionDescriptor descriptor)
+        {
+            if (descriptor == null || descriptor.DisplayUnit == null || descriptor.NumericFormatter == null)
+            {
+                return;
+            }
+
+            var axisId = new AxisId(descriptor.AxisId);
+            var presentationModel = new AxisUnitAndNumericFormatPresentationModel(
+                axisId,
+                descriptor.DisplayUnit,
+                descriptor.NumericFormatter);
+
+            using (var dialog = new AxisUnitAndNumericFormatDialog(CreateAxisDisplayName(descriptor), presentationModel))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+            }
+
+            var updatedGraph = graphControl.GraphModel.ChangeAxisUnitAndFormat(
+                axisId,
+                presentationModel.SelectedUnit,
+                presentationModel.BuildFormatterToApply());
+
+            graphControl.SetGraphSource(updatedGraph, CreateOptions());
+        }
+
+        private static string CreateAxisDisplayName(AxisInteractionDescriptor descriptor)
+        {
+            if (!string.IsNullOrWhiteSpace(descriptor.AxisId))
+            {
+                return descriptor.NumericFormatter.Label;
+            }
+
+            return descriptor.Orientation + " " + descriptor.Side + " Axis";
         }
     }
 }
