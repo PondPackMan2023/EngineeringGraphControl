@@ -21,7 +21,7 @@ namespace Graphing.Controls.Snapshot
             var axisLookup = BuildAxisLookup(graphModel);
 
             var seriesSnapshots = new List<SeriesSnapshot>();
-            var graphSeriesModels = graphModel != null ? graphModel.Series : null;
+            var graphSeriesModels = ResolveOrderedSeries(graphModel, options);
 
             if (graphSeriesModels != null)
             {
@@ -58,6 +58,13 @@ namespace Graphing.Controls.Snapshot
 
             var axisSnapshots = BuildAxisSnapshots(graphModel, seriesSnapshots, options);
             return new GraphSnapshot(seriesSnapshots, axisSnapshots);
+        }
+
+        private static IReadOnlyList<IGraphSeriesModel> ResolveOrderedSeries(IGraphModel graphModel, GraphPresentationOptions options)
+        {
+            var graphSeriesModels = graphModel != null ? graphModel.Series : null;
+            var requestedOrder = options != null ? options.SeriesOrder : null;
+            return GraphPresentationOptions.ResolveSeriesOrder(graphSeriesModels, requestedOrder);
         }
 
         private static Dictionary<string, IAxisModel> BuildAxisLookup(IGraphModel graphModel)

@@ -49,20 +49,27 @@ namespace Graphing.Controls.Presentation
         private const double LegendMinBandWidth = 0.05;
         private const double LegendMinBandHeight = 0.04;
 
-        // Tableau 10 palette — perceptually distinct, professionally appropriate.
-        private static readonly Color[] SeriesColorPalette =
+        internal static Color ResolveSeriesColor(
+            ISeriesSnapshot seriesSnapshot,
+            int visibleSeriesIndex,
+            GraphPresentationOptions options)
         {
-            Color.FromArgb(0x1F, 0x77, 0xB4),  // steel blue
-            Color.FromArgb(0xFF, 0x7F, 0x0E),  // orange
-            Color.FromArgb(0x2C, 0xA0, 0x2C),  // green
-            Color.FromArgb(0xD6, 0x27, 0x28),  // red
-            Color.FromArgb(0x94, 0x67, 0xBD),  // purple
-            Color.FromArgb(0x8C, 0x56, 0x4B),  // brown
-            Color.FromArgb(0xE3, 0x77, 0xC2),  // pink
-            Color.FromArgb(0x7F, 0x7F, 0x7F),  // gray
-            Color.FromArgb(0xBC, 0xBD, 0x22),  // yellow-green
-            Color.FromArgb(0x17, 0xBE, 0xCF),  // teal
-        };
+            var resolvedPaletteColor = GraphPresentationOptions.GetDefaultSeriesColor(visibleSeriesIndex);
+
+            if (seriesSnapshot == null || seriesSnapshot.SeriesId == null || options == null || options.SeriesStyles == null)
+            {
+                return resolvedPaletteColor;
+            }
+
+            SeriesStyle seriesStyle;
+            if (options.SeriesStyles.TryGetValue(seriesSnapshot.SeriesId, out seriesStyle)
+                && seriesStyle != null)
+            {
+                return seriesStyle.Color;
+            }
+
+            return resolvedPaletteColor;
+        }
 
         private readonly IReadOnlyList<SeriesPresentationGeometry> _series;
         private readonly IReadOnlyList<AxisPresentationGeometry> _axes;

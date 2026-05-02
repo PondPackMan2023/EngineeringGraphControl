@@ -1,7 +1,13 @@
 using System.Drawing;
+using System.Linq;
+using System.Reflection;
+using System.Windows.Forms;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
+using Graphing.Controls.Snapshot;
+using Graphing.Editors.Controls;
+using Graphing.Editors.EditorModels;
 using Graphing.Editors.Presentation;
 using NUnit.Framework;
 using UnitRegistry;
@@ -136,34 +142,153 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void FullCycle_SeriesColorOverride_RoundTrips()
+        public void FullCycle_SeriesColor_RoundTrips()
         {
-            // Arrange
             var model = CreateGraphModelWithOneSeries();
             var defaultOptions = new GraphPresentationOptions();
 
-            // First Load
             var pm1 = new GraphOptionsPresentationModel(model, defaultOptions);
             var seriesItem = pm1.Series.Series[0];
-            Assert.That(seriesItem.HasColorOverride, Is.False);
 
-            // Modify - set color override
             var customColor = Color.Red;
-            seriesItem.HasColorOverride = true;
             seriesItem.Color = customColor;
 
-            // Apply
             var appliedOptions = pm1.BuildGraphPresentationOptions();
+            Assert.That(appliedOptions.SeriesStyles[seriesItem.SeriesId].Color, Is.EqualTo(customColor));
 
-            // Reload
             var pm2 = new GraphOptionsPresentationModel(model, appliedOptions);
             var seriesItem2 = pm2.Series.Series[0];
 
-            // Assert - note: the implementation may not currently persist these values
-            Assert.That(seriesItem2.HasColorOverride, Is.True,
-                "Color override flag should round-trip (this may fail if not implemented)");
             Assert.That(seriesItem2.Color, Is.EqualTo(customColor),
-                "Series color override should round-trip (this may fail if not implemented)");
+                "Series color should round-trip as a persistent style.");
+        }
+
+        [Test]
+        public void SeriesColor_DefaultColorPropagation_EditorMatchesResolvedPresentationColor()
+        {
+            var model = CreateGraphModelWithOneSeries();
+            var options = new GraphPresentationOptions();
+            options = GraphPresentationOptions.EnsureSeriesStyles(model, options);
+            var snapshot = new GraphSnapshotBuilder().Build(model, options);
+            var presentation = new GraphPresentationModel(snapshot, options);
+
+            var editorModel = new GraphOptionsPresentationModel(model, options, snapshot);
+            var seriesItem = editorModel.Series.Series[0];
+
+            Assert.That(seriesItem.Color, Is.EqualTo(presentation.Series[0].SeriesColor),
+                "Series editor must display the same stored color used by rendering.");
+        }
+
+        [Test]
+        public void SeriesColor_StoredStyle_IsAppliedToRenderAndEditor()
+        {
+            var model = CreateGraphModelWithOneSeries();
+            var seriesId = new SeriesId("series-1");
+            var styleColor = Color.Goldenrod;
+            var options = new GraphPresentationOptions(
+                seriesStyles: new System.Collections.Generic.Dictionary<SeriesId, SeriesStyle>
+                {
+                    [seriesId] = new SeriesStyle
+                    {
+                        Color = styleColor
+                    }
+                });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model, options);
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var editorModel = new GraphOptionsPresentationModel(model, options, snapshot);
+            var seriesItem = editorModel.Series.Series[0];
+
+            Assert.That(presentation.Series[0].SeriesColor, Is.EqualTo(styleColor),
+                "Presentation series color must use the stored series style color.");
+            Assert.That(presentation.Layout.Legend, Is.Not.Null);
+            Assert.That(presentation.Layout.Legend.Entries[0].SeriesColor, Is.EqualTo(styleColor),
+                "Legend entry color must match the stored rendered series color.");
+            Assert.That(seriesItem.Color, Is.EqualTo(styleColor),
+                "Series editor must display stored series color.");
+        }
+
+        [Test]
+        public void SeriesColor_ReorderingDoesNotChangeStoredColors()
+        {
+            var model = CreateGraphModelWithMultipleSeries();
+            var initialOptions = GraphPresentationOptions.EnsureSeriesStyles(model, new GraphPresentationOptions());
+
+            var originalColors = initialOptions.SeriesStyles.ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value.Color);
+
+            var editorModel = new GraphOptionsPresentationModel(model, initialOptions);
+            var movedSeries = editorModel.Series.Series[2];
+            editorModel.Series.MoveUp(movedSeries);
+            editorModel.Series.MoveUp(movedSeries);
+
+            var reorderedOptions = editorModel.BuildGraphPresentationOptions();
+            var reorderedSnapshot = new GraphSnapshotBuilder().Build(model, reorderedOptions);
+            var reorderedPresentation = new GraphPresentationModel(reorderedSnapshot, reorderedOptions);
+
+            foreach (var series in reorderedPresentation.Series)
+            {
+                Assert.That(series.SeriesColor, Is.EqualTo(originalColors[series.SeriesId]),
+                    "Reordering series must not change stored series color.");
+            }
+        }
+
+        [Test]
+        public void SeriesColor_NewSeriesReceivesPaletteColor_ThenReusesStoredColor()
+        {
+            var firstModel = CreateGraphModelWithOneSeries();
+            var firstOptions = new GraphOptionsPresentationModel(firstModel, new GraphPresentationOptions())
+                .BuildGraphPresentationOptions();
+            var firstSeriesId = new SeriesId("series-1");
+            var firstSeriesColor = firstOptions.SeriesStyles[firstSeriesId].Color;
+
+            Assert.That(firstSeriesColor, Is.EqualTo(GraphPresentationOptions.GetDefaultSeriesColor(0)));
+
+            var expandedModel = CreateGraphModelWithMultipleSeries();
+            var expandedOptions = new GraphOptionsPresentationModel(expandedModel, firstOptions)
+                .BuildGraphPresentationOptions();
+            var secondSeriesId = new SeriesId("series-2");
+
+            Assert.That(expandedOptions.SeriesStyles[firstSeriesId].Color, Is.EqualTo(firstSeriesColor),
+                "Existing series color must be reused after new series are introduced.");
+            Assert.That(expandedOptions.SeriesStyles[secondSeriesId].Color, Is.EqualTo(GraphPresentationOptions.GetDefaultSeriesColor(1)),
+                "New series should receive the next palette color when first encountered.");
+
+            var reorderedOptions = new GraphPresentationOptions(
+                seriesOrder: new[] { secondSeriesId, firstSeriesId, new SeriesId("series-3") },
+                seriesStyles: expandedOptions.SeriesStyles.ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value));
+            reorderedOptions = GraphPresentationOptions.EnsureSeriesStyles(expandedModel, reorderedOptions);
+
+            Assert.That(reorderedOptions.SeriesStyles[firstSeriesId].Color, Is.EqualTo(firstSeriesColor));
+            Assert.That(reorderedOptions.SeriesStyles[secondSeriesId].Color, Is.EqualTo(expandedOptions.SeriesStyles[secondSeriesId].Color));
+        }
+
+        [Test]
+        public void SeriesEditor_ColorButton_IsEnabledForSelectedSeries()
+        {
+            using (var control = new SeriesEditorControl())
+            {
+                var model = new SeriesEditorModel();
+                model.Series.Add(new SeriesItemEditorModel(new SeriesId("series-1"))
+                {
+                    IsVisible = true,
+                    Label = "series-1",
+                    Color = Color.Blue
+                });
+
+                control.LoadControl(model);
+
+                var buttonField = typeof(SeriesEditorControl).GetField("_pickColorButton", BindingFlags.NonPublic | BindingFlags.Instance);
+                Assert.That(buttonField, Is.Not.Null);
+
+                var pickColorButton = buttonField.GetValue(control) as Button;
+                Assert.That(pickColorButton, Is.Not.Null);
+                Assert.That(pickColorButton.Enabled, Is.True,
+                    "Color button must always be enabled when a series is selected.");
+            }
         }
 
         [Test]
@@ -248,19 +373,28 @@ namespace Graphing.Tests
         [Test]
         public void FullCycle_SeriesOrder_PreservedAcrossReload()
         {
-            // Verify series order is preserved
+            // Verify reordered series order is persisted and restored through options.
             var model = CreateGraphModelWithMultipleSeries();
             var defaultOptions = new GraphPresentationOptions();
 
             var pm1 = new GraphOptionsPresentationModel(model, defaultOptions);
-            var originalIds = new[] { pm1.Series.Series[0].SeriesId, pm1.Series.Series[1].SeriesId, pm1.Series.Series[2].SeriesId };
+            var movedSeries = pm1.Series.Series[2];
+            pm1.Series.MoveUp(movedSeries);
+            pm1.Series.MoveUp(movedSeries);
 
             var appliedOptions = pm1.BuildGraphPresentationOptions();
+            Assert.That(appliedOptions.SeriesOrder, Is.EqualTo(new[]
+            {
+                new SeriesId("series-3"),
+                new SeriesId("series-1"),
+                new SeriesId("series-2")
+            }));
+
             var pm2 = new GraphOptionsPresentationModel(model, appliedOptions);
 
-            Assert.That(pm2.Series.Series[0].SeriesId, Is.EqualTo(originalIds[0]));
-            Assert.That(pm2.Series.Series[1].SeriesId, Is.EqualTo(originalIds[1]));
-            Assert.That(pm2.Series.Series[2].SeriesId, Is.EqualTo(originalIds[2]));
+            Assert.That(pm2.Series.Series[0].SeriesId, Is.EqualTo(new SeriesId("series-3")));
+            Assert.That(pm2.Series.Series[1].SeriesId, Is.EqualTo(new SeriesId("series-1")));
+            Assert.That(pm2.Series.Series[2].SeriesId, Is.EqualTo(new SeriesId("series-2")));
         }
 
         [Test]
