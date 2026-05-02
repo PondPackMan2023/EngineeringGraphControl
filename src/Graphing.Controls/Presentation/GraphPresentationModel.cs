@@ -115,6 +115,54 @@ namespace Graphing.Controls.Presentation
             get { return _semantics; }
         }
 
+        /// <summary>
+        /// Resolves the axis layout entry hit by an abstract normalized point, or null when no axis is hit.
+        /// Uses only Presentation Model hit regions and stable layout order.
+        /// </summary>
+        public AxisLayoutEntry ResolveHitAxis(GeometryPoint3D point)
+        {
+            var axisId = _layout.ResolveHitAxisId(point);
+            if (string.IsNullOrWhiteSpace(axisId))
+            {
+                return null;
+            }
+
+            for (var i = 0; i < _layout.Axes.Count; i++)
+            {
+                var entry = _layout.Axes[i];
+                if (entry != null && entry.Axis != null && string.Equals(entry.Axis.AxisId, axisId, StringComparison.Ordinal))
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves the axis identifier hit by an abstract normalized point, or null when no axis is hit.
+        /// </summary>
+        public string ResolveHitAxisId(GeometryPoint3D point)
+        {
+            return _layout.ResolveHitAxisId(point);
+        }
+
+        /// <summary>
+        /// Convenience overload for normalized abstract X/Y coordinates.
+        /// </summary>
+        public AxisLayoutEntry ResolveHitAxis(double x, double y)
+        {
+            return ResolveHitAxis(new GeometryPoint3D(x, y, 0d));
+        }
+
+        /// <summary>
+        /// Convenience overload for normalized abstract X/Y coordinates.
+        /// </summary>
+        public string ResolveHitAxisId(double x, double y)
+        {
+            return ResolveHitAxisId(new GeometryPoint3D(x, y, 0d));
+        }
+
         private sealed class DefaultLayoutMeasurementInput : IGraphLayoutMeasurementInput
         {
             public double MeasureAxisTickThickness(AxisSide side, IReadOnlyList<AxisTickPresentation> ticks)

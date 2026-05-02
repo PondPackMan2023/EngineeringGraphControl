@@ -3,6 +3,7 @@ using System.Linq;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
+using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 using NUnit.Framework;
 using UnitRegistry;
@@ -2868,9 +2869,107 @@ namespace Graphing.Tests
             }
         }
 
+        [Test]
+        public void AxisHitQuery_PointInsideEachAxisRegion_ResolvesCorrectAxis()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
+            {
+                var region = presentation.Layout.AxisHitRegions[i];
+                var x = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                var y = (region.BottomLeft.Y + region.TopRight.Y) * 0.5d;
+
+                var resolvedAxisId = presentation.ResolveHitAxisId(x, y);
+                var resolvedAxis = presentation.ResolveHitAxis(x, y);
+
+                Assert.That(resolvedAxisId, Is.EqualTo(region.AxisId));
+                Assert.That(resolvedAxis, Is.Not.Null);
+                Assert.That(resolvedAxis.Axis.AxisId, Is.EqualTo(region.AxisId));
+            }
+        }
+
+        [Test]
+        public void AxisHitQuery_PointOutsideAllRegions_ReturnsNoHit()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var point = new GeometryPoint3D(0.5d, 0.5d, 0d);
+
+            Assert.That(presentation.ResolveHitAxisId(point), Is.Null);
+            Assert.That(presentation.ResolveHitAxis(point), Is.Null);
+        }
+
+        [Test]
+        public void AxisHitQuery_SharedBorder_UsesDeterministicStableOrdering()
+        {
+            var synthetic = CreateSyntheticLayoutWithSharedBorderRegions();
+            var point = new GeometryPoint3D(0.20d, 0.15d, 0d);
+
+            var resolvedAxisId = synthetic.ResolveHitAxisId(point);
+            var resolvedRegion = synthetic.ResolveHitAxisRegion(point);
+
+            Assert.That(resolvedAxisId, Is.EqualTo("axis-a"));
+            Assert.That(resolvedRegion, Is.Not.Null);
+            Assert.That(resolvedRegion.AxisId, Is.EqualTo("axis-a"));
+        }
+
+        [Test]
+        public void AxisHitQuery_StackedLeftAxes_ResolveIndependently()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var leftRegions = presentation.Layout.AxisHitRegions
+                .Where(r => r.Side == PresentationAxisSide.Left)
+                .OrderByDescending(r => r.BottomLeft.Y)
+                .ToArray();
+
+            Assert.That(leftRegions.Length, Is.GreaterThanOrEqualTo(2));
+
+            var upperCenter = new GeometryPoint3D(
+                (leftRegions[0].BottomLeft.X + leftRegions[0].TopRight.X) * 0.5d,
+                (leftRegions[0].BottomLeft.Y + leftRegions[0].TopRight.Y) * 0.5d,
+                0d);
+            var lowerCenter = new GeometryPoint3D(
+                (leftRegions[1].BottomLeft.X + leftRegions[1].TopRight.X) * 0.5d,
+                (leftRegions[1].BottomLeft.Y + leftRegions[1].TopRight.Y) * 0.5d,
+                0d);
+
+            Assert.That(presentation.ResolveHitAxisId(upperCenter), Is.EqualTo(leftRegions[0].AxisId));
+            Assert.That(presentation.ResolveHitAxisId(lowerCenter), Is.EqualTo(leftRegions[1].AxisId));
+            Assert.That(leftRegions[0].AxisId, Is.Not.EqualTo(leftRegions[1].AxisId));
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);
+        }
+
+        private static GraphLayoutModel CreateSyntheticLayoutWithSharedBorderRegions()
+        {
+            var hitRegions = new AxisHitRegionGeometry[]
+            {
+                new AxisHitRegionGeometry(
+                    "axis-a",
+                    PresentationAxisSide.Left,
+                    PresentationAxisOrientation.Vertical,
+                    0.0015d,
+                    0.00075d,
+                    new GeometryPoint3D(0.10d, 0.10d, 0d),
+                    new GeometryPoint3D(0.20d, 0.20d, 0d)),
+                new AxisHitRegionGeometry(
+                    "axis-b",
+                    PresentationAxisSide.Right,
+                    PresentationAxisOrientation.Vertical,
+                    0.0015d,
+                    0.00075d,
+                    new GeometryPoint3D(0.20d, 0.10d, 0d),
+                    new GeometryPoint3D(0.30d, 0.20d, 0d))
+            };
+
+            return new GraphLayoutModel(
+                new PlotAreaLayout(new GeometryPoint3D(0d, 0d, 0d), new GeometryPoint3D(1d, 1d, 0d)),
+                new AxisLayoutEntry[0],
+                new SeriesPresentationGeometry[0],
+                axisHitRegions: hitRegions);
         }
 
         private static GraphPresentationModel CreatePresentationWithBottomAndMultipleYAxes()

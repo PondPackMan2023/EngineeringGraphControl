@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Graphing.Controls.Rendering.Geometry;
 
 namespace Graphing.Controls.Presentation
 {
@@ -99,5 +100,46 @@ namespace Graphing.Controls.Presentation
         /// Per-axis spine hit regions in abstract normalized geometry space.
         /// </summary>
         public IReadOnlyList<AxisHitRegionGeometry> AxisHitRegions { get; }
+
+        /// <summary>
+        /// Resolves the first matching axis hit region in stable layout order.
+        /// Border points are inclusive and deterministic: first region in AxisHitRegions order wins.
+        /// </summary>
+        public AxisHitRegionGeometry ResolveHitAxisRegion(GeometryPoint3D point)
+        {
+            for (var i = 0; i < AxisHitRegions.Count; i++)
+            {
+                var region = AxisHitRegions[i];
+                if (region == null)
+                {
+                    continue;
+                }
+
+                if (ContainsInclusive(region, point))
+                {
+                    return region;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves the identifier of the first axis hit region that contains the point.
+        /// Returns null when no axis hit region contains the point.
+        /// </summary>
+        public string ResolveHitAxisId(GeometryPoint3D point)
+        {
+            var region = ResolveHitAxisRegion(point);
+            return region != null ? region.AxisId : null;
+        }
+
+        private static bool ContainsInclusive(AxisHitRegionGeometry region, GeometryPoint3D point)
+        {
+            return point.X >= region.BottomLeft.X
+                && point.X <= region.TopRight.X
+                && point.Y >= region.BottomLeft.Y
+                && point.Y <= region.TopRight.Y;
+        }
     }
 }
