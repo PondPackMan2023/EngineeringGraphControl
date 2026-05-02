@@ -15,7 +15,7 @@ namespace Graphing.Controls.Models
 
         string UnitLabel { get; }
 
-        NumericFormatter NumericFormatter { get; }
+        IValueFormatter Formatter { get; }
 
         AxisScaleType ScaleType { get; }
 
@@ -27,6 +27,6 @@ namespace Graphing.Controls.Models
 
         IAxisModel ChangeUnit(Unit newUnit);
 
-        IAxisModel ChangeFormat(NumericFormatter newFormatter);
+        IAxisModel ChangeFormat(IValueFormatter newFormatter);
     }
 }

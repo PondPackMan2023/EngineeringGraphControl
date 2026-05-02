@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Controls.Snapshot
 {
@@ -102,7 +103,7 @@ namespace Graphing.Controls.Snapshot
                 return null;
             }
 
-            var axisFormatter = axis != null ? axis.NumericFormatter : null;
+            var axisFormatter = axis != null ? axis.Formatter : null;
             var formatter = axisFormatter;
 
             var rawValues = fieldDefinition.GetValues();
@@ -281,7 +282,7 @@ namespace Graphing.Controls.Snapshot
                     majorTickStride = yAxisPolicyResolution.MajorTickStride;
                 }
 
-                var sourceFormatter = axis.NumericFormatter;
+                var sourceFormatter = axis.Formatter;
                 var axisTitle = BuildAxisTitle(axis);
 
                 axisSnapshots.Add(
@@ -313,8 +314,9 @@ namespace Graphing.Controls.Snapshot
                 return string.Empty;
             }
 
-            var formatter = axis.NumericFormatter;
-            var label = formatter != null ? formatter.Label : null;
+                var formatter = axis.Formatter;
+                var numericFormatter = formatter as NumericFormatter;
+                var label = numericFormatter != null ? numericFormatter.Label : null;
 
             if (string.IsNullOrWhiteSpace(label))
             {

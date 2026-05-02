@@ -221,7 +221,7 @@ namespace Graphing.Editors.Presentation
                     HasFixedIncrement = false,
                     Increment = increment,
                     DisplayUnit = axis.Unit,
-                    NumericFormatter = axis.NumericFormatter ?? CreateFallbackNumericFormatter(axis)
+                    Formatter = axis.Formatter ?? CreateFallbackFormatter(axis)
                 };
 
                 // Load axis overrides if they exist
@@ -262,7 +262,7 @@ namespace Graphing.Editors.Presentation
             return lookup;
         }
 
-        private static NumericFormatter CreateFallbackNumericFormatter(IAxisModel axis)
+        private static IValueFormatter CreateFallbackFormatter(IAxisModel axis)
         {
             var formatterLabel = string.IsNullOrWhiteSpace(axis.UnitLabel)
                 ? axis.Side.ToString()

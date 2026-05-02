@@ -168,7 +168,7 @@ namespace Graphing.Controls.Snapshot
                 || axis == null
                 || axis.Orientation != AxisOrientation.Y
                 || axis.Unit == null
-                || axis.NumericFormatter == null
+                    || axis.Formatter == null
                 || !increment.HasValue
                 || increment.Value <= 0d
                 || !minimum.HasValue

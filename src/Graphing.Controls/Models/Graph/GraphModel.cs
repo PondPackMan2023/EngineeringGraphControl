@@ -22,7 +22,7 @@ namespace Graphing.Controls.Models
             return ChangeAxisUnits(unitChanges);
         }
 
-        public IGraphModel ChangeAxisFormat(AxisId axisId, NumericFormatter formatter)
+        public IGraphModel ChangeAxisFormat(AxisId axisId, IValueFormatter formatter)
         {
             var updatedAxes = new List<IAxisModel>(Axes.Count);
 
@@ -47,7 +47,7 @@ namespace Graphing.Controls.Models
             return new GraphModel(updatedAxes, Series);
         }
 
-        public IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, NumericFormatter formatter)
+        public IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, IValueFormatter formatter)
         {
             var updatedAxes = new List<IAxisModel>(Axes.Count);
 

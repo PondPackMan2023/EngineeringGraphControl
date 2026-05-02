@@ -3170,7 +3170,7 @@ namespace Graphing.Tests
                 Assert.That(current.Side, Is.EqualTo(first.Side));
                 Assert.That(current.SideIndex, Is.EqualTo(first.SideIndex));
                 Assert.That(current.NormalizedPositionAlongAxis, Is.EqualTo(first.NormalizedPositionAlongAxis).Within(1e-12));
-                Assert.That(ReferenceEquals(current.NumericFormatter, first.NumericFormatter), Is.True);
+                Assert.That(ReferenceEquals(current.Formatter, first.Formatter), Is.True);
             }
         }
 
@@ -3192,7 +3192,7 @@ namespace Graphing.Tests
                     (region.BottomLeft.Y + region.TopRight.Y) * 0.5d);
 
                 Assert.That(descriptor, Is.Not.Null);
-                Assert.That(descriptor.NumericFormatter, Is.Not.Null);
+                Assert.That(descriptor.Formatter, Is.Not.Null);
             }
         }
 
@@ -3206,8 +3206,8 @@ namespace Graphing.Tests
                 (leftRegion.BottomLeft.Y + leftRegion.TopRight.Y) * 0.5d);
 
             Assert.That(descriptor, Is.Not.Null);
-            Assert.That(descriptor.NumericFormatter, Is.Not.Null);
-            Assert.That(descriptor.NumericFormatter.Format(12.3456d), Is.EqualTo("12.35"));
+            Assert.That(descriptor.Formatter, Is.Not.Null);
+            Assert.That(descriptor.Formatter.Format(12.3456d), Is.EqualTo("12.35"));
         }
 
         [Test]
@@ -3224,8 +3224,8 @@ namespace Graphing.Tests
             for (var i = 0; i < 5; i++)
             {
                 var current = presentation.ResolveAxisInteraction(point);
-                Assert.That(ReferenceEquals(current.NumericFormatter, first.NumericFormatter), Is.True);
-                Assert.That(current.NumericFormatter.Format(98.7654d), Is.EqualTo(first.NumericFormatter.Format(98.7654d)));
+                Assert.That(ReferenceEquals(current.Formatter, first.Formatter), Is.True);
+                Assert.That(current.Formatter.Format(98.7654d), Is.EqualTo(first.Formatter.Format(98.7654d)));
             }
         }
 

@@ -73,7 +73,8 @@ namespace Graphing.TestHarness
 
         private void ShowAxisUnitAndNumericFormatDialog(AxisInteractionDescriptor descriptor)
         {
-            if (descriptor == null || descriptor.DisplayUnit == null || descriptor.NumericFormatter == null)
+                var numericFormatter = descriptor != null ? descriptor.Formatter as NumericFormatter : null;
+                if (descriptor == null || descriptor.DisplayUnit == null || numericFormatter == null)
             {
                 return;
             }
@@ -82,7 +83,7 @@ namespace Graphing.TestHarness
             var presentationModel = new AxisUnitAndNumericFormatPresentationModel(
                 axisId,
                 descriptor.DisplayUnit,
-                descriptor.NumericFormatter);
+                    numericFormatter);
 
             using (var dialog = new AxisUnitAndNumericFormatDialog(CreateAxisDisplayName(descriptor), presentationModel))
             {
@@ -102,9 +103,10 @@ namespace Graphing.TestHarness
 
         private static string CreateAxisDisplayName(AxisInteractionDescriptor descriptor)
         {
+                var numericFormatter = descriptor != null ? descriptor.Formatter as NumericFormatter : null;
             if (!string.IsNullOrWhiteSpace(descriptor.AxisId))
             {
-                return descriptor.NumericFormatter.Label;
+                    return numericFormatter != null ? numericFormatter.Label : descriptor.AxisId;
             }
 
             return descriptor.Orientation + " " + descriptor.Side + " Axis";

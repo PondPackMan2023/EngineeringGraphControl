@@ -206,7 +206,7 @@ namespace Graphing.Controls.Presentation
                 axisSnapshot.DisplayUnitLabel ?? string.Empty);
         }
 
-        private static NumericFormatter ResolveAxisFormatter(IAxisSnapshot axisSnapshot)
+        private static IValueFormatter ResolveAxisFormatter(IAxisSnapshot axisSnapshot)
         {
             var fields = axisSnapshot.Fields;
             if (fields == null)
@@ -255,7 +255,7 @@ namespace Graphing.Controls.Presentation
             double? minimumValue,
             double? maximumValue,
             double? increment,
-            NumericFormatter formatter,
+               IValueFormatter formatter,
             UnitRegistry.Unit unit,
             AxisSide side,
             AxisOrientation orientation,
@@ -370,11 +370,11 @@ namespace Graphing.Controls.Presentation
             return new GeometryPoint3D(xExtent, value, 0d);
         }
 
-        private static string FormatAxisLabel(NumericFormatter formatter, double value)
+        private static string FormatAxisLabel(IValueFormatter formatter, double value)
         {
             if (formatter != null)
             {
-                return formatter.Format(value);
+            return formatter.Format(value);
             }
 
             return value.ToString(CultureInfo.InvariantCulture);

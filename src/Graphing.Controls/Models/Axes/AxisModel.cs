@@ -11,14 +11,14 @@ namespace Graphing.Controls.Models
                 AxisSide side,
                 Unit unit,
                 string unitLabel,
-                NumericFormatter numericFormatter)
+                    IValueFormatter formatter)
         {
             Id = id;
             Orientation = orientation;
             Side = side;
             Unit = unit;
             UnitLabel = unitLabel;
-            NumericFormatter = numericFormatter;
+                Formatter = formatter;
             ScaleType = AxisScaleType.Linear;
             IsAutoRange = true;
         }
@@ -28,7 +28,7 @@ namespace Graphing.Controls.Models
         public AxisSide Side { get; }
         public Unit Unit { get; }
         public string UnitLabel { get; }
-        public NumericFormatter NumericFormatter { get; }
+        public IValueFormatter Formatter { get; }
         public AxisScaleType ScaleType { get; }
         public bool IsAutoRange { get; }
         public double? MinimumValue => null;
@@ -37,10 +37,10 @@ namespace Graphing.Controls.Models
         public IAxisModel ChangeUnit(Unit newUnit)
         {
             var newUnitLabel = newUnit != null && newUnit.Id != null ? newUnit.Id.Value : null;
-            return new AxisModel(Id, Orientation, Side, newUnit, newUnitLabel, NumericFormatter);
+              return new AxisModel(Id, Orientation, Side, newUnit, newUnitLabel, Formatter);
         }
 
-        public IAxisModel ChangeFormat(NumericFormatter newFormatter)
+        public IAxisModel ChangeFormat(IValueFormatter newFormatter)
         {
             return new AxisModel(Id, Orientation, Side, Unit, UnitLabel, newFormatter);
         }

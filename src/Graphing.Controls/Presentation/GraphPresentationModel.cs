@@ -206,7 +206,7 @@ namespace Graphing.Controls.Presentation
                 axisEntry.Side,
                 axisEntry.SideIndex,
                 normalizedPosition,
-                axisEntry.Axis.NumericFormatter,
+                   axisEntry.Axis.Formatter,
                 axisEntry.Axis.DisplayUnit);
         }
 

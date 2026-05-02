@@ -38,7 +38,7 @@ namespace Graphing.Tests
                 Assert.That(captured.Button, Is.EqualTo(MouseButtons.Left));
                 Assert.That(captured.Descriptor, Is.Not.Null);
                 Assert.That(captured.Descriptor.AxisId, Is.EqualTo("y-left-1"));
-                Assert.That(captured.Descriptor.NumericFormatter, Is.Not.Null);
+                    Assert.That(captured.Descriptor.Formatter, Is.Not.Null);
             }
         }
 
