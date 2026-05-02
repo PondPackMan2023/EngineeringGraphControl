@@ -163,6 +163,89 @@ namespace Graphing.Controls.Presentation
             return ResolveHitAxisId(new GeometryPoint3D(x, y, 0d));
         }
 
+        /// <summary>
+        /// Resolves an interaction-safe descriptor for an axis hit at the abstract normalized point.
+        /// Returns null when no axis hit region contains the point.
+        /// </summary>
+        public AxisInteractionDescriptor ResolveAxisInteraction(GeometryPoint3D point)
+        {
+            var hitRegion = _layout.ResolveHitAxisRegion(point);
+            if (hitRegion == null)
+            {
+                return null;
+            }
+
+            AxisLayoutEntry axisEntry = null;
+            for (var i = 0; i < _layout.Axes.Count; i++)
+            {
+                var entry = _layout.Axes[i];
+                if (entry != null
+                    && entry.Axis != null
+                    && string.Equals(entry.Axis.AxisId, hitRegion.AxisId, StringComparison.Ordinal))
+                {
+                    axisEntry = entry;
+                    break;
+                }
+            }
+
+            if (axisEntry == null)
+            {
+                return null;
+            }
+
+            var normalizedPosition = ComputeNormalizedPositionAlongAxis(hitRegion, point);
+            return new AxisInteractionDescriptor(
+                axisEntry.Axis.AxisId,
+                axisEntry.Axis.Orientation,
+                axisEntry.Side,
+                axisEntry.SideIndex,
+                normalizedPosition,
+                axisEntry.Axis.NumericFormatter,
+                axisEntry.Axis.DisplayUnit);
+        }
+
+        /// <summary>
+        /// Convenience overload for normalized abstract X/Y coordinates.
+        /// </summary>
+        public AxisInteractionDescriptor ResolveAxisInteraction(double x, double y)
+        {
+            return ResolveAxisInteraction(new GeometryPoint3D(x, y, 0d));
+        }
+
+        private static double ComputeNormalizedPositionAlongAxis(
+            AxisHitRegionGeometry hitRegion,
+            GeometryPoint3D point)
+        {
+            if (hitRegion.Orientation == AxisOrientation.Horizontal)
+            {
+                return NormalizeAlongSpan(point.X, hitRegion.BottomLeft.X, hitRegion.TopRight.X);
+            }
+
+            return NormalizeAlongSpan(point.Y, hitRegion.BottomLeft.Y, hitRegion.TopRight.Y);
+        }
+
+        private static double NormalizeAlongSpan(double value, double start, double end)
+        {
+            var span = end - start;
+            if (span <= 0d)
+            {
+                return 0d;
+            }
+
+            var normalized = (value - start) / span;
+            if (normalized < 0d)
+            {
+                return 0d;
+            }
+
+            if (normalized > 1d)
+            {
+                return 1d;
+            }
+
+            return normalized;
+        }
+
         private sealed class DefaultLayoutMeasurementInput : IGraphLayoutMeasurementInput
         {
             public double MeasureAxisTickThickness(AxisSide side, IReadOnlyList<AxisTickPresentation> ticks)

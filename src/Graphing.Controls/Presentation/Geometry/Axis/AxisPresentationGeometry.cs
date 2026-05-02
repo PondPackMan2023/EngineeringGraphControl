@@ -1,5 +1,7 @@
 using Graphing.Controls.Rendering.Geometry;
 using System.Collections.Generic;
+using UnitRegistry;
+using UnitRegistry.Formatting;
 
 namespace Graphing.Controls.Presentation
 {
@@ -12,6 +14,8 @@ namespace Graphing.Controls.Presentation
             AxisOrientation orientation,
             string title,
             string formatterName,
+            NumericFormatter numericFormatter,
+            Unit displayUnit,
             string displayUnitLabel,
             double? minimumValue,
             double? maximumValue,
@@ -26,6 +30,8 @@ namespace Graphing.Controls.Presentation
             Orientation = orientation;
             Title = title;
             FormatterName = formatterName;
+            NumericFormatter = numericFormatter;
+            DisplayUnit = displayUnit;
             DisplayUnitLabel = displayUnitLabel;
             MinimumValue = minimumValue;
             MaximumValue = maximumValue;
@@ -41,6 +47,8 @@ namespace Graphing.Controls.Presentation
         public AxisOrientation Orientation { get; }
         public string Title { get; }
         public string FormatterName { get; }
+        public NumericFormatter NumericFormatter { get; }
+        public Unit DisplayUnit { get; }
         public string DisplayUnitLabel { get; }
         public double? MinimumValue { get; }
         public double? MaximumValue { get; }
