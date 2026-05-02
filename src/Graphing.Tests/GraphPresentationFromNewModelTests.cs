@@ -2836,13 +2836,72 @@ namespace Graphing.Tests
             for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
             {
                 var hitRegion = presentation.Layout.AxisHitRegions[i];
-                Assert.That(hitRegion.HalfHitThickness, Is.EqualTo(hitRegion.AxisLineThickness * 0.5d).Within(1e-12));
+                var visualHalfThickness = hitRegion.AxisLineThickness * 0.5d;
+                Assert.That(hitRegion.HalfHitThickness, Is.GreaterThanOrEqualTo(visualHalfThickness).Within(1e-12));
 
                 var realizedThickness = hitRegion.Orientation == PresentationAxisOrientation.Horizontal
                     ? hitRegion.TopRight.Y - hitRegion.BottomLeft.Y
                     : hitRegion.TopRight.X - hitRegion.BottomLeft.X;
 
                 Assert.That(realizedThickness, Is.EqualTo(hitRegion.HalfHitThickness * 2d).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_XAxisErgonomicTolerance_HitsSlightlyAboveAndBelowAxisLine()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var xRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var centerX = (xRegion.BottomLeft.X + xRegion.TopRight.X) * 0.5d;
+            var centerY = (xRegion.BottomLeft.Y + xRegion.TopRight.Y) * 0.5d;
+
+            var above = centerY + (xRegion.HalfHitThickness * 0.8d);
+            var below = centerY - (xRegion.HalfHitThickness * 0.8d);
+
+            Assert.That(presentation.ResolveHitAxisId(centerX, above), Is.EqualTo("x-axis"));
+            Assert.That(presentation.ResolveHitAxisId(centerX, below), Is.EqualTo("x-axis"));
+        }
+
+        [Test]
+        public void AxisHitRegions_YAxisBehavior_DoesNotRegress_ForCenterHits()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var yRegions = presentation.Layout.AxisHitRegions
+                .Where(r => r.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+
+            Assert.That(yRegions.Length, Is.GreaterThan(0));
+
+            for (var i = 0; i < yRegions.Length; i++)
+            {
+                var region = yRegions[i];
+                var centerX = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                var centerY = (region.BottomLeft.Y + region.TopRight.Y) * 0.5d;
+                Assert.That(presentation.ResolveHitAxisId(centerX, centerY), Is.EqualTo(region.AxisId));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_Geometry_IsDeterministicAcrossRepeatedBuilds()
+        {
+            var first = CreatePresentationWithBottomAndMultipleYAxes();
+            var second = CreatePresentationWithBottomAndMultipleYAxes();
+
+            Assert.That(second.Layout.AxisHitRegions.Count, Is.EqualTo(first.Layout.AxisHitRegions.Count));
+
+            for (var i = 0; i < first.Layout.AxisHitRegions.Count; i++)
+            {
+                var a = first.Layout.AxisHitRegions[i];
+                var b = second.Layout.AxisHitRegions[i];
+
+                Assert.That(b.AxisId, Is.EqualTo(a.AxisId));
+                Assert.That(b.Orientation, Is.EqualTo(a.Orientation));
+                Assert.That(b.Side, Is.EqualTo(a.Side));
+                Assert.That(b.HalfHitThickness, Is.EqualTo(a.HalfHitThickness).Within(1e-12));
+                Assert.That(b.BottomLeft.X, Is.EqualTo(a.BottomLeft.X).Within(1e-12));
+                Assert.That(b.BottomLeft.Y, Is.EqualTo(a.BottomLeft.Y).Within(1e-12));
+                Assert.That(b.TopRight.X, Is.EqualTo(a.TopRight.X).Within(1e-12));
+                Assert.That(b.TopRight.Y, Is.EqualTo(a.TopRight.Y).Within(1e-12));
             }
         }
 
@@ -2867,6 +2926,102 @@ namespace Graphing.Tests
                         Is.True,
                         $"Axis hit regions '{a.AxisId}' and '{b.AxisId}' must not have interior overlap.");
                 }
+            }
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_XAxis_CapturesPointsAroundAxisLine_AboveAndBelow()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var visual = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var affordance = presentation.Layout.AxisInteractionAffordanceRegions.Single(r => r.AxisId == "x-axis");
+            var plotArea = presentation.Layout.PlotArea;
+
+            var centerX = (visual.BottomLeft.X + visual.TopRight.X) * 0.5d;
+            var probeAboveY = visual.TopRight.Y + ((affordance.TopRight.Y - visual.TopRight.Y) * 0.6d);
+            var probeBelowY = plotArea.BottomLeft.Y - ((plotArea.BottomLeft.Y - affordance.BottomLeft.Y) * 0.6d);
+
+            Assert.That(probeAboveY, Is.GreaterThan(visual.TopRight.Y));
+            Assert.That(probeAboveY, Is.LessThanOrEqualTo(affordance.TopRight.Y));
+            Assert.That(probeBelowY, Is.LessThan(plotArea.BottomLeft.Y));
+            Assert.That(probeBelowY, Is.GreaterThanOrEqualTo(affordance.BottomLeft.Y));
+
+            Assert.That(presentation.ResolveHitAxisId(centerX, probeAboveY), Is.EqualTo("x-axis"));
+            Assert.That(presentation.ResolveHitAxisId(centerX, probeBelowY), Is.EqualTo("x-axis"));
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_YAxes_RemainPredictableAtRegionCenters()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var yAffordances = presentation.Layout.AxisInteractionAffordanceRegions
+                .Where(r => r.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+
+            Assert.That(yAffordances.Length, Is.GreaterThan(0));
+
+            for (var i = 0; i < yAffordances.Length; i++)
+            {
+                var region = yAffordances[i];
+                var centerX = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                var centerY = (region.BottomLeft.Y + region.TopRight.Y) * 0.5d;
+                Assert.That(presentation.ResolveHitAxisId(centerX, centerY), Is.EqualTo(region.AxisId));
+            }
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_XAxis_CanHitOutsideBottomAxisBand()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var plotArea = presentation.Layout.PlotArea;
+            var xHitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var xAffordance = presentation.Layout.AxisInteractionAffordanceRegions.Single(r => r.AxisId == "x-axis");
+            var probeX = (xAffordance.BottomLeft.X + xAffordance.TopRight.X) * 0.5d;
+            var probeY = (plotArea.BottomLeft.Y + xAffordance.TopRight.Y) * 0.5d;
+
+            Assert.That(xHitRegion.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12), "Visual bottom-axis hit region should remain in layout-owned band.");
+            Assert.That(probeY, Is.GreaterThan(plotArea.BottomLeft.Y), "Probe should be outside the bottom axis band and inside plot space.");
+            Assert.That(probeY, Is.LessThanOrEqualTo(xAffordance.TopRight.Y).Within(1e-12));
+            Assert.That(presentation.ResolveHitAxisId(probeX, probeY), Is.EqualTo("x-axis"));
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_Extension_DoesNotChangeLayoutOwnedGeometry()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var plotArea = presentation.Layout.PlotArea;
+            var xHitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var xAffordance = presentation.Layout.AxisInteractionAffordanceRegions.Single(r => r.AxisId == "x-axis");
+
+            Assert.That(plotArea.BottomLeft.X, Is.GreaterThan(0d));
+            Assert.That(plotArea.BottomLeft.Y, Is.GreaterThan(0d));
+            Assert.That(plotArea.TopRight.X, Is.LessThan(1d));
+            Assert.That(plotArea.TopRight.Y, Is.LessThan(1d));
+
+            Assert.That(xHitRegion.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+            Assert.That(xAffordance.TopRight.Y, Is.GreaterThan(plotArea.BottomLeft.Y), "Affordance should be allowed to extend beyond layout-owned band geometry.");
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_Geometry_IsDeterministicAcrossRepeatedBuilds()
+        {
+            var first = CreatePresentationWithBottomAndMultipleYAxes();
+            var second = CreatePresentationWithBottomAndMultipleYAxes();
+
+            var a = first.Layout.AxisInteractionAffordanceRegions;
+            var b = second.Layout.AxisInteractionAffordanceRegions;
+
+            Assert.That(b.Count, Is.EqualTo(a.Count));
+
+            for (var i = 0; i < a.Count; i++)
+            {
+                Assert.That(b[i].AxisId, Is.EqualTo(a[i].AxisId));
+                Assert.That(b[i].Side, Is.EqualTo(a[i].Side));
+                Assert.That(b[i].Orientation, Is.EqualTo(a[i].Orientation));
+                Assert.That(b[i].BottomLeft.X, Is.EqualTo(a[i].BottomLeft.X).Within(1e-12));
+                Assert.That(b[i].BottomLeft.Y, Is.EqualTo(a[i].BottomLeft.Y).Within(1e-12));
+                Assert.That(b[i].TopRight.X, Is.EqualTo(a[i].TopRight.X).Within(1e-12));
+                Assert.That(b[i].TopRight.Y, Is.EqualTo(a[i].TopRight.Y).Within(1e-12));
             }
         }
 

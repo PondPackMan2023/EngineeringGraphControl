@@ -291,7 +291,8 @@ namespace Graphing.TestHarness
 
         private void graphControl_AxisContextRequested(object sender, Controls.Interaction.AxisInteractionMouseEventArgs e)
         {
-            Trace.WriteLine($"{nameof(graphControl_AxisContextRequested)}");
+            Debug.WriteLine($"{nameof(graphControl_AxisContextRequested)}:\n\t{e.Descriptor.AxisId}\n\t{e.Descriptor.NumericFormatter.Label}");
+            MessageBox.Show(this, $"{nameof(graphControl_AxisContextRequested)}:\n\t{e.Descriptor.AxisId}\n\t{e.Descriptor.NumericFormatter.Label}", "Right-Click");
         }
     }
 }

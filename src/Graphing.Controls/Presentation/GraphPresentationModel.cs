@@ -15,6 +15,12 @@ namespace Graphing.Controls.Presentation
         private const double LegendBoundaryEpsilon = 1e-6;
         private const double DefaultAxisLineThickness = 0.0015;
         private const double AxisHitInflationFactor = 0.5;
+        private const double HorizontalAxisMinimumInteractionHalfThickness = 0.010;
+        private const double VerticalAxisMinimumInteractionHalfThickness = 0.003;
+        // Minimum interaction half-height for horizontal-axis affordance regions.
+        // Defined in normalized abstract geometry space and isolated as policy for future configurability.
+        private const double HorizontalAxisInteractionAffordanceHalfHeight = 0.0425;
+        private const double VerticalAxisAffordanceHalfThickness = 0.0425;
         private const double VerticalAxisEndpointInsetAutoFactor = 0.60;
         private const double HorizontalAxisEndpointInsetAutoFactor = 0.85;
         private const double TitleHeight = 0.06;

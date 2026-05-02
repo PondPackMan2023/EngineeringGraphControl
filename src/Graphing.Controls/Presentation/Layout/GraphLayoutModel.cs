@@ -23,6 +23,7 @@ namespace Graphing.Controls.Presentation
             AxisTitleBands = new List<AxisTitleBandGeometry>();
             EdgePaddingBands = new List<EdgePaddingBandGeometry>();
             AxisHitRegions = new List<AxisHitRegionGeometry>();
+            AxisInteractionAffordanceRegions = new List<AxisInteractionAffordanceGeometry>();
         }
 
         public GraphLayoutModel(
@@ -35,7 +36,8 @@ namespace Graphing.Controls.Presentation
             LegendPresentationGeometry legend = null,
             IReadOnlyList<AxisTitleBandGeometry> axisTitleBands = null,
             IReadOnlyList<EdgePaddingBandGeometry> edgePaddingBands = null,
-            IReadOnlyList<AxisHitRegionGeometry> axisHitRegions = null)
+            IReadOnlyList<AxisHitRegionGeometry> axisHitRegions = null,
+            IReadOnlyList<AxisInteractionAffordanceGeometry> axisInteractionAffordanceRegions = null)
         {
             PlotArea = plotArea;
             Axes = axes;
@@ -47,6 +49,7 @@ namespace Graphing.Controls.Presentation
             AxisTitleBands = axisTitleBands ?? new List<AxisTitleBandGeometry>();
             EdgePaddingBands = edgePaddingBands ?? new List<EdgePaddingBandGeometry>();
             AxisHitRegions = axisHitRegions ?? new List<AxisHitRegionGeometry>();
+            AxisInteractionAffordanceRegions = axisInteractionAffordanceRegions ?? new List<AxisInteractionAffordanceGeometry>();
         }
 
         /// <summary>
@@ -102,11 +105,38 @@ namespace Graphing.Controls.Presentation
         public IReadOnlyList<AxisHitRegionGeometry> AxisHitRegions { get; }
 
         /// <summary>
+        /// Per-axis interaction affordance regions in abstract normalized geometry space.
+        /// These regions represent user-intent capture geometry and are distinct from visual hit regions.
+        /// </summary>
+        public IReadOnlyList<AxisInteractionAffordanceGeometry> AxisInteractionAffordanceRegions { get; }
+
+        /// <summary>
         /// Resolves the first matching axis hit region in stable layout order.
         /// Border points are inclusive and deterministic: first region in AxisHitRegions order wins.
         /// </summary>
         public AxisHitRegionGeometry ResolveHitAxisRegion(GeometryPoint3D point)
         {
+            for (var i = 0; i < AxisInteractionAffordanceRegions.Count; i++)
+            {
+                var affordance = AxisInteractionAffordanceRegions[i];
+                if (affordance == null)
+                {
+                    continue;
+                }
+
+                if (ContainsInclusive(affordance, point))
+                {
+                    return new AxisHitRegionGeometry(
+                        affordance.AxisId,
+                        affordance.Side,
+                        affordance.Orientation,
+                        0d,
+                        0d,
+                        affordance.BottomLeft,
+                        affordance.TopRight);
+                }
+            }
+
             for (var i = 0; i < AxisHitRegions.Count; i++)
             {
                 var region = AxisHitRegions[i];
@@ -135,6 +165,14 @@ namespace Graphing.Controls.Presentation
         }
 
         private static bool ContainsInclusive(AxisHitRegionGeometry region, GeometryPoint3D point)
+        {
+            return point.X >= region.BottomLeft.X
+                && point.X <= region.TopRight.X
+                && point.Y >= region.BottomLeft.Y
+                && point.Y <= region.TopRight.Y;
+        }
+
+        private static bool ContainsInclusive(AxisInteractionAffordanceGeometry region, GeometryPoint3D point)
         {
             return point.X >= region.BottomLeft.X
                 && point.X <= region.TopRight.X

@@ -126,14 +126,14 @@ namespace Graphing.Controls
 
             // Phase H4 intentionally does not track hover state; this probe keeps
             // the mouse-to-presentation bridge in place for future hover phases.
-            _ = TryResolveAxisInteraction(e, out _, out _);
+            _ = TryResolveAxisInteraction(e, out _, out _, out _);
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
 
-            if (!TryResolveAxisInteraction(e, out var descriptor, out var graphPosition) || descriptor == null)
+            if (!TryResolveAxisInteraction(e, out var descriptor, out var clientPosition, out var graphPosition) || descriptor == null)
             {
                 return;
             }
@@ -144,7 +144,7 @@ namespace Graphing.Controls
                     descriptor,
                     e.Button,
                     ModifierKeys,
-                    e.Location,
+                    clientPosition,
                     graphPosition));
         }
 
@@ -152,7 +152,7 @@ namespace Graphing.Controls
         {
             base.OnMouseUp(e);
 
-            if (!TryResolveAxisInteraction(e, out var descriptor, out var graphPosition) || descriptor == null)
+            if (!TryResolveAxisInteraction(e, out var descriptor, out var clientPosition, out var graphPosition) || descriptor == null)
             {
                 return;
             }
@@ -161,7 +161,7 @@ namespace Graphing.Controls
                 descriptor,
                 e.Button,
                 ModifierKeys,
-                e.Location,
+                clientPosition,
                 graphPosition);
 
             AxisMouseUp?.Invoke(this, args);
@@ -190,9 +190,11 @@ namespace Graphing.Controls
         private bool TryResolveAxisInteraction(
             MouseEventArgs mouseEvent,
             out AxisInteractionDescriptor descriptor,
+            out System.Drawing.Point clientPosition,
             out GeometryPoint3D graphPosition)
         {
             descriptor = null;
+            clientPosition = System.Drawing.Point.Empty;
             graphPosition = new GeometryPoint3D(0d, 0d, 0d);
 
             var clientBounds = ClientRectangle;
@@ -201,7 +203,8 @@ namespace Graphing.Controls
                 return false;
             }
 
-            graphPosition = ToGraphPosition(clientBounds, mouseEvent.Location);
+            clientPosition = NormalizeMouseToClientPosition(mouseEvent.Location, clientBounds);
+            graphPosition = ToGraphPosition(clientBounds, clientPosition);
 
             GraphPresentationModel presentation;
             lock (_snapshotSync)
@@ -216,6 +219,27 @@ namespace Graphing.Controls
 
             descriptor = ResolveAxisInteractionDescriptor(presentation, graphPosition);
             return true;
+        }
+
+        private System.Drawing.Point NormalizeMouseToClientPosition(
+            System.Drawing.Point inputPosition,
+            System.Drawing.Rectangle clientBounds)
+        {
+            //if (clientBounds.Contains(inputPosition))
+            //{
+            //    return inputPosition;
+            //}
+
+            var hostForm = FindForm();
+            if (hostForm == null)
+            {
+                return inputPosition;
+            }
+
+            // Some input paths provide coordinates in host form client space;
+            // translate those to this control's client space before normalization.
+            var screenPosition = hostForm.PointToScreen(inputPosition);
+            return PointToClient(screenPosition);
         }
 
         private static GeometryPoint3D ToGraphPosition(System.Drawing.Rectangle clientBounds, System.Drawing.Point clientPosition)

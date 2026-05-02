@@ -67,6 +67,64 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void MouseDown_FormRelativeCoordinates_NormalizeToControlClientSpace()
+        {
+            using (var hostForm = new Form { Size = new Size(960, 720) })
+            using (var control = CreateControlWithStackedAxes())
+            {
+                control.Location = new Point(140, 110);
+                hostForm.Controls.Add(control);
+                _ = hostForm.Handle;
+                _ = control.Handle;
+
+                AxisInteractionMouseEventArgs captured = null;
+                control.AxisMouseDown += (_, args) => captured = args;
+
+                var xAffordance = control.ActivePresentation.Layout.AxisInteractionAffordanceRegions.First(r => r.AxisId == "x-axis");
+                var targetX = Mid(xAffordance.BottomLeft.X, xAffordance.TopRight.X);
+                var targetY = Mid(xAffordance.BottomLeft.Y, xAffordance.TopRight.Y);
+                var clientPoint = ToClientPoint(control, targetX, targetY);
+                var formRelativePoint = ToFormClientPoint(control, clientPoint);
+
+                control.RaiseMouseDown(MouseButtons.Left, formRelativePoint);
+
+                Assert.That(captured, Is.Not.Null);
+                Assert.That(captured.ClientPosition, Is.EqualTo(clientPoint));
+                Assert.That(captured.GraphPosition.X, Is.EqualTo(targetX).Within(0.01d));
+                Assert.That(captured.GraphPosition.Y, Is.EqualTo(targetY).Within(0.01d));
+            }
+        }
+
+        [Test]
+        public void MouseUp_RightButton_OnXAxisAffordance_WithFormRelativeCoordinates_RaisesContextRequested()
+        {
+            using (var hostForm = new Form { Size = new Size(960, 720) })
+            using (var control = CreateControlWithStackedAxes())
+            {
+                control.Location = new Point(180, 90);
+                hostForm.Controls.Add(control);
+                _ = hostForm.Handle;
+                _ = control.Handle;
+
+                AxisInteractionMouseEventArgs context = null;
+                control.AxisContextRequested += (_, args) => context = args;
+
+                var xAffordance = control.ActivePresentation.Layout.AxisInteractionAffordanceRegions.First(r => r.AxisId == "x-axis");
+                var targetX = Mid(xAffordance.BottomLeft.X, xAffordance.TopRight.X);
+                var targetY = Mid(xAffordance.BottomLeft.Y, xAffordance.TopRight.Y);
+                var clientPoint = ToClientPoint(control, targetX, targetY);
+                var formRelativePoint = ToFormClientPoint(control, clientPoint);
+
+                control.RaiseMouseUp(MouseButtons.Right, formRelativePoint);
+
+                Assert.That(context, Is.Not.Null);
+                Assert.That(context.Descriptor.AxisId, Is.EqualTo("x-axis"));
+                Assert.That(context.GraphPosition.X, Is.EqualTo(targetX).Within(0.01d));
+                Assert.That(context.GraphPosition.Y, Is.EqualTo(targetY).Within(0.01d));
+            }
+        }
+
+        [Test]
         public void MouseEvents_OutsideAxisRegions_DoNotRaiseAxisEvents()
         {
             using (var control = CreateControlWithStackedAxes())
@@ -198,6 +256,11 @@ namespace Graphing.Tests
             if (y >= control.ClientSize.Height) y = control.ClientSize.Height - 1;
 
             return new Point(x, y);
+        }
+
+        private static Point ToFormClientPoint(Control control, Point controlClientPoint)
+        {
+            return new Point(control.Left + controlClientPoint.X, control.Top + controlClientPoint.Y);
         }
 
         private static double Mid(double a, double b)

@@ -573,6 +573,10 @@ namespace Graphing.Controls.Presentation
                 bottomEdgePadding,
                 topEdgePadding);
 
+            var axisInteractionAffordanceRegions = BuildAxisInteractionAffordanceGeometry(
+                entries,
+                finalPlotArea);
+
             // Create grid lines geometry
             var gridLines = BuildGridLinesGeometry(entries, finalPlotArea, options);
 
@@ -594,7 +598,109 @@ namespace Graphing.Controls.Presentation
                 legendGeometry,
                 axisTitleBands,
                 edgePaddingBands,
-                axisHitRegions);
+                axisHitRegions,
+                axisInteractionAffordanceRegions);
+        }
+
+        private static IReadOnlyList<AxisInteractionAffordanceGeometry> BuildAxisInteractionAffordanceGeometry(
+            IReadOnlyList<AxisLayoutEntry> axisEntries,
+            PlotAreaLayout plotArea)
+        {
+            var regions = new List<AxisInteractionAffordanceGeometry>();
+            var plotLeft = plotArea.BottomLeft.X;
+            var plotBottom = plotArea.BottomLeft.Y;
+            var plotRight = plotArea.TopRight.X;
+            var plotTop = plotArea.TopRight.Y;
+            var plotWidth = Math.Max(0d, plotRight - plotLeft);
+            var plotHeight = Math.Max(0d, plotTop - plotBottom);
+
+            for (var i = 0; i < axisEntries.Count; i++)
+            {
+                var entry = axisEntries[i];
+                if (entry == null || entry.Axis == null || string.IsNullOrWhiteSpace(entry.Axis.AxisId))
+                {
+                    continue;
+                }
+
+                var inset = Math.Max(0d, entry.TickEndpointInset);
+                var spanStart = 0d;
+                var spanEnd = 0d;
+                var axisLineCoordinate = 0d;
+
+                double left;
+                double bottom;
+                double right;
+                double top;
+
+                if (entry.Axis.Orientation == AxisOrientation.Horizontal)
+                {
+                    axisLineCoordinate = entry.Side == AxisSide.Top
+                        ? plotTop
+                        : plotBottom;
+                    spanStart = plotLeft + inset;
+                    spanEnd = plotRight - inset;
+
+                    if (spanEnd < spanStart)
+                    {
+                        var center = plotLeft + (plotWidth * 0.5d);
+                        spanStart = center;
+                        spanEnd = center;
+                    }
+
+                    left = spanStart;
+                    right = spanEnd;
+                    bottom = axisLineCoordinate - HorizontalAxisInteractionAffordanceHalfHeight;
+                    top = axisLineCoordinate + HorizontalAxisInteractionAffordanceHalfHeight;
+                }
+                else
+                {
+                    var normalizedStart = Math.Max(0d, Math.Min(1d, entry.NormalizedSpanStart));
+                    var normalizedEnd = Math.Max(0d, Math.Min(1d, entry.NormalizedSpanEnd));
+                    if (normalizedEnd < normalizedStart)
+                    {
+                        var swap = normalizedStart;
+                        normalizedStart = normalizedEnd;
+                        normalizedEnd = swap;
+                    }
+
+                    spanStart = plotBottom + (normalizedStart * plotHeight) + inset;
+                    spanEnd = plotBottom + (normalizedEnd * plotHeight) - inset;
+                    if (spanEnd < spanStart)
+                    {
+                        var center = plotBottom + (((normalizedStart + normalizedEnd) * 0.5d) * plotHeight);
+                        spanStart = center;
+                        spanEnd = center;
+                    }
+
+                    axisLineCoordinate = entry.Side == AxisSide.Right
+                        ? plotRight
+                        : plotLeft;
+                    left = axisLineCoordinate - VerticalAxisAffordanceHalfThickness;
+                    right = axisLineCoordinate + VerticalAxisAffordanceHalfThickness;
+                    bottom = spanStart;
+                    top = spanEnd;
+                }
+
+                if (right < left)
+                {
+                    right = left;
+                }
+
+                if (top < bottom)
+                {
+                    top = bottom;
+                }
+
+                regions.Add(
+                    new AxisInteractionAffordanceGeometry(
+                        entry.Axis.AxisId,
+                        entry.Side,
+                        entry.Axis.Orientation,
+                        new GeometryPoint3D(left, bottom, 0d),
+                        new GeometryPoint3D(right, top, 0d)));
+            }
+
+            return new ReadOnlyCollection<AxisInteractionAffordanceGeometry>(regions);
         }
 
         private static IReadOnlyList<AxisHitRegionGeometry> BuildAxisHitRegionsGeometry(
@@ -646,7 +752,9 @@ namespace Graphing.Controls.Presentation
                     continue;
                 }
 
-                var halfHitThickness = ComputeAxisHitHalfThickness(entry.Axis.AxisLineThickness);
+                var halfHitThickness = ComputeAxisHitHalfThickness(
+                    entry.Axis.AxisLineThickness,
+                    entry.Axis.Orientation);
                 if (halfHitThickness <= 0d)
                 {
                     continue;
@@ -794,9 +902,16 @@ namespace Graphing.Controls.Presentation
             }
         }
 
-        private static double ComputeAxisHitHalfThickness(double axisLineThickness)
+        private static double ComputeAxisHitHalfThickness(
+            double axisLineThickness,
+            AxisOrientation orientation)
         {
-            return Math.Max(0d, axisLineThickness) * AxisHitInflationFactor;
+            var visualAxisHalfThickness = Math.Max(0d, axisLineThickness) * AxisHitInflationFactor;
+            var minimumInteractionHalfThickness = orientation == AxisOrientation.Horizontal
+                ? HorizontalAxisMinimumInteractionHalfThickness
+                : VerticalAxisMinimumInteractionHalfThickness;
+
+            return Math.Max(visualAxisHalfThickness, minimumInteractionHalfThickness);
         }
 
         private static IReadOnlyList<AxisTickPresentation> GetRepresentativeTicks(IReadOnlyList<AxisPresentationGeometry> axes)
