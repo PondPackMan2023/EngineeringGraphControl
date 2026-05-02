@@ -2775,9 +2775,144 @@ namespace Graphing.Tests
             }
         }
 
+        [Test]
+        public void AxisHitRegions_AreGenerated_OnePerRenderedAxis()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            Assert.That(presentation.Layout.AxisHitRegions.Count, Is.EqualTo(presentation.Layout.Axes.Count));
+
+            for (var i = 0; i < presentation.Layout.Axes.Count; i++)
+            {
+                var axisEntry = presentation.Layout.Axes[i];
+                var hitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == axisEntry.Axis.AxisId);
+
+                Assert.That(hitRegion.Side, Is.EqualTo(axisEntry.Side));
+                Assert.That(hitRegion.Orientation, Is.EqualTo(axisEntry.Axis.Orientation));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_TrackAxisSpineSpan_ForHorizontalAndVerticalAxes()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var plotArea = presentation.Layout.PlotArea;
+            var plotHeight = plotArea.TopRight.Y - plotArea.BottomLeft.Y;
+
+            for (var i = 0; i < presentation.Layout.Axes.Count; i++)
+            {
+                var axisEntry = presentation.Layout.Axes[i];
+                var hitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == axisEntry.Axis.AxisId);
+
+                if (axisEntry.Axis.Orientation == PresentationAxisOrientation.Horizontal)
+                {
+                    Assert.That(hitRegion.BottomLeft.X, Is.EqualTo(plotArea.BottomLeft.X).Within(1e-12));
+                    Assert.That(hitRegion.TopRight.X, Is.EqualTo(plotArea.TopRight.X).Within(1e-12));
+                    continue;
+                }
+
+                if (axisEntry.Side == PresentationAxisSide.Left)
+                {
+                    var expectedBottom = plotArea.BottomLeft.Y + (plotHeight * axisEntry.NormalizedSpanStart);
+                    var expectedTop = plotArea.BottomLeft.Y + (plotHeight * axisEntry.NormalizedSpanEnd);
+
+                    Assert.That(hitRegion.BottomLeft.Y, Is.EqualTo(expectedBottom).Within(1e-12));
+                    Assert.That(hitRegion.TopRight.Y, Is.EqualTo(expectedTop).Within(1e-12));
+                    continue;
+                }
+
+                Assert.That(hitRegion.BottomLeft.Y, Is.EqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+                Assert.That(hitRegion.TopRight.Y, Is.EqualTo(plotArea.TopRight.Y).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_Thickness_IsDerivedFromAxisLineThickness()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
+            {
+                var hitRegion = presentation.Layout.AxisHitRegions[i];
+                Assert.That(hitRegion.HalfHitThickness, Is.EqualTo(hitRegion.AxisLineThickness * 0.5d).Within(1e-12));
+
+                var realizedThickness = hitRegion.Orientation == PresentationAxisOrientation.Horizontal
+                    ? hitRegion.TopRight.Y - hitRegion.BottomLeft.Y
+                    : hitRegion.TopRight.X - hitRegion.BottomLeft.X;
+
+                Assert.That(realizedThickness, Is.EqualTo(hitRegion.HalfHitThickness * 2d).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_DoNotInteriorOverlap_AcrossRenderedAxes()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var hitRegions = presentation.Layout.AxisHitRegions;
+
+            for (var i = 0; i < hitRegions.Count; i++)
+            {
+                for (var j = i + 1; j < hitRegions.Count; j++)
+                {
+                    var a = hitRegions[i];
+                    var b = hitRegions[j];
+
+                    var overlapWidth = Math.Min(a.TopRight.X, b.TopRight.X) - Math.Max(a.BottomLeft.X, b.BottomLeft.X);
+                    var overlapHeight = Math.Min(a.TopRight.Y, b.TopRight.Y) - Math.Max(a.BottomLeft.Y, b.BottomLeft.Y);
+
+                    Assert.That(
+                        overlapWidth <= 1e-12 || overlapHeight <= 1e-12,
+                        Is.True,
+                        $"Axis hit regions '{a.AxisId}' and '{b.AxisId}' must not have interior overlap.");
+                }
+            }
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);
+        }
+
+        private static GraphPresentationModel CreatePresentationWithBottomAndMultipleYAxes()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft1 = new AxisModel(new AxisId("y-left-1"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yLeft2 = new AxisModel(new AxisId("y-left-2"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+
+            var s1 = new GraphSeriesModel(
+                new SeriesId("1"),
+                "series-left-1",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y1", "y1", unit, new[] { 1d, 2d, 3d }),
+                xAxis,
+                yLeft1);
+
+            var s2 = new GraphSeriesModel(
+                new SeriesId("2"),
+                "series-left-2",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y2", "y2", unit, new[] { 10d, 20d, 30d }),
+                xAxis,
+                yLeft2);
+
+            var s3 = new GraphSeriesModel(
+                new SeriesId("3"),
+                "series-right",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y3", "y3", unit, new[] { 100d, 200d, 300d }),
+                xAxis,
+                yRight);
+
+            var model = new GraphModel(new[] { xAxis, yLeft1, yLeft2, yRight }, new[] { s1, s2, s3 });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            return new GraphPresentationModel(snapshot);
         }
 
         private static IGraphModel CreateModelWithAxisSides(SeriesType seriesType, ModelAxisSide xAxisSide, ModelAxisSide yAxisSide)

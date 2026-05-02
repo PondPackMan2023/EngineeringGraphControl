@@ -21,6 +21,7 @@ namespace Graphing.Controls.Presentation
             Legend = null;
             AxisTitleBands = new List<AxisTitleBandGeometry>();
             EdgePaddingBands = new List<EdgePaddingBandGeometry>();
+            AxisHitRegions = new List<AxisHitRegionGeometry>();
         }
 
         public GraphLayoutModel(
@@ -32,7 +33,8 @@ namespace Graphing.Controls.Presentation
             GridLinesGeometry gridLines = null,
             LegendPresentationGeometry legend = null,
             IReadOnlyList<AxisTitleBandGeometry> axisTitleBands = null,
-            IReadOnlyList<EdgePaddingBandGeometry> edgePaddingBands = null)
+            IReadOnlyList<EdgePaddingBandGeometry> edgePaddingBands = null,
+            IReadOnlyList<AxisHitRegionGeometry> axisHitRegions = null)
         {
             PlotArea = plotArea;
             Axes = axes;
@@ -43,6 +45,7 @@ namespace Graphing.Controls.Presentation
             Legend = legend;
             AxisTitleBands = axisTitleBands ?? new List<AxisTitleBandGeometry>();
             EdgePaddingBands = edgePaddingBands ?? new List<EdgePaddingBandGeometry>();
+            AxisHitRegions = axisHitRegions ?? new List<AxisHitRegionGeometry>();
         }
 
         /// <summary>
@@ -91,5 +94,10 @@ namespace Graphing.Controls.Presentation
         /// Fixed edge-padding bands that separate all content from control boundaries.
         /// </summary>
         public IReadOnlyList<EdgePaddingBandGeometry> EdgePaddingBands { get; }
+
+        /// <summary>
+        /// Per-axis spine hit regions in abstract normalized geometry space.
+        /// </summary>
+        public IReadOnlyList<AxisHitRegionGeometry> AxisHitRegions { get; }
     }
 }

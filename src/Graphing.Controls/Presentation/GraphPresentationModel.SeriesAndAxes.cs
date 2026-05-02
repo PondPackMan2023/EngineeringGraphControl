@@ -120,6 +120,7 @@ namespace Graphing.Controls.Presentation
                         axisSnapshot.MinimumValue,
                         axisSnapshot.MaximumValue,
                         axisSnapshot.MajorTickStride,
+                        DefaultAxisLineThickness,
                         linePoints,
                         ticks));
             }

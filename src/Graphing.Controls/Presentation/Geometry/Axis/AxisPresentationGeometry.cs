@@ -16,6 +16,7 @@ namespace Graphing.Controls.Presentation
             double? minimumValue,
             double? maximumValue,
             int majorTickStride,
+            double axisLineThickness,
             IReadOnlyList<GeometryPoint3D> linePoints,
             IReadOnlyList<AxisTickPresentation> ticks)
         {
@@ -29,6 +30,7 @@ namespace Graphing.Controls.Presentation
             MinimumValue = minimumValue;
             MaximumValue = maximumValue;
             MajorTickStride = majorTickStride > 0 ? majorTickStride : 1;
+            AxisLineThickness = axisLineThickness;
             LinePoints = linePoints;
             Ticks = ticks;
         }
@@ -43,6 +45,7 @@ namespace Graphing.Controls.Presentation
         public double? MinimumValue { get; }
         public double? MaximumValue { get; }
         public int MajorTickStride { get; }
+        public double AxisLineThickness { get; }
         public IReadOnlyList<GeometryPoint3D> LinePoints { get; }
         public IReadOnlyList<AxisTickPresentation> Ticks { get; }
     }

@@ -13,6 +13,8 @@ namespace Graphing.Controls.Presentation
         private const double SideBandSiblingGap = 0.0025;
         private const double EdgePaddingThickness = 0.012;
         private const double LegendBoundaryEpsilon = 1e-6;
+        private const double DefaultAxisLineThickness = 0.0015;
+        private const double AxisHitInflationFactor = 0.5;
         private const double VerticalAxisEndpointInsetAutoFactor = 0.60;
         private const double HorizontalAxisEndpointInsetAutoFactor = 0.85;
         private const double TitleHeight = 0.06;
