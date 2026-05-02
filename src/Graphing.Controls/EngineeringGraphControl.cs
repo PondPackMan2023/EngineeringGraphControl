@@ -1,6 +1,8 @@
 using Graphing.Controls.Models;
+using Graphing.Controls.Interaction;
 using Graphing.Controls.Presentation;
 using Graphing.Controls.Rendering;
+using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 using System;
 using System.Drawing.Drawing2D;
@@ -17,6 +19,12 @@ namespace Graphing.Controls
         private IGraphSnapshot _activeSnapshot;
         private GraphPresentationModel _activePresentation;
         private GraphPresentationOptions _activePresentationOptions;
+
+        public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
+
+        public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseUp;
+
+        public event EventHandler<AxisInteractionMouseEventArgs> AxisContextRequested;
 
         public EngineeringGraphControl()
         {
@@ -112,12 +120,109 @@ namespace Graphing.Controls
             Invalidate();
         }
 
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+
+            // Phase H4 intentionally does not track hover state; this probe keeps
+            // the mouse-to-presentation bridge in place for future hover phases.
+            _ = TryResolveAxisInteraction(e, out _, out _);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+
+            if (!TryResolveAxisInteraction(e, out var descriptor, out var graphPosition) || descriptor == null)
+            {
+                return;
+            }
+
+            AxisMouseDown?.Invoke(
+                this,
+                new AxisInteractionMouseEventArgs(
+                    descriptor,
+                    e.Button,
+                    ModifierKeys,
+                    e.Location,
+                    graphPosition));
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            base.OnMouseUp(e);
+
+            if (!TryResolveAxisInteraction(e, out var descriptor, out var graphPosition) || descriptor == null)
+            {
+                return;
+            }
+
+            var args = new AxisInteractionMouseEventArgs(
+                descriptor,
+                e.Button,
+                ModifierKeys,
+                e.Location,
+                graphPosition);
+
+            AxisMouseUp?.Invoke(this, args);
+
+            if (e.Button == MouseButtons.Right)
+            {
+                AxisContextRequested?.Invoke(this, args);
+            }
+        }
+
         protected virtual GraphPresentationModel CreatePresentationModel(
             IGraphSnapshot snapshot,
             GraphPresentationOptions options = null,
             IGraphLayoutMeasurementInput measurementInput = null)
         {
             return new GraphPresentationModel(snapshot, options, measurementInput);
+        }
+
+        protected virtual AxisInteractionDescriptor ResolveAxisInteractionDescriptor(
+            GraphPresentationModel presentation,
+            GeometryPoint3D graphPosition)
+        {
+            return presentation.ResolveAxisInteraction(graphPosition);
+        }
+
+        private bool TryResolveAxisInteraction(
+            MouseEventArgs mouseEvent,
+            out AxisInteractionDescriptor descriptor,
+            out GeometryPoint3D graphPosition)
+        {
+            descriptor = null;
+            graphPosition = new GeometryPoint3D(0d, 0d, 0d);
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            graphPosition = ToGraphPosition(clientBounds, mouseEvent.Location);
+
+            GraphPresentationModel presentation;
+            lock (_snapshotSync)
+            {
+                presentation = _activePresentation;
+            }
+
+            if (presentation == null)
+            {
+                return false;
+            }
+
+            descriptor = ResolveAxisInteractionDescriptor(presentation, graphPosition);
+            return true;
+        }
+
+        private static GeometryPoint3D ToGraphPosition(System.Drawing.Rectangle clientBounds, System.Drawing.Point clientPosition)
+        {
+            var normalizedX = (clientPosition.X - clientBounds.Left) / (double)clientBounds.Width;
+            var normalizedY = (clientBounds.Bottom - clientPosition.Y) / (double)clientBounds.Height;
+            return new GeometryPoint3D(normalizedX, normalizedY, 0d);
         }
 
         private void TryInstallSnapshotAndPresentation(IGraphSnapshot nextSnapshot,

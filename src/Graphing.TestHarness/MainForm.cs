@@ -5,6 +5,7 @@ using Graphing.TestHarness.Libraries;
 using Graphing.TestHarness.Scenarios;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using UnitRegistry;
@@ -286,6 +287,11 @@ namespace Graphing.TestHarness
             var options = EngineeringGraphOptionsEditorForm.OpenOptions(graphControl.GraphModel,
                 graphControl.ActiveOptions, graphControl.ActiveSnapshot, this);
             graphControl.SetGraphSource(graphControl.GraphModel, options);
+        }
+
+        private void graphControl_AxisContextRequested(object sender, Controls.Interaction.AxisInteractionMouseEventArgs e)
+        {
+            Trace.WriteLine($"{nameof(graphControl_AxisContextRequested)}");
         }
     }
 }
