@@ -58,6 +58,7 @@ namespace Graphing.Editors.Controls
             // 
             this._seriesListBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this._seriesListBox.FormattingEnabled = true;
+            this._seriesListBox.HorizontalScrollbar = true;
             this._seriesListBox.Location = new System.Drawing.Point(0, 0);
             this._seriesListBox.Name = "_seriesListBox";
             this._seriesListBox.Size = new System.Drawing.Size(188, 270);
