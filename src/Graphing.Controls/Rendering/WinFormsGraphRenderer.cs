@@ -21,7 +21,7 @@ namespace Graphing.Controls.Rendering
         private const int TickLabelOffset = 3;
         private const int AxisTitleOffset = 6;
         private const float AxisLineWidth = 1f;
-        private const float SeriesLineWidth = 1.5f;
+        private const float SeriesLineWidth = 2.0f;
         private const float GridLineWidth = 0.5f;
         private const float LegendLineWidth = 1f;
         private const float LegendTextOffset = 6f;

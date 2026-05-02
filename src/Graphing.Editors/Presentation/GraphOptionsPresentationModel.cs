@@ -41,14 +41,20 @@ namespace Graphing.Editors.Presentation
                 throw new ArgumentNullException(nameof(existingOptions));
             }
 
+            existingOptions = GraphPresentationOptions.EnsureSeriesStyles(graphModel, existingOptions);
+
             Titles = ConstructTitlesEditorModel(existingOptions);
-            Series = ConstructSeriesEditorModel(graphModel, existingOptions);
+            Series = ConstructSeriesEditorModel(graphModel, existingOptions, snapshot);
             Axes = ConstructAxesEditorModel(graphModel, existingOptions, snapshot);
             Legend = ConstructLegendEditorModel(existingOptions);
         }
 
         public GraphPresentationOptions BuildGraphPresentationOptions()
         {
+            var seriesOrder = Series.Series
+                .Select(s => s.SeriesId)
+                .ToList();
+
             var hiddenSeriesIds = Series.Series
                 .Where(s => !s.IsVisible)
                 .Select(s => s.SeriesId)
@@ -59,20 +65,16 @@ namespace Graphing.Editors.Presentation
                 .Select(a => a.AxisId)
                 .ToList();
 
-            // Capture series overrides (label, color)
-            var seriesOverrides = new Dictionary<SeriesId, SeriesOverrides>();
+            // Capture persistent series styles.
+            var seriesStyles = new Dictionary<SeriesId, SeriesStyle>();
             foreach (var series in Series.Series)
             {
-                if (series.HasLabelOverride || series.HasColorOverride)
+                seriesStyles[series.SeriesId] = new SeriesStyle
                 {
-                    seriesOverrides[series.SeriesId] = new SeriesOverrides
-                    {
-                        HasLabelOverride = series.HasLabelOverride,
-                        Label = series.Label,
-                        HasColorOverride = series.HasColorOverride,
-                        Color = series.Color
-                    };
-                }
+                    HasLabelOverride = series.HasLabelOverride,
+                    Label = series.HasLabelOverride ? series.Label : null,
+                    Color = series.Color
+                };
             }
 
             // Capture axis overrides (title, range, increment)
@@ -100,7 +102,8 @@ namespace Graphing.Editors.Presentation
                 graphTitle: Titles.HasTitleTextOverride ? Titles.TitleText : null,
                 graphSubtitle: Titles.HasSubtitleTextOverride ? Titles.SubtitleText : null,
                 legendPlacement: Legend.Position,
-                seriesOverrides: seriesOverrides,
+                seriesOrder: seriesOrder,
+                seriesStyles: seriesStyles,
                 axisOverrides: axisOverrides);
         }
 
@@ -122,34 +125,64 @@ namespace Graphing.Editors.Presentation
 
         private static SeriesEditorModel ConstructSeriesEditorModel(
             IGraphModel graphModel,
-            GraphPresentationOptions existingOptions)
+            GraphPresentationOptions existingOptions,
+            IGraphSnapshot snapshot)
         {
             var model = new SeriesEditorModel();
+            var resolvedSeriesColors = BuildResolvedSeriesColorLookup(snapshot, existingOptions);
+            var orderedSeries = GraphPresentationOptions.ResolveSeriesOrder(graphModel.Series, existingOptions.SeriesOrder);
 
-            foreach (var series in graphModel.Series)
+            foreach (var series in orderedSeries)
             {
+                var effectiveColor = Color.Black;
+                if (resolvedSeriesColors.TryGetValue(series.SeriesId, out var resolvedColor))
+                {
+                    effectiveColor = resolvedColor;
+                }
+
                 var item = new SeriesItemEditorModel(series.SeriesId)
                 {
                     IsVisible = existingOptions.HiddenSeriesIds.Contains(series.SeriesId) ? false : true,
                     HasLabelOverride = false,
                     Label = series.Label,
-                    HasColorOverride = false,
-                    Color = Color.Black
+                    Color = effectiveColor
                 };
 
-                // Load series overrides if they exist
-                if (existingOptions.SeriesOverrides.TryGetValue(series.SeriesId, out var overrides))
+                if (existingOptions.SeriesStyles.TryGetValue(series.SeriesId, out var style))
                 {
-                    item.HasLabelOverride = overrides.HasLabelOverride;
-                    item.Label = overrides.Label ?? series.Label;
-                    item.HasColorOverride = overrides.HasColorOverride;
-                    item.Color = overrides.Color;
+                    item.HasLabelOverride = style.HasLabelOverride;
+                    item.Label = style.Label ?? series.Label;
+                    item.Color = style.Color;
                 }
 
                 model.Series.Add(item);
             }
 
             return model;
+        }
+
+        private static Dictionary<SeriesId, Color> BuildResolvedSeriesColorLookup(
+            IGraphSnapshot snapshot,
+            GraphPresentationOptions existingOptions)
+        {
+            var lookup = new Dictionary<SeriesId, Color>();
+
+            if (snapshot == null)
+            {
+                return lookup;
+            }
+
+            var presentation = new GraphPresentationModel(snapshot, existingOptions);
+            for (var seriesIndex = 0; seriesIndex < presentation.Series.Count; seriesIndex++)
+            {
+                var seriesGeometry = presentation.Series[seriesIndex];
+                if (seriesGeometry != null && seriesGeometry.SeriesId != null)
+                {
+                    lookup[seriesGeometry.SeriesId] = seriesGeometry.SeriesColor;
+                }
+            }
+
+            return lookup;
         }
 
         private static AxesEditorModel ConstructAxesEditorModel(

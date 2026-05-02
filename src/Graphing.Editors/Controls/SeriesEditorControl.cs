@@ -42,7 +42,6 @@ namespace Graphing.Editors.Controls
             _hasLabelOverrideCheckBox.CheckedChanged += hasLabelOverrideCheckBox_CheckedChanged;
             _labelTextBox.TextChanged += labelTextBox_TextChanged;
 
-            _hasColorOverrideCheckBox.CheckedChanged += hasColorOverrideCheckBox_CheckedChanged;
             _pickColorButton.Click += pickColorButton_Click;
         }
 
@@ -135,23 +134,6 @@ namespace Graphing.Editors.Controls
             _seriesListBox.Refresh();
         }
 
-        private void hasColorOverrideCheckBox_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_isUpdatingUi)
-            {
-                return;
-            }
-
-            var selectedItem = GetSelectedItem();
-            if (selectedItem == null)
-            {
-                return;
-            }
-
-            selectedItem.HasColorOverride = _hasColorOverrideCheckBox.Checked;
-            _pickColorButton.Enabled = selectedItem.HasColorOverride;
-        }
-
         private void pickColorButton_Click(object sender, EventArgs e)
         {
             var selectedItem = GetSelectedItem();
@@ -184,7 +166,6 @@ namespace Graphing.Editors.Controls
                     _hasLabelOverrideCheckBox.Checked = false;
                     _labelTextBox.Text = string.Empty;
                     _labelTextBox.Enabled = false;
-                    _hasColorOverrideCheckBox.Checked = false;
                     _pickColorButton.Enabled = false;
                     _colorSwatchPanel.BackColor = SystemColors.Control;
                 }
@@ -194,8 +175,7 @@ namespace Graphing.Editors.Controls
                     _hasLabelOverrideCheckBox.Checked = selectedItem.HasLabelOverride;
                     _labelTextBox.Text = selectedItem.Label ?? string.Empty;
                     _labelTextBox.Enabled = selectedItem.HasLabelOverride;
-                    _hasColorOverrideCheckBox.Checked = selectedItem.HasColorOverride;
-                    _pickColorButton.Enabled = selectedItem.HasColorOverride;
+                    _pickColorButton.Enabled = true;
                     _colorSwatchPanel.BackColor = selectedItem.Color;
                 }
             }

@@ -13,7 +13,6 @@ namespace Graphing.Editors.EditorModels
         public bool HasLabelOverride { get; set; }
         public string Label { get; set; }
 
-        public bool HasColorOverride { get; set; }
         public Color Color { get; set; }
 
         public SeriesItemEditorModel(SeriesId seriesId)

@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
@@ -30,6 +31,19 @@ namespace Graphing.Tests
         private const int H = 600;
         private const int PixelRadius = 5;
         private const int ColorThreshold = 50;
+
+        [Test]
+        public void Renderer_DefaultSeriesLineWidth_IsTwoPixels()
+        {
+            var seriesLineWidthField = typeof(WinFormsGraphRenderer)
+                .GetField("SeriesLineWidth", BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.That(seriesLineWidthField, Is.Not.Null,
+                "Series line width constant should exist on the renderer.");
+
+            var value = (float)seriesLineWidthField.GetRawConstantValue();
+            Assert.That(value, Is.EqualTo(2.0f));
+        }
 
         [Test]
         public void SeriesPixelMapping_UsesAxisSpanNotFullPlotRect()

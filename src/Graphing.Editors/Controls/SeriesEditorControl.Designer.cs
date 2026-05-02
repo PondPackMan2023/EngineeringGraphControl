@@ -23,7 +23,6 @@ namespace Graphing.Editors.Controls
             this._rightPanel = new System.Windows.Forms.Panel();
             this._colorSwatchPanel = new System.Windows.Forms.Panel();
             this._pickColorButton = new System.Windows.Forms.Button();
-            this._hasColorOverrideCheckBox = new System.Windows.Forms.CheckBox();
             this._labelTextBox = new System.Windows.Forms.TextBox();
             this._hasLabelOverrideCheckBox = new System.Windows.Forms.CheckBox();
             this._isVisibleCheckBox = new System.Windows.Forms.CheckBox();
@@ -62,7 +61,7 @@ namespace Graphing.Editors.Controls
             this._seriesListBox.Location = new System.Drawing.Point(0, 0);
             this._seriesListBox.Name = "_seriesListBox";
             this._seriesListBox.Size = new System.Drawing.Size(188, 270);
-            this._seriesListBox.TabIndex = 1;
+            this._seriesListBox.TabIndex = 0;
             // 
             // _orderingPanel
             // 
@@ -72,7 +71,7 @@ namespace Graphing.Editors.Controls
             this._orderingPanel.Location = new System.Drawing.Point(0, 270);
             this._orderingPanel.Name = "_orderingPanel";
             this._orderingPanel.Size = new System.Drawing.Size(188, 30);
-            this._orderingPanel.TabIndex = 0;
+            this._orderingPanel.TabIndex = 1;
             // 
             // _moveDownButton
             // 
@@ -96,7 +95,6 @@ namespace Graphing.Editors.Controls
             // 
             this._rightPanel.Controls.Add(this._colorSwatchPanel);
             this._rightPanel.Controls.Add(this._pickColorButton);
-            this._rightPanel.Controls.Add(this._hasColorOverrideCheckBox);
             this._rightPanel.Controls.Add(this._labelTextBox);
             this._rightPanel.Controls.Add(this._hasLabelOverrideCheckBox);
             this._rightPanel.Controls.Add(this._isVisibleCheckBox);
@@ -109,31 +107,20 @@ namespace Graphing.Editors.Controls
             // _colorSwatchPanel
             // 
             this._colorSwatchPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this._colorSwatchPanel.Location = new System.Drawing.Point(102, 121);
+            this._colorSwatchPanel.Location = new System.Drawing.Point(102, 97);
             this._colorSwatchPanel.Name = "_colorSwatchPanel";
-            this._colorSwatchPanel.Size = new System.Drawing.Size(35, 20);
-            this._colorSwatchPanel.TabIndex = 5;
+            this._colorSwatchPanel.Size = new System.Drawing.Size(35, 25);
+            this._colorSwatchPanel.TabIndex = 4;
             // 
             // _pickColorButton
             // 
             this._pickColorButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._pickColorButton.Location = new System.Drawing.Point(10, 119);
+            this._pickColorButton.Location = new System.Drawing.Point(10, 97);
             this._pickColorButton.Name = "_pickColorButton";
             this._pickColorButton.Size = new System.Drawing.Size(86, 25);
-            this._pickColorButton.TabIndex = 4;
+            this._pickColorButton.TabIndex = 3;
             this._pickColorButton.Text = "Choose color...";
             this._pickColorButton.UseVisualStyleBackColor = true;
-            // 
-            // _hasColorOverrideCheckBox
-            // 
-            this._hasColorOverrideCheckBox.AutoSize = true;
-            this._hasColorOverrideCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this._hasColorOverrideCheckBox.Location = new System.Drawing.Point(10, 97);
-            this._hasColorOverrideCheckBox.Name = "_hasColorOverrideCheckBox";
-            this._hasColorOverrideCheckBox.Size = new System.Drawing.Size(98, 18);
-            this._hasColorOverrideCheckBox.TabIndex = 3;
-            this._hasColorOverrideCheckBox.Text = "Override color";
-            this._hasColorOverrideCheckBox.UseVisualStyleBackColor = true;
             // 
             // _labelTextBox
             // 
@@ -191,7 +178,6 @@ namespace Graphing.Editors.Controls
         private System.Windows.Forms.CheckBox _isVisibleCheckBox;
         private System.Windows.Forms.CheckBox _hasLabelOverrideCheckBox;
         private System.Windows.Forms.TextBox _labelTextBox;
-        private System.Windows.Forms.CheckBox _hasColorOverrideCheckBox;
         private System.Windows.Forms.Button _pickColorButton;
         private System.Windows.Forms.Panel _colorSwatchPanel;
         private System.Windows.Forms.ColorDialog _colorDialog;

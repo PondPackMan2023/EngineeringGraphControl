@@ -39,14 +39,14 @@ namespace Graphing.Controls.Presentation
                 }
 
                 var points = BuildPoints(seriesSnapshot.XField, seriesSnapshot.YField);
-                var paletteColor = SeriesColorPalette[result.Count % SeriesColorPalette.Length];
+                var resolvedSeriesColor = ResolveSeriesColor(seriesSnapshot, result.Count, options);
                 var geometry = new SeriesPresentationGeometry(
                     seriesSnapshot.SeriesId,
                     seriesSnapshot.Label,
                     seriesSnapshot.SeriesType,
                     ResolveConnectivity(seriesSnapshot.SeriesType),
                     points,
-                    paletteColor);
+                    resolvedSeriesColor);
 
                 result.Add(new SeriesGeometryContext(seriesSnapshot, geometry));
             }

@@ -9,13 +9,12 @@ using UnitRegistry;
 namespace Graphing.Controls.Presentation
 {
     /// <summary>
-    /// Holds series-specific presentation overrides.
+    /// Holds persistent per-series presentation style.
     /// </summary>
-    public sealed class SeriesOverrides
+    public sealed class SeriesStyle
     {
         public bool HasLabelOverride { get; set; }
         public string Label { get; set; }
-        public bool HasColorOverride { get; set; }
         public Color Color { get; set; }
     }
 
@@ -38,6 +37,26 @@ namespace Graphing.Controls.Presentation
     /// </summary>
     public sealed class GraphPresentationOptions
     {
+        private static readonly Color[] DefaultSeriesColorPalette =
+        {
+            Color.FromArgb(0, 0, 255),
+            Color.FromArgb(255, 0, 0),
+            Color.FromArgb(0, 128, 0),
+            Color.FromArgb(255, 0, 255),
+            Color.FromArgb(0, 255, 255),
+            Color.FromArgb(128, 0, 0),
+            Color.FromArgb(0, 255, 0),
+            Color.FromArgb(128, 128, 0),
+            Color.FromArgb(128, 0, 128),
+            Color.FromArgb(0, 128, 128),
+            Color.FromArgb(255, 215, 0),
+            Color.FromArgb(64, 224, 208),
+            Color.FromArgb(160, 32, 240),
+            Color.FromArgb(154, 205, 50),
+            Color.FromArgb(255, 192, 203),
+            Color.FromArgb(255, 165, 0),
+        };
+
         private static readonly ISet<Dimension> DefaultDenseNumericYAxisExcludedDimensionsSet =
             new HashSet<Dimension>
             {
@@ -49,7 +68,8 @@ namespace Graphing.Controls.Presentation
         private readonly HashSet<AxisId> _hiddenAxisIds;
         private readonly HashSet<AxisId> _hiddenAxisGridLineIds;
         private readonly IReadOnlyList<AnnotationSemantic> _annotations;
-        private readonly IReadOnlyDictionary<SeriesId, SeriesOverrides> _seriesOverrides;
+        private readonly IReadOnlyList<SeriesId> _seriesOrder;
+        private readonly IReadOnlyDictionary<SeriesId, SeriesStyle> _seriesStyles;
         private readonly IReadOnlyDictionary<AxisId, AxisOverrides> _axisOverrides;
         private readonly bool _enableDenseNumericYAxisTicks;
         private readonly ISet<Dimension> _denseNumericYAxisExcludedDimensions;
@@ -66,7 +86,8 @@ namespace Graphing.Controls.Presentation
             AxisEndpointInsetMode axisEndpointInsetMode = AxisEndpointInsetMode.Auto,
             double axisEndpointInsetFixedValue = 0.01,
             IEnumerable<AxisId> hiddenAxisGridLineIds = null,
-            IDictionary<SeriesId, SeriesOverrides> seriesOverrides = null,
+            IEnumerable<SeriesId> seriesOrder = null,
+            IDictionary<SeriesId, SeriesStyle> seriesStyles = null,
             IDictionary<AxisId, AxisOverrides> axisOverrides = null,
             bool enableDenseNumericYAxisTicks = true,
             ISet<Dimension> denseNumericYAxisExcludedDimensions = null)
@@ -83,9 +104,12 @@ namespace Graphing.Controls.Presentation
                 ? [.. hiddenAxisGridLineIds]
                 : new HashSet<AxisId>();
 
-            _seriesOverrides = seriesOverrides != null
-                ? new ReadOnlyDictionary<SeriesId, SeriesOverrides>(seriesOverrides)
-                : new ReadOnlyDictionary<SeriesId, SeriesOverrides>(new Dictionary<SeriesId, SeriesOverrides>());
+            _seriesOrder = new ReadOnlyCollection<SeriesId>(
+                [.. seriesOrder ?? []]);
+
+            _seriesStyles = seriesStyles != null
+                ? new ReadOnlyDictionary<SeriesId, SeriesStyle>(seriesStyles)
+                : new ReadOnlyDictionary<SeriesId, SeriesStyle>(new Dictionary<SeriesId, SeriesStyle>());
 
             _axisOverrides = axisOverrides != null
                 ? new ReadOnlyDictionary<AxisId, AxisOverrides>(axisOverrides)
@@ -135,9 +159,14 @@ namespace Graphing.Controls.Presentation
 
         public IReadOnlyCollection<SeriesId> HiddenSeriesIds { get; }
 
-        public IReadOnlyDictionary<SeriesId, SeriesOverrides> SeriesOverrides
+        public IReadOnlyList<SeriesId> SeriesOrder
         {
-            get { return _seriesOverrides; }
+            get { return _seriesOrder; }
+        }
+
+        public IReadOnlyDictionary<SeriesId, SeriesStyle> SeriesStyles
+        {
+            get { return _seriesStyles; }
         }
 
         public IReadOnlyDictionary<AxisId, AxisOverrides> AxisOverrides
@@ -158,6 +187,157 @@ namespace Graphing.Controls.Presentation
         internal static ISet<Dimension> CreateDefaultDenseNumericYAxisExcludedDimensions()
         {
             return new HashSet<Dimension>(DefaultDenseNumericYAxisExcludedDimensionsSet);
+        }
+
+        public static Color GetDefaultSeriesColor(int index)
+        {
+            return DefaultSeriesColorPalette[index % DefaultSeriesColorPalette.Length];
+        }
+
+        public static IReadOnlyList<IGraphSeriesModel> ResolveSeriesOrder(
+            IReadOnlyList<IGraphSeriesModel> graphSeries,
+            IReadOnlyList<SeriesId> seriesOrder)
+        {
+            var orderedSeries = new List<IGraphSeriesModel>();
+            if (graphSeries == null || graphSeries.Count == 0)
+            {
+                return orderedSeries;
+            }
+
+            var remainingSeriesById = new Dictionary<SeriesId, IGraphSeriesModel>();
+            for (var index = 0; index < graphSeries.Count; index++)
+            {
+                var series = graphSeries[index];
+                if (series != null && series.SeriesId != null && !remainingSeriesById.ContainsKey(series.SeriesId))
+                {
+                    remainingSeriesById.Add(series.SeriesId, series);
+                }
+            }
+
+            if (seriesOrder != null)
+            {
+                for (var index = 0; index < seriesOrder.Count; index++)
+                {
+                    var seriesId = seriesOrder[index];
+                    if (seriesId == null)
+                    {
+                        continue;
+                    }
+
+                    if (remainingSeriesById.TryGetValue(seriesId, out var orderedMatch))
+                    {
+                        orderedSeries.Add(orderedMatch);
+                        remainingSeriesById.Remove(seriesId);
+                    }
+                }
+            }
+
+            for (var index = 0; index < graphSeries.Count; index++)
+            {
+                var series = graphSeries[index];
+                if (series == null || series.SeriesId == null)
+                {
+                    continue;
+                }
+
+                if (remainingSeriesById.ContainsKey(series.SeriesId))
+                {
+                    orderedSeries.Add(series);
+                    remainingSeriesById.Remove(series.SeriesId);
+                }
+            }
+
+            return orderedSeries;
+        }
+
+        public static GraphPresentationOptions EnsureSeriesStyles(
+            IGraphModel graphModel,
+            GraphPresentationOptions options)
+        {
+            options = options ?? new GraphPresentationOptions();
+
+            var graphSeries = graphModel != null ? graphModel.Series : null;
+            if (graphSeries == null || graphSeries.Count == 0)
+            {
+                return options;
+            }
+
+            var orderedSeries = ResolveSeriesOrder(graphSeries, options.SeriesOrder);
+            var seriesStyles = new Dictionary<SeriesId, SeriesStyle>();
+            var nextPaletteIndex = 0;
+
+            if (options.SeriesStyles != null)
+            {
+                foreach (var existingStyle in options.SeriesStyles)
+                {
+                    if (existingStyle.Key == null || existingStyle.Value == null)
+                    {
+                        continue;
+                    }
+
+                    seriesStyles[existingStyle.Key] = new SeriesStyle
+                    {
+                        HasLabelOverride = existingStyle.Value.HasLabelOverride,
+                        Label = existingStyle.Value.Label,
+                        Color = existingStyle.Value.Color
+                    };
+                    nextPaletteIndex++;
+                }
+            }
+
+            for (var index = 0; index < orderedSeries.Count; index++)
+            {
+                var series = orderedSeries[index];
+                if (series == null || series.SeriesId == null || seriesStyles.ContainsKey(series.SeriesId))
+                {
+                    continue;
+                }
+
+                seriesStyles[series.SeriesId] = new SeriesStyle
+                {
+                    HasLabelOverride = false,
+                    Label = null,
+                    Color = GetDefaultSeriesColor(nextPaletteIndex)
+                };
+                nextPaletteIndex++;
+            }
+
+            return new GraphPresentationOptions(
+                hiddenSeriesIds: options.HiddenSeriesIds,
+                hiddenAxisIds: options.HiddenAxisIds,
+                graphTitle: options.GraphTitle,
+                graphSubtitle: options.GraphSubtitle,
+                annotations: options.Annotations,
+                showGraphBorder: options.ShowGraphBorder,
+                legendPlacement: options.LegendPlacement,
+                resizeChart: options.ResizeChart,
+                axisEndpointInsetMode: options.AxisEndpointInsetMode,
+                axisEndpointInsetFixedValue: options.AxisEndpointInsetFixedValue,
+                hiddenAxisGridLineIds: options.HiddenAxisGridLineIds,
+                seriesOrder: options.SeriesOrder,
+                seriesStyles: seriesStyles,
+                axisOverrides: CloneAxisOverrides(options.AxisOverrides),
+                enableDenseNumericYAxisTicks: options.EnableDenseNumericYAxisTicks,
+                denseNumericYAxisExcludedDimensions: options.DenseNumericYAxisExcludedDimensions != null
+                    ? new HashSet<Dimension>(options.DenseNumericYAxisExcludedDimensions)
+                    : null);
+        }
+
+        private static IDictionary<AxisId, AxisOverrides> CloneAxisOverrides(
+            IReadOnlyDictionary<AxisId, AxisOverrides> axisOverrides)
+        {
+            if (axisOverrides == null)
+            {
+                return null;
+            }
+
+            var clone = new Dictionary<AxisId, AxisOverrides>();
+            foreach (var axisOverride in axisOverrides)
+            {
+                clone[axisOverride.Key] = axisOverride.Value;
+            }
+
+            return clone;
         }
 
         public bool IsSeriesVisible(ISeriesSnapshot series)

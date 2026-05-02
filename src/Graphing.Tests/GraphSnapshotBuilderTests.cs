@@ -27,5 +27,112 @@ namespace Graphing.Tests
                     .With.Message.Contains("duplicate AxisId")
                     .And.Message.Contains("axis-duplicate"));
         }
+
+        [Test]
+        public void Build_AppliesSeriesOrder_FromPresentationOptions()
+        {
+            var model = CreateGraphModelWithMultipleSeries();
+            var options = new Graphing.Controls.Presentation.GraphPresentationOptions(
+                seriesOrder: new[]
+                {
+                    new SeriesId("series-3"),
+                    new SeriesId("series-1"),
+                    new SeriesId("series-2")
+                });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model, options);
+
+            Assert.That(snapshot.Series[0].SeriesId, Is.EqualTo(new SeriesId("series-3")));
+            Assert.That(snapshot.Series[1].SeriesId, Is.EqualTo(new SeriesId("series-1")));
+            Assert.That(snapshot.Series[2].SeriesId, Is.EqualTo(new SeriesId("series-2")));
+        }
+
+        [Test]
+        public void Build_IgnoresUnknownSeriesIds_AndAppendsNewSeriesInModelOrder()
+        {
+            var model = CreateGraphModelWithFourSeries();
+            var options = new Graphing.Controls.Presentation.GraphPresentationOptions(
+                seriesOrder: new[]
+                {
+                    new SeriesId("series-2"),
+                    new SeriesId("missing-series"),
+                    new SeriesId("series-1")
+                });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model, options);
+
+            Assert.That(snapshot.Series[0].SeriesId, Is.EqualTo(new SeriesId("series-2")));
+            Assert.That(snapshot.Series[1].SeriesId, Is.EqualTo(new SeriesId("series-1")));
+            Assert.That(snapshot.Series[2].SeriesId, Is.EqualTo(new SeriesId("series-3")));
+            Assert.That(snapshot.Series[3].SeriesId, Is.EqualTo(new SeriesId("series-4")));
+        }
+
+        [Test]
+        public void PresentationAndLegend_FollowSnapshotSeriesOrder()
+        {
+            var model = CreateGraphModelWithMultipleSeries();
+            var options = new Graphing.Controls.Presentation.GraphPresentationOptions(
+                seriesOrder: new[]
+                {
+                    new SeriesId("series-2"),
+                    new SeriesId("series-3"),
+                    new SeriesId("series-1")
+                });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model, options);
+            var presentation = new Graphing.Controls.Presentation.GraphPresentationModel(snapshot, options);
+
+            Assert.That(presentation.Series[0].SeriesId, Is.EqualTo(new SeriesId("series-2")));
+            Assert.That(presentation.Series[1].SeriesId, Is.EqualTo(new SeriesId("series-3")));
+            Assert.That(presentation.Series[2].SeriesId, Is.EqualTo(new SeriesId("series-1")));
+            Assert.That(presentation.Layout.Legend, Is.Not.Null);
+            Assert.That(presentation.Layout.Legend.Entries[0].SeriesId, Is.EqualTo(new SeriesId("series-2")));
+            Assert.That(presentation.Layout.Legend.Entries[1].SeriesId, Is.EqualTo(new SeriesId("series-3")));
+            Assert.That(presentation.Layout.Legend.Entries[2].SeriesId, Is.EqualTo(new SeriesId("series-1")));
+        }
+
+        private static IGraphModel CreateGraphModelWithMultipleSeries()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
+            var yField1 = new TestFieldDefinition("Y1", "y1", unit, new[] { 0d, 1d });
+            var yField2 = new TestFieldDefinition("Y2", "y2", unit, new[] { 2d, 3d });
+            var yField3 = new TestFieldDefinition("Y3", "y3", unit, new[] { 4d, 5d });
+
+            return new GraphModel(
+                new[] { xAxis, yAxis },
+                new IGraphSeriesModel[]
+                {
+                    new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField1, xAxis, yAxis),
+                    new GraphSeriesModel(new SeriesId("series-2"), "series-2", SeriesType.Line, xField, yField2, xAxis, yAxis),
+                    new GraphSeriesModel(new SeriesId("series-3"), "series-3", SeriesType.Line, xField, yField3, xAxis, yAxis)
+                });
+        }
+
+        private static IGraphModel CreateGraphModelWithFourSeries()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
+            var yField1 = new TestFieldDefinition("Y1", "y1", unit, new[] { 0d, 1d });
+            var yField2 = new TestFieldDefinition("Y2", "y2", unit, new[] { 2d, 3d });
+            var yField3 = new TestFieldDefinition("Y3", "y3", unit, new[] { 4d, 5d });
+            var yField4 = new TestFieldDefinition("Y4", "y4", unit, new[] { 6d, 7d });
+
+            return new GraphModel(
+                new[] { xAxis, yAxis },
+                new IGraphSeriesModel[]
+                {
+                    new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField1, xAxis, yAxis),
+                    new GraphSeriesModel(new SeriesId("series-2"), "series-2", SeriesType.Line, xField, yField2, xAxis, yAxis),
+                    new GraphSeriesModel(new SeriesId("series-3"), "series-3", SeriesType.Line, xField, yField3, xAxis, yAxis),
+                    new GraphSeriesModel(new SeriesId("series-4"), "series-4", SeriesType.Line, xField, yField4, xAxis, yAxis)
+                });
+        }
     }
 }

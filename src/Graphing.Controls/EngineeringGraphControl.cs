@@ -3,6 +3,7 @@ using Graphing.Controls.Presentation;
 using Graphing.Controls.Rendering;
 using Graphing.Controls.Snapshot;
 using System;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace Graphing.Controls
@@ -63,6 +64,7 @@ namespace Graphing.Controls
             {
                 var snapshotBuilder = new GraphSnapshotBuilder();
                 _graphModel = graphModel;
+                options = GraphPresentationOptions.EnsureSeriesStyles(graphModel, options);
                 var nextSnapshot = graphModel == null
                     ? null
                     : snapshotBuilder.Build(graphModel, options);
@@ -74,6 +76,9 @@ namespace Graphing.Controls
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
 
             GraphPresentationModel presentation;
             GraphPresentationOptions options;
