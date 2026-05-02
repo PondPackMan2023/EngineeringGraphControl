@@ -116,10 +116,13 @@ namespace Graphing.Controls.Presentation
                         orientation,
                         title,
                         axisSnapshot.FormatterName,
+                        formatter,
+                        axisSnapshot.Unit,
                         axisSnapshot.DisplayUnitLabel,
                         axisSnapshot.MinimumValue,
                         axisSnapshot.MaximumValue,
                         axisSnapshot.MajorTickStride,
+                        DefaultAxisLineThickness,
                         linePoints,
                         ticks));
             }

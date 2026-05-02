@@ -1,8 +1,10 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
+using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 using NUnit.Framework;
 using UnitRegistry;
@@ -2775,9 +2777,601 @@ namespace Graphing.Tests
             }
         }
 
+        [Test]
+        public void AxisHitRegions_AreGenerated_OnePerRenderedAxis()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            Assert.That(presentation.Layout.AxisHitRegions.Count, Is.EqualTo(presentation.Layout.Axes.Count));
+
+            for (var i = 0; i < presentation.Layout.Axes.Count; i++)
+            {
+                var axisEntry = presentation.Layout.Axes[i];
+                var hitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == axisEntry.Axis.AxisId);
+
+                Assert.That(hitRegion.Side, Is.EqualTo(axisEntry.Side));
+                Assert.That(hitRegion.Orientation, Is.EqualTo(axisEntry.Axis.Orientation));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_TrackAxisSpineSpan_ForHorizontalAndVerticalAxes()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var plotArea = presentation.Layout.PlotArea;
+            var plotHeight = plotArea.TopRight.Y - plotArea.BottomLeft.Y;
+
+            for (var i = 0; i < presentation.Layout.Axes.Count; i++)
+            {
+                var axisEntry = presentation.Layout.Axes[i];
+                var hitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == axisEntry.Axis.AxisId);
+
+                if (axisEntry.Axis.Orientation == PresentationAxisOrientation.Horizontal)
+                {
+                    Assert.That(hitRegion.BottomLeft.X, Is.EqualTo(plotArea.BottomLeft.X).Within(1e-12));
+                    Assert.That(hitRegion.TopRight.X, Is.EqualTo(plotArea.TopRight.X).Within(1e-12));
+                    continue;
+                }
+
+                if (axisEntry.Side == PresentationAxisSide.Left)
+                {
+                    var expectedBottom = plotArea.BottomLeft.Y + (plotHeight * axisEntry.NormalizedSpanStart);
+                    var expectedTop = plotArea.BottomLeft.Y + (plotHeight * axisEntry.NormalizedSpanEnd);
+
+                    Assert.That(hitRegion.BottomLeft.Y, Is.EqualTo(expectedBottom).Within(1e-12));
+                    Assert.That(hitRegion.TopRight.Y, Is.EqualTo(expectedTop).Within(1e-12));
+                    continue;
+                }
+
+                Assert.That(hitRegion.BottomLeft.Y, Is.EqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+                Assert.That(hitRegion.TopRight.Y, Is.EqualTo(plotArea.TopRight.Y).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_Thickness_IsDerivedFromAxisLineThickness()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
+            {
+                var hitRegion = presentation.Layout.AxisHitRegions[i];
+                var visualHalfThickness = hitRegion.AxisLineThickness * 0.5d;
+                Assert.That(hitRegion.HalfHitThickness, Is.GreaterThanOrEqualTo(visualHalfThickness).Within(1e-12));
+
+                var realizedThickness = hitRegion.Orientation == PresentationAxisOrientation.Horizontal
+                    ? hitRegion.TopRight.Y - hitRegion.BottomLeft.Y
+                    : hitRegion.TopRight.X - hitRegion.BottomLeft.X;
+
+                Assert.That(realizedThickness, Is.EqualTo(hitRegion.HalfHitThickness * 2d).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_XAxisErgonomicTolerance_HitsSlightlyAboveAndBelowAxisLine()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var xRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var centerX = (xRegion.BottomLeft.X + xRegion.TopRight.X) * 0.5d;
+            var centerY = (xRegion.BottomLeft.Y + xRegion.TopRight.Y) * 0.5d;
+
+            var above = centerY + (xRegion.HalfHitThickness * 0.8d);
+            var below = centerY - (xRegion.HalfHitThickness * 0.8d);
+
+            Assert.That(presentation.ResolveHitAxisId(centerX, above), Is.EqualTo("x-axis"));
+            Assert.That(presentation.ResolveHitAxisId(centerX, below), Is.EqualTo("x-axis"));
+        }
+
+        [Test]
+        public void AxisHitRegions_YAxisBehavior_DoesNotRegress_ForCenterHits()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var yRegions = presentation.Layout.AxisHitRegions
+                .Where(r => r.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+
+            Assert.That(yRegions.Length, Is.GreaterThan(0));
+
+            for (var i = 0; i < yRegions.Length; i++)
+            {
+                var region = yRegions[i];
+                var centerX = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                var centerY = (region.BottomLeft.Y + region.TopRight.Y) * 0.5d;
+                Assert.That(presentation.ResolveHitAxisId(centerX, centerY), Is.EqualTo(region.AxisId));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_Geometry_IsDeterministicAcrossRepeatedBuilds()
+        {
+            var first = CreatePresentationWithBottomAndMultipleYAxes();
+            var second = CreatePresentationWithBottomAndMultipleYAxes();
+
+            Assert.That(second.Layout.AxisHitRegions.Count, Is.EqualTo(first.Layout.AxisHitRegions.Count));
+
+            for (var i = 0; i < first.Layout.AxisHitRegions.Count; i++)
+            {
+                var a = first.Layout.AxisHitRegions[i];
+                var b = second.Layout.AxisHitRegions[i];
+
+                Assert.That(b.AxisId, Is.EqualTo(a.AxisId));
+                Assert.That(b.Orientation, Is.EqualTo(a.Orientation));
+                Assert.That(b.Side, Is.EqualTo(a.Side));
+                Assert.That(b.HalfHitThickness, Is.EqualTo(a.HalfHitThickness).Within(1e-12));
+                Assert.That(b.BottomLeft.X, Is.EqualTo(a.BottomLeft.X).Within(1e-12));
+                Assert.That(b.BottomLeft.Y, Is.EqualTo(a.BottomLeft.Y).Within(1e-12));
+                Assert.That(b.TopRight.X, Is.EqualTo(a.TopRight.X).Within(1e-12));
+                Assert.That(b.TopRight.Y, Is.EqualTo(a.TopRight.Y).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitRegions_DoNotInteriorOverlap_AcrossRenderedAxes()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var hitRegions = presentation.Layout.AxisHitRegions;
+
+            for (var i = 0; i < hitRegions.Count; i++)
+            {
+                for (var j = i + 1; j < hitRegions.Count; j++)
+                {
+                    var a = hitRegions[i];
+                    var b = hitRegions[j];
+
+                    var overlapWidth = Math.Min(a.TopRight.X, b.TopRight.X) - Math.Max(a.BottomLeft.X, b.BottomLeft.X);
+                    var overlapHeight = Math.Min(a.TopRight.Y, b.TopRight.Y) - Math.Max(a.BottomLeft.Y, b.BottomLeft.Y);
+
+                    Assert.That(
+                        overlapWidth <= 1e-12 || overlapHeight <= 1e-12,
+                        Is.True,
+                        $"Axis hit regions '{a.AxisId}' and '{b.AxisId}' must not have interior overlap.");
+                }
+            }
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_XAxis_CapturesPointsAroundAxisLine_AboveAndBelow()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var visual = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var affordance = presentation.Layout.AxisInteractionAffordanceRegions.Single(r => r.AxisId == "x-axis");
+            var plotArea = presentation.Layout.PlotArea;
+
+            var centerX = (visual.BottomLeft.X + visual.TopRight.X) * 0.5d;
+            var probeAboveY = visual.TopRight.Y + ((affordance.TopRight.Y - visual.TopRight.Y) * 0.6d);
+            var probeBelowY = plotArea.BottomLeft.Y - ((plotArea.BottomLeft.Y - affordance.BottomLeft.Y) * 0.6d);
+
+            Assert.That(probeAboveY, Is.GreaterThan(visual.TopRight.Y));
+            Assert.That(probeAboveY, Is.LessThanOrEqualTo(affordance.TopRight.Y));
+            Assert.That(probeBelowY, Is.LessThan(plotArea.BottomLeft.Y));
+            Assert.That(probeBelowY, Is.GreaterThanOrEqualTo(affordance.BottomLeft.Y));
+
+            Assert.That(presentation.ResolveHitAxisId(centerX, probeAboveY), Is.EqualTo("x-axis"));
+            Assert.That(presentation.ResolveHitAxisId(centerX, probeBelowY), Is.EqualTo("x-axis"));
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_YAxes_RemainPredictableAtRegionCenters()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var yAffordances = presentation.Layout.AxisInteractionAffordanceRegions
+                .Where(r => r.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+
+            Assert.That(yAffordances.Length, Is.GreaterThan(0));
+
+            for (var i = 0; i < yAffordances.Length; i++)
+            {
+                var region = yAffordances[i];
+                var centerX = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                var centerY = (region.BottomLeft.Y + region.TopRight.Y) * 0.5d;
+                Assert.That(presentation.ResolveHitAxisId(centerX, centerY), Is.EqualTo(region.AxisId));
+            }
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_XAxis_CanHitOutsideBottomAxisBand()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var plotArea = presentation.Layout.PlotArea;
+            var xHitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var xAffordance = presentation.Layout.AxisInteractionAffordanceRegions.Single(r => r.AxisId == "x-axis");
+            var probeX = (xAffordance.BottomLeft.X + xAffordance.TopRight.X) * 0.5d;
+            var probeY = (plotArea.BottomLeft.Y + xAffordance.TopRight.Y) * 0.5d;
+
+            Assert.That(xHitRegion.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12), "Visual bottom-axis hit region should remain in layout-owned band.");
+            Assert.That(probeY, Is.GreaterThan(plotArea.BottomLeft.Y), "Probe should be outside the bottom axis band and inside plot space.");
+            Assert.That(probeY, Is.LessThanOrEqualTo(xAffordance.TopRight.Y).Within(1e-12));
+            Assert.That(presentation.ResolveHitAxisId(probeX, probeY), Is.EqualTo("x-axis"));
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_Extension_DoesNotChangeLayoutOwnedGeometry()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var plotArea = presentation.Layout.PlotArea;
+            var xHitRegion = presentation.Layout.AxisHitRegions.Single(r => r.AxisId == "x-axis");
+            var xAffordance = presentation.Layout.AxisInteractionAffordanceRegions.Single(r => r.AxisId == "x-axis");
+
+            Assert.That(plotArea.BottomLeft.X, Is.GreaterThan(0d));
+            Assert.That(plotArea.BottomLeft.Y, Is.GreaterThan(0d));
+            Assert.That(plotArea.TopRight.X, Is.LessThan(1d));
+            Assert.That(plotArea.TopRight.Y, Is.LessThan(1d));
+
+            Assert.That(xHitRegion.TopRight.Y, Is.LessThanOrEqualTo(plotArea.BottomLeft.Y).Within(1e-12));
+            Assert.That(xAffordance.TopRight.Y, Is.GreaterThan(plotArea.BottomLeft.Y), "Affordance should be allowed to extend beyond layout-owned band geometry.");
+        }
+
+        [Test]
+        public void AxisInteractionAffordance_Geometry_IsDeterministicAcrossRepeatedBuilds()
+        {
+            var first = CreatePresentationWithBottomAndMultipleYAxes();
+            var second = CreatePresentationWithBottomAndMultipleYAxes();
+
+            var a = first.Layout.AxisInteractionAffordanceRegions;
+            var b = second.Layout.AxisInteractionAffordanceRegions;
+
+            Assert.That(b.Count, Is.EqualTo(a.Count));
+
+            for (var i = 0; i < a.Count; i++)
+            {
+                Assert.That(b[i].AxisId, Is.EqualTo(a[i].AxisId));
+                Assert.That(b[i].Side, Is.EqualTo(a[i].Side));
+                Assert.That(b[i].Orientation, Is.EqualTo(a[i].Orientation));
+                Assert.That(b[i].BottomLeft.X, Is.EqualTo(a[i].BottomLeft.X).Within(1e-12));
+                Assert.That(b[i].BottomLeft.Y, Is.EqualTo(a[i].BottomLeft.Y).Within(1e-12));
+                Assert.That(b[i].TopRight.X, Is.EqualTo(a[i].TopRight.X).Within(1e-12));
+                Assert.That(b[i].TopRight.Y, Is.EqualTo(a[i].TopRight.Y).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisHitQuery_PointInsideEachAxisRegion_ResolvesCorrectAxis()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
+            {
+                var region = presentation.Layout.AxisHitRegions[i];
+                var x = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                var y = (region.BottomLeft.Y + region.TopRight.Y) * 0.5d;
+
+                var resolvedAxisId = presentation.ResolveHitAxisId(x, y);
+                var resolvedAxis = presentation.ResolveHitAxis(x, y);
+
+                Assert.That(resolvedAxisId, Is.EqualTo(region.AxisId));
+                Assert.That(resolvedAxis, Is.Not.Null);
+                Assert.That(resolvedAxis.Axis.AxisId, Is.EqualTo(region.AxisId));
+            }
+        }
+
+        [Test]
+        public void AxisHitQuery_PointOutsideAllRegions_ReturnsNoHit()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var point = new GeometryPoint3D(0.5d, 0.5d, 0d);
+
+            Assert.That(presentation.ResolveHitAxisId(point), Is.Null);
+            Assert.That(presentation.ResolveHitAxis(point), Is.Null);
+        }
+
+        [Test]
+        public void AxisHitQuery_SharedBorder_UsesDeterministicStableOrdering()
+        {
+            var synthetic = CreateSyntheticLayoutWithSharedBorderRegions();
+            var point = new GeometryPoint3D(0.20d, 0.15d, 0d);
+
+            var resolvedAxisId = synthetic.ResolveHitAxisId(point);
+            var resolvedRegion = synthetic.ResolveHitAxisRegion(point);
+
+            Assert.That(resolvedAxisId, Is.EqualTo("axis-a"));
+            Assert.That(resolvedRegion, Is.Not.Null);
+            Assert.That(resolvedRegion.AxisId, Is.EqualTo("axis-a"));
+        }
+
+        [Test]
+        public void AxisHitQuery_StackedLeftAxes_ResolveIndependently()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var leftRegions = presentation.Layout.AxisHitRegions
+                .Where(r => r.Side == PresentationAxisSide.Left)
+                .OrderByDescending(r => r.BottomLeft.Y)
+                .ToArray();
+
+            Assert.That(leftRegions.Length, Is.GreaterThanOrEqualTo(2));
+
+            var upperCenter = new GeometryPoint3D(
+                (leftRegions[0].BottomLeft.X + leftRegions[0].TopRight.X) * 0.5d,
+                (leftRegions[0].BottomLeft.Y + leftRegions[0].TopRight.Y) * 0.5d,
+                0d);
+            var lowerCenter = new GeometryPoint3D(
+                (leftRegions[1].BottomLeft.X + leftRegions[1].TopRight.X) * 0.5d,
+                (leftRegions[1].BottomLeft.Y + leftRegions[1].TopRight.Y) * 0.5d,
+                0d);
+
+            Assert.That(presentation.ResolveHitAxisId(upperCenter), Is.EqualTo(leftRegions[0].AxisId));
+            Assert.That(presentation.ResolveHitAxisId(lowerCenter), Is.EqualTo(leftRegions[1].AxisId));
+            Assert.That(leftRegions[0].AxisId, Is.Not.EqualTo(leftRegions[1].AxisId));
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_ContainsCorrectAxisMetadata()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
+            {
+                var region = presentation.Layout.AxisHitRegions[i];
+                var point = new GeometryPoint3D(
+                    (region.BottomLeft.X + region.TopRight.X) * 0.5d,
+                    (region.BottomLeft.Y + region.TopRight.Y) * 0.5d,
+                    0d);
+
+                var descriptor = presentation.ResolveAxisInteraction(point);
+                var layoutEntry = presentation.Layout.Axes.Single(a => a.Axis.AxisId == region.AxisId);
+
+                Assert.That(descriptor, Is.Not.Null);
+                Assert.That(descriptor.AxisId, Is.EqualTo(layoutEntry.Axis.AxisId));
+                Assert.That(descriptor.Orientation, Is.EqualTo(layoutEntry.Axis.Orientation));
+                Assert.That(descriptor.Side, Is.EqualTo(layoutEntry.Side));
+                Assert.That(descriptor.SideIndex, Is.EqualTo(layoutEntry.SideIndex));
+            }
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_NormalizedPositionAlongAxis_IsProjectedCorrectly()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+
+            for (var i = 0; i < presentation.Layout.AxisHitRegions.Count; i++)
+            {
+                var region = presentation.Layout.AxisHitRegions[i];
+
+                if (region.Orientation == PresentationAxisOrientation.Horizontal)
+                {
+                    var atStart = presentation.ResolveAxisInteraction(region.BottomLeft.X, (region.BottomLeft.Y + region.TopRight.Y) * 0.5d);
+                    var atMiddle = presentation.ResolveAxisInteraction((region.BottomLeft.X + region.TopRight.X) * 0.5d, (region.BottomLeft.Y + region.TopRight.Y) * 0.5d);
+                    var atEnd = presentation.ResolveAxisInteraction(region.TopRight.X, (region.BottomLeft.Y + region.TopRight.Y) * 0.5d);
+
+                    Assert.That(atStart.NormalizedPositionAlongAxis, Is.EqualTo(0d).Within(1e-12));
+                    Assert.That(atMiddle.NormalizedPositionAlongAxis, Is.EqualTo(0.5d).Within(1e-12));
+                    Assert.That(atEnd.NormalizedPositionAlongAxis, Is.EqualTo(1d).Within(1e-12));
+                }
+                else
+                {
+                    var centerX = (region.BottomLeft.X + region.TopRight.X) * 0.5d;
+                    var atStart = presentation.ResolveAxisInteraction(centerX, region.BottomLeft.Y);
+                    var atMiddle = presentation.ResolveAxisInteraction(centerX, (region.BottomLeft.Y + region.TopRight.Y) * 0.5d);
+                    var atEnd = presentation.ResolveAxisInteraction(centerX, region.TopRight.Y);
+
+                    Assert.That(atStart.NormalizedPositionAlongAxis, Is.EqualTo(0d).Within(1e-12));
+                    Assert.That(atMiddle.NormalizedPositionAlongAxis, Is.EqualTo(0.5d).Within(1e-12));
+                    Assert.That(atEnd.NormalizedPositionAlongAxis, Is.EqualTo(1d).Within(1e-12));
+                }
+            }
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_Query_IsDeterministicAcrossRepeatedInvocations()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var region = presentation.Layout.AxisHitRegions.First();
+            var point = new GeometryPoint3D(
+                (region.BottomLeft.X + region.TopRight.X) * 0.5d,
+                (region.BottomLeft.Y + region.TopRight.Y) * 0.5d,
+                0d);
+
+            var first = presentation.ResolveAxisInteraction(point);
+            for (var i = 0; i < 10; i++)
+            {
+                var current = presentation.ResolveAxisInteraction(point);
+                Assert.That(current.AxisId, Is.EqualTo(first.AxisId));
+                Assert.That(current.Orientation, Is.EqualTo(first.Orientation));
+                Assert.That(current.Side, Is.EqualTo(first.Side));
+                Assert.That(current.SideIndex, Is.EqualTo(first.SideIndex));
+                Assert.That(current.NormalizedPositionAlongAxis, Is.EqualTo(first.NormalizedPositionAlongAxis).Within(1e-12));
+                Assert.That(ReferenceEquals(current.NumericFormatter, first.NumericFormatter), Is.True);
+            }
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_NumericAxes_ExposeNonNullFormatter()
+        {
+            var presentation = CreatePresentationWithFormattedBottomAndMultipleYAxes();
+            var yRegions = presentation.Layout.AxisHitRegions
+                .Where(r => r.Orientation == PresentationAxisOrientation.Vertical)
+                .ToArray();
+
+            Assert.That(yRegions.Length, Is.GreaterThan(0));
+
+            for (var i = 0; i < yRegions.Length; i++)
+            {
+                var region = yRegions[i];
+                var descriptor = presentation.ResolveAxisInteraction(
+                    (region.BottomLeft.X + region.TopRight.X) * 0.5d,
+                    (region.BottomLeft.Y + region.TopRight.Y) * 0.5d);
+
+                Assert.That(descriptor, Is.Not.Null);
+                Assert.That(descriptor.NumericFormatter, Is.Not.Null);
+            }
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_Formatter_ProducesExpectedOutput()
+        {
+            var presentation = CreatePresentationWithFormattedBottomAndMultipleYAxes();
+            var leftRegion = presentation.Layout.AxisHitRegions.First(r => r.AxisId == "y-left-1");
+            var descriptor = presentation.ResolveAxisInteraction(
+                (leftRegion.BottomLeft.X + leftRegion.TopRight.X) * 0.5d,
+                (leftRegion.BottomLeft.Y + leftRegion.TopRight.Y) * 0.5d);
+
+            Assert.That(descriptor, Is.Not.Null);
+            Assert.That(descriptor.NumericFormatter, Is.Not.Null);
+            Assert.That(descriptor.NumericFormatter.Format(12.3456d), Is.EqualTo("12.35"));
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_FormatterReference_IsStableAcrossRepeatedQueries()
+        {
+            var presentation = CreatePresentationWithFormattedBottomAndMultipleYAxes();
+            var leftRegion = presentation.Layout.AxisHitRegions.First(r => r.AxisId == "y-left-1");
+            var point = new GeometryPoint3D(
+                (leftRegion.BottomLeft.X + leftRegion.TopRight.X) * 0.5d,
+                (leftRegion.BottomLeft.Y + leftRegion.TopRight.Y) * 0.5d,
+                0d);
+
+            var first = presentation.ResolveAxisInteraction(point);
+            for (var i = 0; i < 5; i++)
+            {
+                var current = presentation.ResolveAxisInteraction(point);
+                Assert.That(ReferenceEquals(current.NumericFormatter, first.NumericFormatter), Is.True);
+                Assert.That(current.NumericFormatter.Format(98.7654d), Is.EqualTo(first.NumericFormatter.Format(98.7654d)));
+            }
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_PublicSurface_DoesNotExposeDomainAxisObjects()
+        {
+            var descriptorType = typeof(AxisInteractionDescriptor);
+            var propertyTypes = descriptorType
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Select(p => p.PropertyType)
+                .ToArray();
+
+            Assert.That(propertyTypes.Any(t => typeof(IAxisModel).IsAssignableFrom(t)), Is.False,
+                "Axis interaction descriptor must not expose domain axis model references.");
+        }
+
+        [Test]
+        public void AxisInteractionDescriptor_NoHitPoint_ReturnsNull()
+        {
+            var presentation = CreatePresentationWithBottomAndMultipleYAxes();
+            var descriptor = presentation.ResolveAxisInteraction(0.5d, 0.5d);
+            Assert.That(descriptor, Is.Null);
+        }
+
         private static IGraphModel CreateModel(SeriesType seriesType)
         {
             return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);
+        }
+
+        private static GraphLayoutModel CreateSyntheticLayoutWithSharedBorderRegions()
+        {
+            var hitRegions = new AxisHitRegionGeometry[]
+            {
+                new AxisHitRegionGeometry(
+                    "axis-a",
+                    PresentationAxisSide.Left,
+                    PresentationAxisOrientation.Vertical,
+                    0.0015d,
+                    0.00075d,
+                    new GeometryPoint3D(0.10d, 0.10d, 0d),
+                    new GeometryPoint3D(0.20d, 0.20d, 0d)),
+                new AxisHitRegionGeometry(
+                    "axis-b",
+                    PresentationAxisSide.Right,
+                    PresentationAxisOrientation.Vertical,
+                    0.0015d,
+                    0.00075d,
+                    new GeometryPoint3D(0.20d, 0.10d, 0d),
+                    new GeometryPoint3D(0.30d, 0.20d, 0d))
+            };
+
+            return new GraphLayoutModel(
+                new PlotAreaLayout(new GeometryPoint3D(0d, 0d, 0d), new GeometryPoint3D(1d, 1d, 0d)),
+                new AxisLayoutEntry[0],
+                new SeriesPresentationGeometry[0],
+                axisHitRegions: hitRegions);
+        }
+
+        private static GraphPresentationModel CreatePresentationWithBottomAndMultipleYAxes()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yLeft1 = new AxisModel(new AxisId("y-left-1"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yLeft2 = new AxisModel(new AxisId("y-left-2"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", null);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+
+            var s1 = new GraphSeriesModel(
+                new SeriesId("1"),
+                "series-left-1",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y1", "y1", unit, new[] { 1d, 2d, 3d }),
+                xAxis,
+                yLeft1);
+
+            var s2 = new GraphSeriesModel(
+                new SeriesId("2"),
+                "series-left-2",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y2", "y2", unit, new[] { 10d, 20d, 30d }),
+                xAxis,
+                yLeft2);
+
+            var s3 = new GraphSeriesModel(
+                new SeriesId("3"),
+                "series-right",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y3", "y3", unit, new[] { 100d, 200d, 300d }),
+                xAxis,
+                yRight);
+
+            var model = new GraphModel(new[] { xAxis, yLeft1, yLeft2, yRight }, new[] { s1, s2, s3 });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            return new GraphPresentationModel(snapshot);
+        }
+
+        private static GraphPresentationModel CreatePresentationWithFormattedBottomAndMultipleYAxes()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+            var xFormatter = new NumericFormatter("fmt-x", registry, "X", "F1");
+            var yFormatterLeft1 = new NumericFormatter("fmt-y-left-1", registry, "YL1", "F2");
+            var yFormatterLeft2 = new NumericFormatter("fmt-y-left-2", registry, "YL2", "F3");
+            var yFormatterRight = new NumericFormatter("fmt-y-right", registry, "YR", "F4");
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", xFormatter);
+            var yLeft1 = new AxisModel(new AxisId("y-left-1"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", yFormatterLeft1);
+            var yLeft2 = new AxisModel(new AxisId("y-left-2"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", yFormatterLeft2);
+            var yRight = new AxisModel(new AxisId("y-right"), ModelAxisOrientation.Y, ModelAxisSide.Right, unit, "m", yFormatterRight);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+
+            var s1 = new GraphSeriesModel(
+                new SeriesId("1"),
+                "series-left-1",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y1", "y1", unit, new[] { 1d, 2d, 3d }),
+                xAxis,
+                yLeft1);
+
+            var s2 = new GraphSeriesModel(
+                new SeriesId("2"),
+                "series-left-2",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y2", "y2", unit, new[] { 10d, 20d, 30d }),
+                xAxis,
+                yLeft2);
+
+            var s3 = new GraphSeriesModel(
+                new SeriesId("3"),
+                "series-right",
+                SeriesType.Line,
+                xField,
+                new TestFieldDefinition("Y3", "y3", unit, new[] { 100d, 200d, 300d }),
+                xAxis,
+                yRight);
+
+            var model = new GraphModel(new[] { xAxis, yLeft1, yLeft2, yRight }, new[] { s1, s2, s3 });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            return new GraphPresentationModel(snapshot);
         }
 
         private static IGraphModel CreateModelWithAxisSides(SeriesType seriesType, ModelAxisSide xAxisSide, ModelAxisSide yAxisSide)

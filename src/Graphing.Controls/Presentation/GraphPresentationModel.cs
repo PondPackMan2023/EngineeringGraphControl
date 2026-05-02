@@ -13,6 +13,14 @@ namespace Graphing.Controls.Presentation
         private const double SideBandSiblingGap = 0.0025;
         private const double EdgePaddingThickness = 0.012;
         private const double LegendBoundaryEpsilon = 1e-6;
+        private const double DefaultAxisLineThickness = 0.0015;
+        private const double AxisHitInflationFactor = 0.5;
+        private const double HorizontalAxisMinimumInteractionHalfThickness = 0.010;
+        private const double VerticalAxisMinimumInteractionHalfThickness = 0.003;
+        // Minimum interaction half-height for horizontal-axis affordance regions.
+        // Defined in normalized abstract geometry space and isolated as policy for future configurability.
+        private const double HorizontalAxisInteractionAffordanceHalfHeight = 0.0425;
+        private const double VerticalAxisAffordanceHalfThickness = 0.0425;
         private const double VerticalAxisEndpointInsetAutoFactor = 0.60;
         private const double HorizontalAxisEndpointInsetAutoFactor = 0.85;
         private const double TitleHeight = 0.06;
@@ -111,6 +119,137 @@ namespace Graphing.Controls.Presentation
         public GraphSemanticModel Semantics
         {
             get { return _semantics; }
+        }
+
+        /// <summary>
+        /// Resolves the axis layout entry hit by an abstract normalized point, or null when no axis is hit.
+        /// Uses only Presentation Model hit regions and stable layout order.
+        /// </summary>
+        public AxisLayoutEntry ResolveHitAxis(GeometryPoint3D point)
+        {
+            var axisId = _layout.ResolveHitAxisId(point);
+            if (string.IsNullOrWhiteSpace(axisId))
+            {
+                return null;
+            }
+
+            for (var i = 0; i < _layout.Axes.Count; i++)
+            {
+                var entry = _layout.Axes[i];
+                if (entry != null && entry.Axis != null && string.Equals(entry.Axis.AxisId, axisId, StringComparison.Ordinal))
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves the axis identifier hit by an abstract normalized point, or null when no axis is hit.
+        /// </summary>
+        public string ResolveHitAxisId(GeometryPoint3D point)
+        {
+            return _layout.ResolveHitAxisId(point);
+        }
+
+        /// <summary>
+        /// Convenience overload for normalized abstract X/Y coordinates.
+        /// </summary>
+        public AxisLayoutEntry ResolveHitAxis(double x, double y)
+        {
+            return ResolveHitAxis(new GeometryPoint3D(x, y, 0d));
+        }
+
+        /// <summary>
+        /// Convenience overload for normalized abstract X/Y coordinates.
+        /// </summary>
+        public string ResolveHitAxisId(double x, double y)
+        {
+            return ResolveHitAxisId(new GeometryPoint3D(x, y, 0d));
+        }
+
+        /// <summary>
+        /// Resolves an interaction-safe descriptor for an axis hit at the abstract normalized point.
+        /// Returns null when no axis hit region contains the point.
+        /// </summary>
+        public AxisInteractionDescriptor ResolveAxisInteraction(GeometryPoint3D point)
+        {
+            var hitRegion = _layout.ResolveHitAxisRegion(point);
+            if (hitRegion == null)
+            {
+                return null;
+            }
+
+            AxisLayoutEntry axisEntry = null;
+            for (var i = 0; i < _layout.Axes.Count; i++)
+            {
+                var entry = _layout.Axes[i];
+                if (entry != null
+                    && entry.Axis != null
+                    && string.Equals(entry.Axis.AxisId, hitRegion.AxisId, StringComparison.Ordinal))
+                {
+                    axisEntry = entry;
+                    break;
+                }
+            }
+
+            if (axisEntry == null)
+            {
+                return null;
+            }
+
+            var normalizedPosition = ComputeNormalizedPositionAlongAxis(hitRegion, point);
+            return new AxisInteractionDescriptor(
+                axisEntry.Axis.AxisId,
+                axisEntry.Axis.Orientation,
+                axisEntry.Side,
+                axisEntry.SideIndex,
+                normalizedPosition,
+                axisEntry.Axis.NumericFormatter,
+                axisEntry.Axis.DisplayUnit);
+        }
+
+        /// <summary>
+        /// Convenience overload for normalized abstract X/Y coordinates.
+        /// </summary>
+        public AxisInteractionDescriptor ResolveAxisInteraction(double x, double y)
+        {
+            return ResolveAxisInteraction(new GeometryPoint3D(x, y, 0d));
+        }
+
+        private static double ComputeNormalizedPositionAlongAxis(
+            AxisHitRegionGeometry hitRegion,
+            GeometryPoint3D point)
+        {
+            if (hitRegion.Orientation == AxisOrientation.Horizontal)
+            {
+                return NormalizeAlongSpan(point.X, hitRegion.BottomLeft.X, hitRegion.TopRight.X);
+            }
+
+            return NormalizeAlongSpan(point.Y, hitRegion.BottomLeft.Y, hitRegion.TopRight.Y);
+        }
+
+        private static double NormalizeAlongSpan(double value, double start, double end)
+        {
+            var span = end - start;
+            if (span <= 0d)
+            {
+                return 0d;
+            }
+
+            var normalized = (value - start) / span;
+            if (normalized < 0d)
+            {
+                return 0d;
+            }
+
+            if (normalized > 1d)
+            {
+                return 1d;
+            }
+
+            return normalized;
         }
 
         private sealed class DefaultLayoutMeasurementInput : IGraphLayoutMeasurementInput

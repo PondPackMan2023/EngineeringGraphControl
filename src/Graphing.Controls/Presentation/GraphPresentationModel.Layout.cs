@@ -557,6 +557,26 @@ namespace Graphing.Controls.Presentation
                 topTitleBandThickness,
                 topTickBandThickness);
 
+            var axisHitRegions = BuildAxisHitRegionsGeometry(
+                entries,
+                finalPlotArea,
+                leftAxisBandWidth,
+                rightAxisBandWidth,
+                bottomAxisBandHeight,
+                topAxisBandHeight,
+                leftLegendBandWidth,
+                rightLegendBandWidth,
+                bottomLegendBandHeight,
+                topLegendBandHeight,
+                leftEdgePadding,
+                rightEdgePadding,
+                bottomEdgePadding,
+                topEdgePadding);
+
+            var axisInteractionAffordanceRegions = BuildAxisInteractionAffordanceGeometry(
+                entries,
+                finalPlotArea);
+
             // Create grid lines geometry
             var gridLines = BuildGridLinesGeometry(entries, finalPlotArea, options);
 
@@ -577,7 +597,321 @@ namespace Graphing.Controls.Presentation
                 gridLines,
                 legendGeometry,
                 axisTitleBands,
-                edgePaddingBands);
+                edgePaddingBands,
+                axisHitRegions,
+                axisInteractionAffordanceRegions);
+        }
+
+        private static IReadOnlyList<AxisInteractionAffordanceGeometry> BuildAxisInteractionAffordanceGeometry(
+            IReadOnlyList<AxisLayoutEntry> axisEntries,
+            PlotAreaLayout plotArea)
+        {
+            var regions = new List<AxisInteractionAffordanceGeometry>();
+            var plotLeft = plotArea.BottomLeft.X;
+            var plotBottom = plotArea.BottomLeft.Y;
+            var plotRight = plotArea.TopRight.X;
+            var plotTop = plotArea.TopRight.Y;
+            var plotWidth = Math.Max(0d, plotRight - plotLeft);
+            var plotHeight = Math.Max(0d, plotTop - plotBottom);
+
+            for (var i = 0; i < axisEntries.Count; i++)
+            {
+                var entry = axisEntries[i];
+                if (entry == null || entry.Axis == null || string.IsNullOrWhiteSpace(entry.Axis.AxisId))
+                {
+                    continue;
+                }
+
+                var inset = Math.Max(0d, entry.TickEndpointInset);
+                var spanStart = 0d;
+                var spanEnd = 0d;
+                var axisLineCoordinate = 0d;
+
+                double left;
+                double bottom;
+                double right;
+                double top;
+
+                if (entry.Axis.Orientation == AxisOrientation.Horizontal)
+                {
+                    axisLineCoordinate = entry.Side == AxisSide.Top
+                        ? plotTop
+                        : plotBottom;
+                    spanStart = plotLeft + inset;
+                    spanEnd = plotRight - inset;
+
+                    if (spanEnd < spanStart)
+                    {
+                        var center = plotLeft + (plotWidth * 0.5d);
+                        spanStart = center;
+                        spanEnd = center;
+                    }
+
+                    left = spanStart;
+                    right = spanEnd;
+                    bottom = axisLineCoordinate - HorizontalAxisInteractionAffordanceHalfHeight;
+                    top = axisLineCoordinate + HorizontalAxisInteractionAffordanceHalfHeight;
+                }
+                else
+                {
+                    var normalizedStart = Math.Max(0d, Math.Min(1d, entry.NormalizedSpanStart));
+                    var normalizedEnd = Math.Max(0d, Math.Min(1d, entry.NormalizedSpanEnd));
+                    if (normalizedEnd < normalizedStart)
+                    {
+                        var swap = normalizedStart;
+                        normalizedStart = normalizedEnd;
+                        normalizedEnd = swap;
+                    }
+
+                    spanStart = plotBottom + (normalizedStart * plotHeight) + inset;
+                    spanEnd = plotBottom + (normalizedEnd * plotHeight) - inset;
+                    if (spanEnd < spanStart)
+                    {
+                        var center = plotBottom + (((normalizedStart + normalizedEnd) * 0.5d) * plotHeight);
+                        spanStart = center;
+                        spanEnd = center;
+                    }
+
+                    axisLineCoordinate = entry.Side == AxisSide.Right
+                        ? plotRight
+                        : plotLeft;
+                    left = axisLineCoordinate - VerticalAxisAffordanceHalfThickness;
+                    right = axisLineCoordinate + VerticalAxisAffordanceHalfThickness;
+                    bottom = spanStart;
+                    top = spanEnd;
+                }
+
+                if (right < left)
+                {
+                    right = left;
+                }
+
+                if (top < bottom)
+                {
+                    top = bottom;
+                }
+
+                regions.Add(
+                    new AxisInteractionAffordanceGeometry(
+                        entry.Axis.AxisId,
+                        entry.Side,
+                        entry.Axis.Orientation,
+                        new GeometryPoint3D(left, bottom, 0d),
+                        new GeometryPoint3D(right, top, 0d)));
+            }
+
+            return new ReadOnlyCollection<AxisInteractionAffordanceGeometry>(regions);
+        }
+
+        private static IReadOnlyList<AxisHitRegionGeometry> BuildAxisHitRegionsGeometry(
+            IReadOnlyList<AxisLayoutEntry> axisEntries,
+            PlotAreaLayout plotArea,
+            double leftAxisBandWidth,
+            double rightAxisBandWidth,
+            double bottomAxisBandHeight,
+            double topAxisBandHeight,
+            double leftLegendBandWidth,
+            double rightLegendBandWidth,
+            double bottomLegendBandHeight,
+            double topLegendBandHeight,
+            double leftEdgePadding,
+            double rightEdgePadding,
+            double bottomEdgePadding,
+            double topEdgePadding)
+        {
+            var regions = new List<AxisHitRegionGeometry>();
+
+            for (var i = 0; i < axisEntries.Count; i++)
+            {
+                var entry = axisEntries[i];
+                if (entry == null || entry.Axis == null || string.IsNullOrWhiteSpace(entry.Axis.AxisId))
+                {
+                    continue;
+                }
+
+                if (!TryGetAxisBandBounds(
+                        entry,
+                        plotArea,
+                        leftAxisBandWidth,
+                        rightAxisBandWidth,
+                        bottomAxisBandHeight,
+                        topAxisBandHeight,
+                        leftLegendBandWidth,
+                        rightLegendBandWidth,
+                        bottomLegendBandHeight,
+                        topLegendBandHeight,
+                        leftEdgePadding,
+                        rightEdgePadding,
+                        bottomEdgePadding,
+                        topEdgePadding,
+                        out var bandLeft,
+                        out var bandBottom,
+                        out var bandRight,
+                        out var bandTop))
+                {
+                    continue;
+                }
+
+                var halfHitThickness = ComputeAxisHitHalfThickness(
+                    entry.Axis.AxisLineThickness,
+                    entry.Axis.Orientation);
+                if (halfHitThickness <= 0d)
+                {
+                    continue;
+                }
+
+                var centerX = (bandLeft + bandRight) * 0.5d;
+                var centerY = (bandBottom + bandTop) * 0.5d;
+
+                double left;
+                double bottom;
+                double right;
+                double top;
+
+                if (entry.Axis.Orientation == AxisOrientation.Horizontal)
+                {
+                    left = bandLeft;
+                    right = bandRight;
+                    bottom = centerY - halfHitThickness;
+                    top = centerY + halfHitThickness;
+                }
+                else
+                {
+                    left = centerX - halfHitThickness;
+                    right = centerX + halfHitThickness;
+                    bottom = bandBottom;
+                    top = bandTop;
+                }
+
+                left = Math.Max(bandLeft, left);
+                right = Math.Min(bandRight, right);
+                bottom = Math.Max(bandBottom, bottom);
+                top = Math.Min(bandTop, top);
+
+                if (right < left)
+                {
+                    right = left;
+                }
+
+                if (top < bottom)
+                {
+                    top = bottom;
+                }
+
+                regions.Add(
+                    new AxisHitRegionGeometry(
+                        entry.Axis.AxisId,
+                        entry.Side,
+                        entry.Axis.Orientation,
+                        entry.Axis.AxisLineThickness,
+                        halfHitThickness,
+                        new GeometryPoint3D(left, bottom, 0d),
+                        new GeometryPoint3D(right, top, 0d)));
+            }
+
+            return new ReadOnlyCollection<AxisHitRegionGeometry>(regions);
+        }
+
+        private static bool TryGetAxisBandBounds(
+            AxisLayoutEntry entry,
+            PlotAreaLayout plotArea,
+            double leftAxisBandWidth,
+            double rightAxisBandWidth,
+            double bottomAxisBandHeight,
+            double topAxisBandHeight,
+            double leftLegendBandWidth,
+            double rightLegendBandWidth,
+            double bottomLegendBandHeight,
+            double topLegendBandHeight,
+            double leftEdgePadding,
+            double rightEdgePadding,
+            double bottomEdgePadding,
+            double topEdgePadding,
+            out double left,
+            out double bottom,
+            out double right,
+            out double top)
+        {
+            left = 0d;
+            bottom = 0d;
+            right = 0d;
+            top = 0d;
+
+            switch (entry.Side)
+            {
+                case AxisSide.Left:
+                    if (leftAxisBandWidth <= 0d)
+                    {
+                        return false;
+                    }
+
+                    left = leftEdgePadding + leftLegendBandWidth;
+                    right = left + leftAxisBandWidth;
+
+                    var leftSpanStart = Clamp01(entry.NormalizedSpanStart);
+                    var leftSpanEnd = Clamp01(entry.NormalizedSpanEnd);
+                    bottom = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * leftSpanStart);
+                    top = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * leftSpanEnd);
+                    if (top < bottom)
+                    {
+                        var temp = top;
+                        top = bottom;
+                        bottom = temp;
+                    }
+
+                    return true;
+
+                case AxisSide.Right:
+                    if (rightAxisBandWidth <= 0d)
+                    {
+                        return false;
+                    }
+
+                    left = 1.0 - rightEdgePadding - rightLegendBandWidth - rightAxisBandWidth;
+                    right = 1.0 - rightEdgePadding - rightLegendBandWidth;
+                    bottom = plotArea.BottomLeft.Y;
+                    top = plotArea.TopRight.Y;
+                    return true;
+
+                case AxisSide.Bottom:
+                    if (bottomAxisBandHeight <= 0d)
+                    {
+                        return false;
+                    }
+
+                    left = plotArea.BottomLeft.X;
+                    right = plotArea.TopRight.X;
+                    bottom = bottomEdgePadding + bottomLegendBandHeight;
+                    top = bottom + bottomAxisBandHeight;
+                    return true;
+
+                case AxisSide.Top:
+                    if (topAxisBandHeight <= 0d)
+                    {
+                        return false;
+                    }
+
+                    left = plotArea.BottomLeft.X;
+                    right = plotArea.TopRight.X;
+                    bottom = 1.0 - topEdgePadding - topLegendBandHeight - topAxisBandHeight;
+                    top = 1.0 - topEdgePadding - topLegendBandHeight;
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static double ComputeAxisHitHalfThickness(
+            double axisLineThickness,
+            AxisOrientation orientation)
+        {
+            var visualAxisHalfThickness = Math.Max(0d, axisLineThickness) * AxisHitInflationFactor;
+            var minimumInteractionHalfThickness = orientation == AxisOrientation.Horizontal
+                ? HorizontalAxisMinimumInteractionHalfThickness
+                : VerticalAxisMinimumInteractionHalfThickness;
+
+            return Math.Max(visualAxisHalfThickness, minimumInteractionHalfThickness);
         }
 
         private static IReadOnlyList<AxisTickPresentation> GetRepresentativeTicks(IReadOnlyList<AxisPresentationGeometry> axes)

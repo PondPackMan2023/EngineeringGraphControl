@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Graphing.Controls.Rendering.Geometry;
 
 namespace Graphing.Controls.Presentation
 {
@@ -21,6 +22,8 @@ namespace Graphing.Controls.Presentation
             Legend = null;
             AxisTitleBands = new List<AxisTitleBandGeometry>();
             EdgePaddingBands = new List<EdgePaddingBandGeometry>();
+            AxisHitRegions = new List<AxisHitRegionGeometry>();
+            AxisInteractionAffordanceRegions = new List<AxisInteractionAffordanceGeometry>();
         }
 
         public GraphLayoutModel(
@@ -32,7 +35,9 @@ namespace Graphing.Controls.Presentation
             GridLinesGeometry gridLines = null,
             LegendPresentationGeometry legend = null,
             IReadOnlyList<AxisTitleBandGeometry> axisTitleBands = null,
-            IReadOnlyList<EdgePaddingBandGeometry> edgePaddingBands = null)
+            IReadOnlyList<EdgePaddingBandGeometry> edgePaddingBands = null,
+            IReadOnlyList<AxisHitRegionGeometry> axisHitRegions = null,
+            IReadOnlyList<AxisInteractionAffordanceGeometry> axisInteractionAffordanceRegions = null)
         {
             PlotArea = plotArea;
             Axes = axes;
@@ -43,6 +48,8 @@ namespace Graphing.Controls.Presentation
             Legend = legend;
             AxisTitleBands = axisTitleBands ?? new List<AxisTitleBandGeometry>();
             EdgePaddingBands = edgePaddingBands ?? new List<EdgePaddingBandGeometry>();
+            AxisHitRegions = axisHitRegions ?? new List<AxisHitRegionGeometry>();
+            AxisInteractionAffordanceRegions = axisInteractionAffordanceRegions ?? new List<AxisInteractionAffordanceGeometry>();
         }
 
         /// <summary>
@@ -91,5 +98,86 @@ namespace Graphing.Controls.Presentation
         /// Fixed edge-padding bands that separate all content from control boundaries.
         /// </summary>
         public IReadOnlyList<EdgePaddingBandGeometry> EdgePaddingBands { get; }
+
+        /// <summary>
+        /// Per-axis spine hit regions in abstract normalized geometry space.
+        /// </summary>
+        public IReadOnlyList<AxisHitRegionGeometry> AxisHitRegions { get; }
+
+        /// <summary>
+        /// Per-axis interaction affordance regions in abstract normalized geometry space.
+        /// These regions represent user-intent capture geometry and are distinct from visual hit regions.
+        /// </summary>
+        public IReadOnlyList<AxisInteractionAffordanceGeometry> AxisInteractionAffordanceRegions { get; }
+
+        /// <summary>
+        /// Resolves the first matching axis hit region in stable layout order.
+        /// Border points are inclusive and deterministic: first region in AxisHitRegions order wins.
+        /// </summary>
+        public AxisHitRegionGeometry ResolveHitAxisRegion(GeometryPoint3D point)
+        {
+            for (var i = 0; i < AxisInteractionAffordanceRegions.Count; i++)
+            {
+                var affordance = AxisInteractionAffordanceRegions[i];
+                if (affordance == null)
+                {
+                    continue;
+                }
+
+                if (ContainsInclusive(affordance, point))
+                {
+                    return new AxisHitRegionGeometry(
+                        affordance.AxisId,
+                        affordance.Side,
+                        affordance.Orientation,
+                        0d,
+                        0d,
+                        affordance.BottomLeft,
+                        affordance.TopRight);
+                }
+            }
+
+            for (var i = 0; i < AxisHitRegions.Count; i++)
+            {
+                var region = AxisHitRegions[i];
+                if (region == null)
+                {
+                    continue;
+                }
+
+                if (ContainsInclusive(region, point))
+                {
+                    return region;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves the identifier of the first axis hit region that contains the point.
+        /// Returns null when no axis hit region contains the point.
+        /// </summary>
+        public string ResolveHitAxisId(GeometryPoint3D point)
+        {
+            var region = ResolveHitAxisRegion(point);
+            return region != null ? region.AxisId : null;
+        }
+
+        private static bool ContainsInclusive(AxisHitRegionGeometry region, GeometryPoint3D point)
+        {
+            return point.X >= region.BottomLeft.X
+                && point.X <= region.TopRight.X
+                && point.Y >= region.BottomLeft.Y
+                && point.Y <= region.TopRight.Y;
+        }
+
+        private static bool ContainsInclusive(AxisInteractionAffordanceGeometry region, GeometryPoint3D point)
+        {
+            return point.X >= region.BottomLeft.X
+                && point.X <= region.TopRight.X
+                && point.Y >= region.BottomLeft.Y
+                && point.Y <= region.TopRight.Y;
+        }
     }
 }

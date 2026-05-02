@@ -420,6 +420,7 @@ namespace Graphing.TestHarness
             this.graphControl.Name = "graphControl";
             this.graphControl.Size = new System.Drawing.Size(654, 323);
             this.graphControl.TabIndex = 0;
+            this.graphControl.AxisContextRequested += new System.EventHandler<Graphing.Controls.Interaction.AxisInteractionMouseEventArgs>(this.graphControl_AxisContextRequested);
             // 
             // buttonScenarioC
             // 

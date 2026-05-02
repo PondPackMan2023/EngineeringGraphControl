@@ -5,6 +5,7 @@ using Graphing.TestHarness.Libraries;
 using Graphing.TestHarness.Scenarios;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using UnitRegistry;
@@ -286,6 +287,12 @@ namespace Graphing.TestHarness
             var options = EngineeringGraphOptionsEditorForm.OpenOptions(graphControl.GraphModel,
                 graphControl.ActiveOptions, graphControl.ActiveSnapshot, this);
             graphControl.SetGraphSource(graphControl.GraphModel, options);
+        }
+
+        private void graphControl_AxisContextRequested(object sender, Controls.Interaction.AxisInteractionMouseEventArgs e)
+        {
+            Debug.WriteLine($"{nameof(graphControl_AxisContextRequested)}:\n\t{e.Descriptor.AxisId}\n\t{e.Descriptor.NumericFormatter.Label}");
+            MessageBox.Show(this, $"{nameof(graphControl_AxisContextRequested)}:\n\t{e.Descriptor.AxisId}\n\t{e.Descriptor.NumericFormatter.Label}", "Right-Click");
         }
     }
 }
