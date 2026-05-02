@@ -14,7 +14,7 @@ namespace Graphing.Controls.Presentation
             AxisOrientation orientation,
             string title,
             string formatterName,
-            NumericFormatter numericFormatter,
+               IValueFormatter formatter,
             Unit displayUnit,
             string displayUnitLabel,
             double? minimumValue,
@@ -30,7 +30,7 @@ namespace Graphing.Controls.Presentation
             Orientation = orientation;
             Title = title;
             FormatterName = formatterName;
-            NumericFormatter = numericFormatter;
+                Formatter = formatter;
             DisplayUnit = displayUnit;
             DisplayUnitLabel = displayUnitLabel;
             MinimumValue = minimumValue;
@@ -47,7 +47,7 @@ namespace Graphing.Controls.Presentation
         public AxisOrientation Orientation { get; }
         public string Title { get; }
         public string FormatterName { get; }
-        public NumericFormatter NumericFormatter { get; }
+        public IValueFormatter Formatter { get; }
         public Unit DisplayUnit { get; }
         public string DisplayUnitLabel { get; }
         public double? MinimumValue { get; }

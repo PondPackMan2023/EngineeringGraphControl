@@ -209,9 +209,9 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
-            var formatter = GetNumericFormatter(selected);
+                var formatter = GetFormatter(selected);
             double parsed;
-            if (formatter.TryInterpret(_minimumTextBox.Text, out parsed))
+                if (TryParseValue(formatter, _minimumTextBox.Text, out parsed))
             {
                 selected.Minimum = parsed;
             }
@@ -230,14 +230,35 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
-            var formatter = GetNumericFormatter(selected);
+                var formatter = GetFormatter(selected);
             double parsed;
-            if (formatter.TryInterpret(_maximumTextBox.Text, out parsed))
+                if (TryParseValue(formatter, _maximumTextBox.Text, out parsed))
             {
                 selected.Maximum = parsed;
             }
         }
 
+        private static bool TryParseValue(IValueFormatter formatter, string text, out double result)
+        {
+            var parser = formatter as IValueParser;
+            if (parser != null)
+            {
+                object parsedObj;
+                if (parser.TryParse(text, null, out parsedObj) && parsedObj is double d)
+                {
+                    result = d;
+                    return true;
+                }
+                result = 0d;
+                return false;
+            }
+
+            return double.TryParse(
+                text,
+                System.Globalization.NumberStyles.Float | System.Globalization.NumberStyles.AllowThousands,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out result);
+        }
         private void minimumTextBox_Leave(object sender, EventArgs e)
         {
             CommitNumericText(
@@ -301,12 +322,12 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
-            var formatter = GetNumericFormatter(selected);
-            double parsed;
-            if (formatter.TryInterpret(_incrementTextBox.Text, out parsed))
-            {
-                selected.Increment = parsed;
-            }
+                var formatter = GetFormatter(selected);
+                double parsed;
+                if (TryParseValue(formatter, _incrementTextBox.Text, out parsed))
+                {
+                    selected.Increment = parsed;
+                }
         }
 
         private void incrementTextBox_Leave(object sender, EventArgs e)
@@ -369,7 +390,7 @@ namespace Graphing.Editors.Controls
                     _titleTextBox.Text = selected.Title ?? string.Empty;
                     _titleTextBox.Enabled = selected.HasTitleOverride;
 
-                    var formatter = GetNumericFormatter(selected);
+                        var formatter = GetFormatter(selected);
 
                     _fixedRangeRadioButton.Checked = selected.HasFixedRange;
                     _autoRangeRadioButton.Checked = !selected.HasFixedRange;
@@ -413,22 +434,22 @@ namespace Graphing.Editors.Controls
             return _axesListBox.SelectedItem as AxisItemEditorModel;
         }
 
-        private static NumericFormatter GetNumericFormatter(AxisItemEditorModel selected)
+        private static IValueFormatter GetFormatter(AxisItemEditorModel selected)
         {
-            if (selected.NumericFormatter != null)
+            if (selected.Formatter != null)
             {
-                return selected.NumericFormatter;
+                return selected.Formatter;
             }
 
             var formatterLabel = selected.DisplayUnit != null ? selected.DisplayUnit.Label : "Axis";
-            selected.NumericFormatter = new NumericFormatter(
+            selected.Formatter = new NumericFormatter(
                 "axis-editor-fallback-" + (selected.AxisId != null ? selected.AxisId.Value : "axis"),
                 UnitRegistry.UnitsRegistry.Default,
                 formatterLabel,
                 "R",
                 CultureInfo.CurrentCulture);
 
-            return selected.NumericFormatter;
+            return selected.Formatter;
         }
 
         private void CommitNumericText(
@@ -447,9 +468,9 @@ namespace Graphing.Editors.Controls
                 return;
             }
 
-            var formatter = GetNumericFormatter(selected);
-            double parsed;
-            if (formatter.TryInterpret(textBox.Text, out parsed))
+                var formatter = GetFormatter(selected);
+                double parsed;
+                if (TryParseValue(formatter, textBox.Text, out parsed))
             {
                 setValue(selected, parsed);
                 SetTextWithoutUpdatingUi(textBox, formatter.Format(parsed));

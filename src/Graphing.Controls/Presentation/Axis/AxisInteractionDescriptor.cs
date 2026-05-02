@@ -15,7 +15,7 @@ namespace Graphing.Controls.Presentation
             AxisSide side,
             int sideIndex,
             double normalizedPositionAlongAxis,
-            NumericFormatter numericFormatter,
+               IValueFormatter formatter,
             Unit displayUnit)
         {
             AxisId = axisId;
@@ -23,7 +23,7 @@ namespace Graphing.Controls.Presentation
             Side = side;
             SideIndex = sideIndex;
             NormalizedPositionAlongAxis = normalizedPositionAlongAxis;
-            NumericFormatter = numericFormatter;
+                Formatter = formatter;
             DisplayUnit = displayUnit;
         }
 
@@ -37,7 +37,7 @@ namespace Graphing.Controls.Presentation
 
         public double NormalizedPositionAlongAxis { get; }
 
-        public NumericFormatter NumericFormatter { get; }
+        public IValueFormatter Formatter { get; }
 
         public Unit DisplayUnit { get; }
     }

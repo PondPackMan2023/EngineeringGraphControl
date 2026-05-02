@@ -42,6 +42,6 @@ namespace Graphing.Controls.Snapshot
         /// <summary>
         /// Optional defensive formatter copy for unitized fields.
         /// </summary>
-        NumericFormatter Formatter { get; }
+            IValueFormatter Formatter { get; }
     }
 }

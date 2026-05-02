@@ -24,7 +24,7 @@ namespace Graphing.Editors.EditorModels
 
         public Unit DisplayUnit { get; set; }
 
-        public NumericFormatter NumericFormatter { get; set; }
+        public IValueFormatter Formatter { get; set; }
 
         public AxisItemEditorModel(AxisId axisId, AxisSide side)
         {

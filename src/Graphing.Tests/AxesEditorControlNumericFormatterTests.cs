@@ -236,7 +236,7 @@ namespace Graphing.Tests
             }
         }
 
-        private static AxisItemEditorModel CreateAxisItem(NumericFormatter formatter, double minimum, double maximum, double increment)
+        private static AxisItemEditorModel CreateAxisItem(IValueFormatter formatter, double minimum, double maximum, double increment)
         {
             return new AxisItemEditorModel(new AxisId("y-axis"), AxisSide.Left)
             {
@@ -249,7 +249,7 @@ namespace Graphing.Tests
                 HasFixedIncrement = true,
                 Increment = increment,
                 DisplayUnit = Units.Length.Meter,
-                NumericFormatter = formatter
+                Formatter = formatter
             };
         }
 

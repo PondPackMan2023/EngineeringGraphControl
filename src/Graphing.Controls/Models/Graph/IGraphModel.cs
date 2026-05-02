@@ -12,9 +12,9 @@ namespace Graphing.Controls.Models
 
         IGraphModel ChangeAxisUnit(AxisId axisId, Unit unit);
 
-        IGraphModel ChangeAxisFormat(AxisId axisId, NumericFormatter formatter);
+        IGraphModel ChangeAxisFormat(AxisId axisId, IValueFormatter formatter);
 
-        IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, NumericFormatter formatter);
+        IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, IValueFormatter formatter);
 
         IGraphModel ChangeAxisUnits(IReadOnlyDictionary<AxisId, Unit> unitChanges);
     }

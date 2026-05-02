@@ -73,7 +73,7 @@ namespace Graphing.Tests
                 propertyNames,
                 Is.EqualTo(new[]
                 {
-                "Id", "IsAutoRange", "MaximumValue", "MinimumValue", "NumericFormatter", "Orientation", "ScaleType", "Side", "Unit", "UnitLabel"
+                    "Formatter", "Id", "IsAutoRange", "MaximumValue", "MinimumValue", "Orientation", "ScaleType", "Side", "Unit", "UnitLabel"
                 }));
         }
 
@@ -105,8 +105,8 @@ namespace Graphing.Tests
             Assert.That(graph.Series.Count, Is.EqualTo(1));
             Assert.That(graph.Series[0].XField.Unit, Is.EqualTo(unitNone));
             Assert.That(graph.Series[0].YField.Unit, Is.EqualTo(unitUnitless));
-            Assert.That(graph.Series[0].YAxis.NumericFormatter, Is.SameAs(formatter));
-            Assert.That(graph.Series[0].XAxis.NumericFormatter, Is.Null);
+            Assert.That(graph.Series[0].YAxis.Formatter, Is.SameAs(formatter));
+            Assert.That(graph.Series[0].XAxis.Formatter, Is.Null);
         }
 
         [Test]
@@ -129,8 +129,8 @@ namespace Graphing.Tests
             var resultingXAxis = withYFormat.Axes.Single(a => a.Id.Equals(xAxisId));
             var resultingYAxis = withYFormat.Axes.Single(a => a.Id.Equals(yAxisId));
 
-            Assert.That(resultingXAxis.NumericFormatter, Is.SameAs(xFormatter));
-            Assert.That(resultingYAxis.NumericFormatter, Is.SameAs(yFormatter));
+            Assert.That(resultingXAxis.Formatter, Is.SameAs(xFormatter));
+            Assert.That(resultingYAxis.Formatter, Is.SameAs(yFormatter));
             Assert.That(resultingXAxis.Unit, Is.SameAs(unit));
             Assert.That(resultingYAxis.Unit, Is.SameAs(unit));
         }
@@ -155,9 +155,9 @@ namespace Graphing.Tests
             var updatedXAxis = updatedGraph.Axes.Single(a => a.Id.Equals(xAxisId));
 
             Assert.That(originalXAxis.Unit, Is.SameAs(hoursUnit));
-            Assert.That(originalXAxis.NumericFormatter, Is.Null);
+            Assert.That(originalXAxis.Formatter, Is.Null);
             Assert.That(updatedXAxis.Unit, Is.SameAs(secondsUnit));
-            Assert.That(updatedXAxis.NumericFormatter, Is.SameAs(formatter));
+            Assert.That(updatedXAxis.Formatter, Is.SameAs(formatter));
             Assert.That(updatedXAxis.UnitLabel, Is.EqualTo("s"));
         }
 
@@ -180,7 +180,7 @@ namespace Graphing.Tests
                 return ChangeAxisUnits(changes);
             }
 
-            public IGraphModel ChangeAxisFormat(AxisId axisId, NumericFormatter formatter)
+            public IGraphModel ChangeAxisFormat(AxisId axisId, IValueFormatter formatter)
             {
                 var updatedAxes = new List<IAxisModel>(Axes.Count);
 
@@ -216,7 +216,7 @@ namespace Graphing.Tests
                 return new TestGraphModel(updatedAxes, Series);
             }
 
-            public IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, NumericFormatter formatter)
+            public IGraphModel ChangeAxisUnitAndFormat(AxisId axisId, Unit unit, IValueFormatter formatter)
             {
                 var updatedAxes = new List<IAxisModel>(Axes.Count);
 
@@ -284,7 +284,7 @@ namespace Graphing.Tests
                             axis.Side,
                             replacementUnit,
                             axis.UnitLabel,
-                            axis.NumericFormatter,
+                                axis.Formatter,
                             axis.ScaleType,
                             axis.IsAutoRange,
                             axis.MinimumValue,
@@ -362,7 +362,7 @@ namespace Graphing.Tests
                 AxisSide side,
                 Unit unit,
                 string unitLabel,
-                NumericFormatter formatter,
+                   IValueFormatter formatter,
                 AxisScaleType scaleType,
                 bool isAutoRange,
                 double? minimumValue,
@@ -373,7 +373,7 @@ namespace Graphing.Tests
                 Side = side;
                 Unit = unit;
                 UnitLabel = unitLabel;
-                NumericFormatter = formatter;
+                   Formatter = formatter;
                 ScaleType = scaleType;
                 IsAutoRange = isAutoRange;
                 MinimumValue = minimumValue;
@@ -390,7 +390,7 @@ namespace Graphing.Tests
 
             public string UnitLabel { get; }
 
-            public NumericFormatter NumericFormatter { get; }
+            public IValueFormatter Formatter { get; }
 
             public AxisScaleType ScaleType { get; }
 
@@ -408,14 +408,14 @@ namespace Graphing.Tests
                     Side,
                     newUnit,
                     UnitLabel,
-                    NumericFormatter,
+                       Formatter,
                     ScaleType,
                     IsAutoRange,
                     MinimumValue,
                     MaximumValue);
             }
 
-            public IAxisModel ChangeFormat(NumericFormatter newFormatter)
+            public IAxisModel ChangeFormat(IValueFormatter newFormatter)
             {
                 return new TestAxisModel(
                     Id,

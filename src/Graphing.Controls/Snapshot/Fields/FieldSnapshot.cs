@@ -16,7 +16,7 @@ namespace Graphing.Controls.Snapshot
         private readonly Unit _unit;
         private readonly string _displayUnitLabel;
         private readonly string _formatterName;
-        private readonly NumericFormatter _formatter;
+            private readonly IValueFormatter _formatter;
 
         /// <summary>
         /// The human-readable label of the field.
@@ -69,7 +69,7 @@ namespace Graphing.Controls.Snapshot
         /// <summary>
         /// Optional defensive formatter copy for unitized fields.
         /// </summary>
-        public NumericFormatter Formatter
+            public IValueFormatter Formatter
         {
             get { return _formatter; }
         }
@@ -91,7 +91,7 @@ namespace Graphing.Controls.Snapshot
             Unit unit,
             string displayUnitLabel,
             string formatterName,
-            NumericFormatter formatter)
+               IValueFormatter formatter)
         {
             _label = label;
             _name = name;
