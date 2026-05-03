@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using UnitRegistry;
 using UnitRegistry.Formatting;
 
 namespace Graphing.TestScenarios.AxisUnits
 {
-    internal sealed class DateTimeCompositeFormatter : IValueFormatter, IValueParser
+    internal sealed class DateTimeCompositeFormatter : IValueFormatter, IValueParser, ILabel
     {
         private static readonly DateTime UnixEpochUtc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private static readonly DateTimeFormats[] SupportedFormats = (DateTimeFormats[])Enum.GetValues(typeof(DateTimeFormats));
@@ -29,6 +30,8 @@ namespace Graphing.TestScenarios.AxisUnits
         public FormatterId Id { get; }
 
         public Type ValueType => typeof(double);
+
+        public string Label => "Time";
 
         public IFormatProvider FormatProvider { get; }
 

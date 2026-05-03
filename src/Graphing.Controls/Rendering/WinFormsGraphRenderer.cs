@@ -248,10 +248,28 @@ namespace Graphing.Controls.Rendering
                 }
 
                 var availableWidthPixels = _deviceBounds.Width > 0 ? (float)(availablePrimarySpan * _deviceBounds.Width) : 0f;
+                var contentWidthPixels = availableWidthPixels - (2f * LegendOuterPaddingPixels) - (2f * LegendInnerPaddingPixels);
                 var itemsPerRow = 1;
                 if (availableWidthPixels > 0f)
                 {
                     itemsPerRow = Math.Max(1, (int)Math.Floor((availableWidthPixels + LegendEntryGapPixels) / (maxItemWidth + LegendEntryGapPixels)));
+                }
+
+                // Guard: if a single item cannot fit within contentWidth, force itemsPerRow = 1
+                // and ensure height calculation wraps all items accordingly
+                if (maxItemWidth > contentWidthPixels)
+                {
+                    itemsPerRow = 1;
+                }
+
+                // Conservative guard: if the packed row overflows contentWidth, step back by 1
+                if (itemsPerRow > 1)
+                {
+                    var packedWidthPixels = (itemsPerRow * maxItemWidth) + ((itemsPerRow - 1) * LegendEntryGapPixels);
+                    if (packedWidthPixels > contentWidthPixels)
+                    {
+                        itemsPerRow = Math.Max(1, itemsPerRow - 1);
+                    }
                 }
 
                 var rowCount = (int)Math.Ceiling(series.Count / (double)itemsPerRow);

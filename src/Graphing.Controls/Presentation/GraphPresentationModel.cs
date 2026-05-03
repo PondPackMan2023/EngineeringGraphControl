@@ -358,6 +358,23 @@ namespace Graphing.Controls.Presentation
                     itemsPerRow = Math.Max(1, (int)Math.Floor((contentWidth + LegendEntryGap) / (itemWidth + LegendEntryGap)));
                 }
 
+                // Guard: if a single item cannot fit within contentWidth, force itemsPerRow = 1
+                // and ensure height calculation wraps all items accordingly
+                if (itemWidth > contentWidth)
+                {
+                    itemsPerRow = 1;
+                }
+
+                // Conservative guard: if the packed row overflows contentWidth, step back by 1
+                if (itemsPerRow > 1)
+                {
+                    var packedWidth = (itemsPerRow * itemWidth) + ((itemsPerRow - 1) * LegendEntryGap);
+                    if (packedWidth > contentWidth)
+                    {
+                        itemsPerRow = Math.Max(1, itemsPerRow - 1);
+                    }
+                }
+
                 var rowCount = (int)Math.Ceiling(series.Count / (double)itemsPerRow);
                 var requiredHeight = (2 * LegendOuterPaddingY)
                     + (2 * LegendInnerPaddingY)

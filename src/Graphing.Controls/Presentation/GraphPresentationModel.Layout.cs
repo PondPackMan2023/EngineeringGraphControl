@@ -406,42 +406,8 @@ namespace Graphing.Controls.Presentation
             var titleBandHeight = 0d;
             var subtitleBandHeight = 0d;
 
-            var topBottomAvailablePrimarySpan = Math.Max(0d, 1.0 - leftEdgePadding - rightEdgePadding - leftAxisBandWidth - rightAxisBandWidth);
-            var leftRightAvailablePrimarySpan = Math.Max(
-                0d,
-                1.0
-                - topEdgePadding
-                - bottomEdgePadding
-                - topAxisBandHeight
-                - bottomAxisBandHeight
-                - titleRequest
-                - subtitleRequest);
-            var legendAvailablePrimarySpan = legendPlacement == LegendPlacement.Left || legendPlacement == LegendPlacement.Right
-                ? leftRightAvailablePrimarySpan
-                : topBottomAvailablePrimarySpan;
-            var legendAdvice = hasLegend
-                ? measurementInput.MeasureLegend(legendPlacement, series, legendAvailablePrimarySpan)
-                : null;
-            var legendRequest = ComputeLegendThicknessRequest(legendPlacement, legendAdvice);
-
-            if (resizeChart && hasLegend)
-            {
-                switch (legendPlacement)
-                {
-                    case LegendPlacement.Left:
-                        GrantSide(ref leftLegendBandWidth, legendRequest, true, leftAxisBandWidth, topAxisBandHeight, bottomAxisBandHeight);
-                        break;
-                    case LegendPlacement.Right:
-                        GrantSide(ref rightLegendBandWidth, legendRequest, true, rightAxisBandWidth, topAxisBandHeight, bottomAxisBandHeight);
-                        break;
-                    case LegendPlacement.Top:
-                        GrantSide(ref topLegendBandHeight, legendRequest, false, topAxisBandHeight, leftAxisBandWidth, rightAxisBandWidth);
-                        break;
-                    case LegendPlacement.Bottom:
-                        GrantSide(ref bottomLegendBandHeight, legendRequest, false, bottomAxisBandHeight, leftAxisBandWidth, rightAxisBandWidth);
-                        break;
-                }
-            }
+            LegendMeasurementAdvice legendAdvice;
+            var legendRequest = 0d;
 
             GrantSide(ref leftTitleBandThickness, leftTitleRequest, true, leftTickBandThickness, rightAxisBandWidth, topAxisBandHeight, bottomAxisBandHeight);
             GrantSide(ref rightTitleBandThickness, rightTitleRequest, true, rightTickBandThickness, leftAxisBandWidth, topAxisBandHeight, bottomAxisBandHeight);
@@ -453,8 +419,81 @@ namespace Graphing.Controls.Presentation
             bottomAxisBandHeight = bottomTickBandThickness + bottomTitleBandThickness;
             topAxisBandHeight = topTickBandThickness + topTitleBandThickness;
 
-            GrantSide(ref subtitleBandHeight, subtitleRequest, false, topLegendBandHeight, leftAxisBandWidth, rightAxisBandWidth, topAxisBandHeight);
-            GrantSide(ref titleBandHeight, titleRequest, false, subtitleBandHeight, leftAxisBandWidth, rightAxisBandWidth, topAxisBandHeight, topLegendBandHeight);
+            GrantSide(ref subtitleBandHeight, subtitleRequest, false, leftAxisBandWidth, rightAxisBandWidth, topAxisBandHeight, bottomAxisBandHeight);
+            GrantSide(ref titleBandHeight, titleRequest, false, subtitleBandHeight, leftAxisBandWidth, rightAxisBandWidth, topAxisBandHeight, bottomAxisBandHeight);
+
+            var topBottomAvailablePrimarySpan = Math.Max(0d, 1.0 - leftEdgePadding - rightEdgePadding - leftAxisBandWidth - rightAxisBandWidth);
+            var leftRightAvailablePrimarySpan = Math.Max(
+                0d,
+                1.0
+                - topEdgePadding
+                - bottomEdgePadding
+                - topAxisBandHeight
+                - bottomAxisBandHeight
+                - titleBandHeight
+                - subtitleBandHeight);
+            var legendAvailablePrimarySpan = legendPlacement == LegendPlacement.Left || legendPlacement == LegendPlacement.Right
+                ? leftRightAvailablePrimarySpan
+                : topBottomAvailablePrimarySpan;
+            legendAdvice = hasLegend
+                ? measurementInput.MeasureLegend(legendPlacement, series, legendAvailablePrimarySpan)
+                : null;
+            legendRequest = ComputeLegendThicknessRequest(legendPlacement, legendAdvice);
+
+            if (resizeChart && hasLegend)
+            {
+                switch (legendPlacement)
+                {
+                    case LegendPlacement.Left:
+                        GrantSide(
+                            ref leftLegendBandWidth,
+                            legendRequest,
+                            true,
+                            rightAxisBandWidth,
+                            leftAxisBandWidth,
+                            topAxisBandHeight,
+                            bottomAxisBandHeight,
+                            titleBandHeight,
+                            subtitleBandHeight);
+                        break;
+                    case LegendPlacement.Right:
+                        GrantSide(
+                            ref rightLegendBandWidth,
+                            legendRequest,
+                            true,
+                            leftAxisBandWidth,
+                            rightAxisBandWidth,
+                            topAxisBandHeight,
+                            bottomAxisBandHeight,
+                            titleBandHeight,
+                            subtitleBandHeight);
+                        break;
+                    case LegendPlacement.Top:
+                        GrantSide(
+                            ref topLegendBandHeight,
+                            legendRequest,
+                            false,
+                            topAxisBandHeight,
+                            bottomAxisBandHeight,
+                            leftAxisBandWidth,
+                            rightAxisBandWidth,
+                            titleBandHeight,
+                            subtitleBandHeight);
+                        break;
+                    case LegendPlacement.Bottom:
+                        GrantSide(
+                            ref bottomLegendBandHeight,
+                            legendRequest,
+                            false,
+                            bottomAxisBandHeight,
+                            topAxisBandHeight,
+                            leftAxisBandWidth,
+                            rightAxisBandWidth,
+                            titleBandHeight,
+                            subtitleBandHeight);
+                        break;
+                }
+            }
 
             var leftGap = leftLegendBandWidth > 0d && leftAxisBandWidth > 0d ? SideBandSiblingGap : 0d;
             var rightGap = rightLegendBandWidth > 0d && rightAxisBandWidth > 0d ? SideBandSiblingGap : 0d;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
+using UnitRegistry;
 using UnitRegistry.Formatting;
 
 namespace Graphing.Controls.Snapshot
@@ -315,7 +316,7 @@ namespace Graphing.Controls.Snapshot
             }
 
                 var formatter = axis.Formatter;
-                var numericFormatter = formatter as NumericFormatter;
+                var numericFormatter = formatter as ILabel;
                 var label = numericFormatter != null ? numericFormatter.Label : null;
 
             if (string.IsNullOrWhiteSpace(label))
