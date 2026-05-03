@@ -27,8 +27,7 @@ namespace Graphing.Tests
         {
             var formatter = new DateTimeCompositeFormatter(DateTimeFormats.ElapsedTimeLong, CultureInfo.InvariantCulture);
 
-            Assert.That(formatter.Format(90061d), Is.EqualTo("1 day 01:01:01"));
-
+            Assert.That(formatter.Format(90061d), Is.EqualTo("25:01:01"));
             formatter.SetSelectedFormat(DateTimeFormats.LongTime);
             Assert.That(formatter.Format(3661d), Is.EqualTo("01:01:01"));
 
@@ -148,7 +147,7 @@ namespace Graphing.Tests
                 dialog.DateTimeFormatComboForTesting.SelectedValue = DateTimeFormats.ElapsedTimeLong;
                 var elapsedPreview = dialog.PreviewTextForTesting;
 
-                Assert.That(elapsedPreview, Does.Contain("day"));
+                Assert.That(elapsedPreview, Does.Not.Contain("day"));
 
                 dialog.DateTimeFormatComboForTesting.SelectedValue = DateTimeFormats.SortableDateTime;
                 var sortablePreview = dialog.PreviewTextForTesting;
