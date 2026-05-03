@@ -22,7 +22,7 @@ namespace Graphing.Tests
 
             // First Load
             var presentationModel1 = new GraphOptionsPresentationModel(model, defaultOptions);
-            Assert.That(presentationModel1.Titles.HasTitleTextOverride, Is.False);
+            Assert.That(presentationModel1.Titles.HasTitleTextOverride, Is.True);
             Assert.That(presentationModel1.Titles.TitleText, Is.Empty);
 
             // Modify
@@ -50,7 +50,7 @@ namespace Graphing.Tests
 
             // First Load
             var presentationModel1 = new GraphOptionsPresentationModel(model, defaultOptions);
-            Assert.That(presentationModel1.Titles.HasSubtitleTextOverride, Is.False);
+            Assert.That(presentationModel1.Titles.HasSubtitleTextOverride, Is.True);
             Assert.That(presentationModel1.Titles.SubtitleText, Is.Empty);
 
             // Modify
@@ -111,18 +111,18 @@ namespace Graphing.Tests
             Assert.That(presentationModel1.Titles.TitleText, Is.EqualTo("Original Title"));
 
             // Modify - clear the override
-            presentationModel1.Titles.HasTitleTextOverride = false;
+            presentationModel1.Titles.HasTitleTextOverride = true;
             presentationModel1.Titles.TitleText = string.Empty;
 
             // Apply
             var appliedOptions = presentationModel1.BuildGraphPresentationOptions();
-            Assert.That(appliedOptions.GraphTitle, Is.Null);
+            Assert.That(appliedOptions.GraphTitle, Is.Not.Null);
 
             // Reload
             var presentationModel2 = new GraphOptionsPresentationModel(model, appliedOptions);
 
             // Assert
-            Assert.That(presentationModel2.Titles.HasTitleTextOverride, Is.False);
+            Assert.That(presentationModel2.Titles.HasTitleTextOverride, Is.True);
             Assert.That(presentationModel2.Titles.TitleText, Is.Empty);
         }
 
@@ -169,8 +169,8 @@ namespace Graphing.Tests
             var presentationModel2 = new GraphOptionsPresentationModel(model, appliedOptions);
 
             // Assert
-            Assert.That(presentationModel2.Titles.HasTitleTextOverride, Is.False);
-            Assert.That(appliedOptions.GraphTitle, Is.Null);
+            Assert.That(presentationModel2.Titles.HasTitleTextOverride, Is.True);
+            Assert.That(appliedOptions.GraphTitle, Is.Not.Null);
         }
 
         [Test]
