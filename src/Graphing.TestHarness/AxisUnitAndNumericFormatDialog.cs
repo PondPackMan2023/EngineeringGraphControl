@@ -10,19 +10,39 @@ namespace Graphing.TestScenarios
 {
     internal sealed class AxisUnitAndNumericFormatDialog : Form
     {
+        private static readonly Size CompactDialogSize = new Size(420, 250);
+        private static readonly Size ExpandedDialogSize = new Size(420, 285);
+        private static readonly Point NumericFormatLabelDefaultLocation = new Point(20, 147);
+        private static readonly Point NumericFormatComboDefaultLocation = new Point(140, 143);
+        private static readonly Point DateTimeFormatLabelLocation = new Point(20, 147);
+        private static readonly Point DateTimeFormatComboLocation = new Point(140, 143);
+        private static readonly Point NumericFormatLabelExpandedLocation = new Point(20, 180);
+        private static readonly Point NumericFormatComboExpandedLocation = new Point(140, 176);
+        private static readonly Point PrecisionLabelDefaultLocation = new Point(20, 180);
+        private static readonly Point PrecisionTextDefaultLocation = new Point(140, 176);
+        private static readonly Point PrecisionLabelExpandedLocation = new Point(20, 213);
+        private static readonly Point PrecisionTextExpandedLocation = new Point(140, 209);
+        private static readonly Point ButtonOkDefaultLocation = new Point(252, 214);
+        private static readonly Point ButtonCancelDefaultLocation = new Point(333, 214);
+        private static readonly Point ButtonOkExpandedLocation = new Point(252, 247);
+        private static readonly Point ButtonCancelExpandedLocation = new Point(333, 247);
+
         private readonly AxisUnitAndNumericFormatPresentationModel presentationModel;
         private bool isBinding;
         private bool isPrecisionModeActive;
 
         private readonly ComboBox comboUnit;
         private readonly ComboBox comboFormat;
+        private readonly ComboBox comboDateTimeFormat;
         private readonly TextBox textPrecision;
         private readonly TextBox textPreview;
         private readonly Label labelFormat;
+        private readonly Label labelDateTimeFormat;
         private readonly Label labelPrecision;
         private readonly Label labelPreviewUnit;
         private readonly Label labelPreviewBase;
         private readonly Button buttonOk;
+        private readonly Button buttonCancel;
         private readonly ErrorProvider precisionErrorProvider;
 
         public AxisUnitAndNumericFormatDialog(string axisDisplayName, AxisUnitAndNumericFormatPresentationModel presentationModel)
@@ -40,7 +60,7 @@ namespace Graphing.TestScenarios
             MinimizeBox = false;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(420, 250);
+            ClientSize = CompactDialogSize;
 
             var groupPreview = new GroupBox
             {
@@ -107,28 +127,46 @@ namespace Graphing.TestScenarios
             {
                 Text = "Format:",
                 AutoSize = true,
-                Location = new Point(20, 147)
+                Location = NumericFormatLabelDefaultLocation
             };
 
             comboFormat = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(140, 143),
+                Location = NumericFormatComboDefaultLocation,
                 Size = new Size(268, 23),
                 DisplayMember = "Name",
                 ValueMember = "Kind"
+            };
+
+            labelDateTimeFormat = new Label
+            {
+                Text = "Date/Time Format:",
+                AutoSize = true,
+                Location = DateTimeFormatLabelLocation,
+                Visible = false
+            };
+
+            comboDateTimeFormat = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = DateTimeFormatComboLocation,
+                Size = new Size(268, 23),
+                DisplayMember = "Name",
+                ValueMember = "Format",
+                Visible = false
             };
 
             labelPrecision = new Label
             {
                 Text = "Display Precision:",
                 AutoSize = true,
-                Location = new Point(20, 180)
+                Location = PrecisionLabelDefaultLocation
             };
 
             textPrecision = new TextBox
             {
-                Location = new Point(140, 176),
+                Location = PrecisionTextDefaultLocation,
                 Size = new Size(80, 23)
             };
 
@@ -136,15 +174,15 @@ namespace Graphing.TestScenarios
             {
                 Text = "OK",
                 DialogResult = DialogResult.OK,
-                Location = new Point(252, 214),
+                Location = ButtonOkDefaultLocation,
                 Size = new Size(75, 28)
             };
 
-            var buttonCancel = new Button
+            buttonCancel = new Button
             {
                 Text = "Cancel",
                 DialogResult = DialogResult.Cancel,
-                Location = new Point(333, 214),
+                Location = ButtonCancelDefaultLocation,
                 Size = new Size(75, 28)
             };
 
@@ -159,6 +197,8 @@ namespace Graphing.TestScenarios
             Controls.Add(comboUnit);
             Controls.Add(labelFormat);
             Controls.Add(comboFormat);
+            Controls.Add(labelDateTimeFormat);
+            Controls.Add(comboDateTimeFormat);
             Controls.Add(labelPrecision);
             Controls.Add(textPrecision);
             Controls.Add(buttonOk);
@@ -169,6 +209,7 @@ namespace Graphing.TestScenarios
 
             comboUnit.SelectedIndexChanged += comboUnit_SelectedIndexChanged;
             comboFormat.SelectedIndexChanged += comboFormat_SelectedIndexChanged;
+            comboDateTimeFormat.SelectedIndexChanged += comboDateTimeFormat_SelectedIndexChanged;
             textPrecision.TextChanged += textPrecision_TextChanged;
             buttonOk.Click += buttonOk_Click;
 
@@ -209,23 +250,8 @@ namespace Graphing.TestScenarios
 
         private void BindNumericMode()
         {
-            var formats = new List<NumericFormatOption>
-            {
-                new NumericFormatOption("Scientific", AxisNumericFormatKind.Scientific),
-                new NumericFormatOption("Fixed Point", AxisNumericFormatKind.FixedPoint),
-                new NumericFormatOption("General", AxisNumericFormatKind.General),
-                new NumericFormatOption("Number", AxisNumericFormatKind.Number)
-            };
-
-            labelFormat.Text = "Format:";
-            comboFormat.DisplayMember = "Name";
-            comboFormat.ValueMember = "Kind";
-            comboFormat.DataSource = formats;
-
-            var selectedFormatIndex = formats.FindIndex(option => option.Kind == presentationModel.SelectedFormatKind);
-            comboFormat.SelectedIndex = selectedFormatIndex >= 0 ? selectedFormatIndex : 0;
-
-            textPrecision.Text = presentationModel.DisplayPrecision.ToString(CultureInfo.InvariantCulture);
+            ConfigureLayoutForMode(isDateTimeMode: false, showNumericControls: true);
+            BindNumericControlsFromModel();
             labelPrecision.Visible = true;
             textPrecision.Visible = true;
             isPrecisionModeActive = true;
@@ -237,19 +263,85 @@ namespace Graphing.TestScenarios
                 .Select(format => new DateTimeFormatOption(presentationModel.GetDateTimeFormatDisplayName(format), format))
                 .ToList();
 
-            labelFormat.Text = "Date/Time Format:";
-            comboFormat.DisplayMember = "Name";
-            comboFormat.ValueMember = "Format";
-            comboFormat.DataSource = formats;
+            comboDateTimeFormat.DataSource = formats;
 
             var selectedFormatIndex = formats.FindIndex(option => option.Format == presentationModel.SelectedDateTimeFormat);
-            comboFormat.SelectedIndex = selectedFormatIndex >= 0 ? selectedFormatIndex : 0;
+            comboDateTimeFormat.SelectedIndex = selectedFormatIndex >= 0 ? selectedFormatIndex : 0;
 
-            labelPrecision.Visible = false;
-            textPrecision.Visible = false;
-            isPrecisionModeActive = false;
-            precisionErrorProvider.SetError(textPrecision, string.Empty);
-            buttonOk.Enabled = true;
+            UpdateDateTimeNumericControlVisibility();
+        }
+
+        private void UpdateDateTimeNumericControlVisibility()
+        {
+            var showNumericControls = presentationModel.ShouldShowNumericFormattingControls;
+            ConfigureLayoutForMode(isDateTimeMode: true, showNumericControls: showNumericControls);
+            isPrecisionModeActive = showNumericControls;
+
+            if (showNumericControls)
+            {
+                BindNumericControlsFromModel();
+            }
+
+            if (!showNumericControls)
+            {
+                precisionErrorProvider.SetError(textPrecision, string.Empty);
+                buttonOk.Enabled = true;
+            }
+        }
+
+        private void BindNumericControlsFromModel()
+        {
+            var previousBinding = isBinding;
+            isBinding = true;
+
+            var formats = new List<NumericFormatOption>
+            {
+                new NumericFormatOption("Scientific", AxisNumericFormatKind.Scientific),
+                new NumericFormatOption("Fixed Point", AxisNumericFormatKind.FixedPoint),
+                new NumericFormatOption("General", AxisNumericFormatKind.General),
+                new NumericFormatOption("Number", AxisNumericFormatKind.Number)
+            };
+
+            labelFormat.Text = "Format:";
+            comboFormat.DataSource = formats;
+
+            var selectedFormatIndex = formats.FindIndex(option => option.Kind == presentationModel.SelectedFormatKind);
+            comboFormat.SelectedIndex = selectedFormatIndex >= 0 ? selectedFormatIndex : 0;
+            textPrecision.Text = presentationModel.DisplayPrecision.ToString(CultureInfo.InvariantCulture);
+
+            isBinding = previousBinding;
+        }
+
+        private void ConfigureLayoutForMode(bool isDateTimeMode, bool showNumericControls)
+        {
+            labelDateTimeFormat.Visible = isDateTimeMode;
+            comboDateTimeFormat.Visible = isDateTimeMode;
+
+            labelFormat.Text = "Format:";
+            labelFormat.Visible = showNumericControls;
+            comboFormat.Visible = showNumericControls;
+            labelPrecision.Visible = showNumericControls;
+            textPrecision.Visible = showNumericControls;
+
+            if (isDateTimeMode && showNumericControls)
+            {
+                ClientSize = ExpandedDialogSize;
+                labelFormat.Location = NumericFormatLabelExpandedLocation;
+                comboFormat.Location = NumericFormatComboExpandedLocation;
+                labelPrecision.Location = PrecisionLabelExpandedLocation;
+                textPrecision.Location = PrecisionTextExpandedLocation;
+                buttonOk.Location = ButtonOkExpandedLocation;
+                buttonCancel.Location = ButtonCancelExpandedLocation;
+                return;
+            }
+
+            ClientSize = CompactDialogSize;
+            labelFormat.Location = NumericFormatLabelDefaultLocation;
+            comboFormat.Location = NumericFormatComboDefaultLocation;
+            labelPrecision.Location = PrecisionLabelDefaultLocation;
+            textPrecision.Location = PrecisionTextDefaultLocation;
+            buttonOk.Location = ButtonOkDefaultLocation;
+            buttonCancel.Location = ButtonCancelDefaultLocation;
         }
 
         private void comboUnit_SelectedIndexChanged(object sender, EventArgs e)
@@ -273,14 +365,8 @@ namespace Graphing.TestScenarios
                 return;
             }
 
-            if (presentationModel.IsDateTimeMode)
+            if (presentationModel.IsDateTimeMode && !presentationModel.ShouldShowNumericFormattingControls)
             {
-                if (comboFormat.SelectedValue is DateTimeFormats selectedDateTimeFormat)
-                {
-                    presentationModel.SetDateTimeFormat(selectedDateTimeFormat);
-                    RefreshPreview();
-                }
-
                 return;
             }
 
@@ -289,6 +375,24 @@ namespace Graphing.TestScenarios
                 presentationModel.SetFormatKind(selectedKind);
                 RefreshPreview();
             }
+        }
+
+        private void comboDateTimeFormat_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (isBinding)
+            {
+                return;
+            }
+
+            if (!(comboDateTimeFormat.SelectedValue is DateTimeFormats selectedDateTimeFormat))
+            {
+                return;
+            }
+
+            presentationModel.SetDateTimeFormat(selectedDateTimeFormat);
+            UpdateDateTimeNumericControlVisibility();
+            ValidateAndUpdatePrecision();
+            RefreshPreview();
         }
 
         private void textPrecision_TextChanged(object sender, EventArgs e)
@@ -312,7 +416,7 @@ namespace Graphing.TestScenarios
 
         private bool ValidateAndUpdatePrecision()
         {
-            if (presentationModel.IsDateTimeMode)
+            if (!presentationModel.ShouldShowNumericFormattingControls)
             {
                 precisionErrorProvider.SetError(textPrecision, string.Empty);
                 buttonOk.Enabled = true;
@@ -346,6 +450,14 @@ namespace Graphing.TestScenarios
         internal string PreviewTextForTesting => textPreview.Text;
 
         internal ComboBox FormatComboForTesting => comboFormat;
+
+        internal ComboBox DateTimeFormatComboForTesting => comboDateTimeFormat;
+
+        internal int DateTimeFormatCountForTesting => comboDateTimeFormat.Items.Count;
+
+        internal string PrecisionTextForTesting => textPrecision.Text;
+
+        internal int NumericFormatCountForTesting => comboFormat.Items.Count;
 
         private sealed class NumericFormatOption
         {

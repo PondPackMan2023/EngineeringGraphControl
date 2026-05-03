@@ -70,6 +70,13 @@ namespace Graphing.TestScenarios.AxisUnits
                 SelectedDateTimeFormat = dateTimeFormatter != null
                     ? dateTimeFormatter.SelectedFormat
                     : DateTimeFormats.ShortDateAndShortTime;
+
+                var dateTimeNumericFormatSpecifier = dateTimeFormatter != null
+                    ? dateTimeFormatter.NumericFormatSpecifier
+                    : NumericFormat.General();
+                ParseFormatSpecifier(dateTimeNumericFormatSpecifier, out var dateTimeFormatKind, out var dateTimePrecision);
+                SelectedFormatKind = dateTimeFormatKind;
+                DisplayPrecision = dateTimePrecision;
             }
             else
             {
@@ -101,6 +108,19 @@ namespace Graphing.TestScenarios.AxisUnits
         public DateTimeFormats SelectedDateTimeFormat { get; private set; }
 
         public int DisplayPrecision { get; private set; }
+
+        public bool ShouldShowNumericFormattingControls
+        {
+            get
+            {
+                if (!IsDateTimeMode)
+                {
+                    return true;
+                }
+
+                return SelectedDateTimeFormat == DateTimeFormats.ElapsedTimeShort;
+            }
+        }
 
         public IReadOnlyList<DateTimeFormats> AvailableDateTimeFormats
         {
@@ -148,7 +168,7 @@ namespace Graphing.TestScenarios.AxisUnits
 
         public bool TrySetDisplayPrecision(string precisionText)
         {
-            if (IsDateTimeMode)
+            if (!ShouldShowNumericFormattingControls)
             {
                 return true;
             }
@@ -192,7 +212,7 @@ namespace Graphing.TestScenarios.AxisUnits
             {
                 if (dateTimeFormatter != null)
                 {
-                    return dateTimeFormatter.WithSelectedFormat(SelectedDateTimeFormat);
+                    return dateTimeFormatter.WithFormatting(SelectedDateTimeFormat, BuildFormatSpecifier());
                 }
 
                 return currentFormatter;

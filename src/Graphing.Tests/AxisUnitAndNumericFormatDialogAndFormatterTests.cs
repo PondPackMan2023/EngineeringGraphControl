@@ -139,22 +139,56 @@ namespace Graphing.Tests
             using (var dialog = new AxisUnitAndNumericFormatDialog("Time Axis", model))
             {
                 Assert.That(dialog.IsDateTimeModeForTesting, Is.True);
-                Assert.That(dialog.ActiveFormatLabelTextForTesting, Is.EqualTo("Date/Time Format:"));
+                Assert.That(dialog.ActiveFormatLabelTextForTesting, Is.EqualTo("Format:"));
                 Assert.That(dialog.IsPrecisionVisibleForTesting, Is.False);
+                Assert.That(dialog.DateTimeFormatCountForTesting, Is.GreaterThan(3));
 
                 var before = dialog.PreviewTextForTesting;
 
-                dialog.FormatComboForTesting.SelectedValue = DateTimeFormats.ElapsedTimeLong;
+                dialog.DateTimeFormatComboForTesting.SelectedValue = DateTimeFormats.ElapsedTimeLong;
                 var elapsedPreview = dialog.PreviewTextForTesting;
 
                 Assert.That(elapsedPreview, Does.Contain("day"));
 
-                dialog.FormatComboForTesting.SelectedValue = DateTimeFormats.SortableDateTime;
+                dialog.DateTimeFormatComboForTesting.SelectedValue = DateTimeFormats.SortableDateTime;
                 var sortablePreview = dialog.PreviewTextForTesting;
 
                 Assert.That(sortablePreview, Is.EqualTo("1970-01-01T00:00:01"));
                 Assert.That(sortablePreview, Is.Not.EqualTo(before));
             }
+        }
+
+        [Test]
+        public void DatetimeElapsedTimeShort_ShowsNumericFormatAndPrecisionControls()
+        {
+            var formatter = new DateTimeCompositeFormatter(DateTimeFormats.ShortDateAndShortTime, CultureInfo.InvariantCulture);
+            var model = new AxisUnitAndNumericFormatPresentationModel(new AxisId("x"), Units.Time.Second, formatter);
+
+            using (var dialog = new AxisUnitAndNumericFormatDialog("Time Axis", model))
+            {
+                dialog.DateTimeFormatComboForTesting.SelectedValue = DateTimeFormats.ElapsedTimeShort;
+
+                Assert.That(dialog.IsDateTimeModeForTesting, Is.True);
+                Assert.That(dialog.IsPrecisionVisibleForTesting, Is.True);
+                Assert.That(dialog.ActiveFormatLabelTextForTesting, Is.EqualTo("Format:"));
+                Assert.That(dialog.FormatComboForTesting.Enabled, Is.True);
+                Assert.That(dialog.DateTimeFormatCountForTesting, Is.GreaterThan(3));
+                Assert.That(dialog.NumericFormatCountForTesting, Is.EqualTo(4));
+                Assert.That(dialog.PrecisionTextForTesting, Is.Not.Empty);
+                Assert.That(dialog.PreviewTextForTesting, Does.Not.Contain(":"));
+            }
+        }
+
+        [Test]
+        public void DatetimeElapsedTimeShort_UsesNumericSpecifierForPreview()
+        {
+            var formatter = new DateTimeCompositeFormatter(DateTimeFormats.ElapsedTimeShort, CultureInfo.InvariantCulture);
+            var model = new AxisUnitAndNumericFormatPresentationModel(new AxisId("x"), Units.Time.Second, formatter);
+
+            model.SetFormatKind(AxisNumericFormatKind.FixedPoint);
+            Assert.That(model.TrySetDisplayPrecision("2"), Is.True);
+
+            Assert.That(model.BuildPreviewText(), Is.EqualTo("1.00"));
         }
     }
 }

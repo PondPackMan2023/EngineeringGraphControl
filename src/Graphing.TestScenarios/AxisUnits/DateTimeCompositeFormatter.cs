@@ -9,14 +9,21 @@ namespace Graphing.TestScenarios.AxisUnits
     {
         private static readonly DateTime UnixEpochUtc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private static readonly DateTimeFormats[] SupportedFormats = (DateTimeFormats[])Enum.GetValues(typeof(DateTimeFormats));
+        private const string DefaultNumericFormatSpecifier = "F0";
 
         public const string FormatterIdentity = "datetime";
 
-        public DateTimeCompositeFormatter(DateTimeFormats selectedFormat = DateTimeFormats.ShortDateAndShortTime, IFormatProvider formatProvider = null)
+        public DateTimeCompositeFormatter(
+            DateTimeFormats selectedFormat = DateTimeFormats.ShortDateAndShortTime,
+            IFormatProvider formatProvider = null,
+            string numericFormatSpecifier = DefaultNumericFormatSpecifier)
         {
             Id = new FormatterId(FormatterIdentity);
             FormatProvider = formatProvider;
             SelectedFormat = selectedFormat;
+            NumericFormatSpecifier = string.IsNullOrWhiteSpace(numericFormatSpecifier)
+                ? DefaultNumericFormatSpecifier
+                : numericFormatSpecifier;
         }
 
         public FormatterId Id { get; }
@@ -26,6 +33,8 @@ namespace Graphing.TestScenarios.AxisUnits
         public IFormatProvider FormatProvider { get; }
 
         public DateTimeFormats SelectedFormat { get; private set; }
+
+        public string NumericFormatSpecifier { get; private set; }
 
         public IReadOnlyList<DateTimeFormats> GetSupportedFormats()
         {
@@ -37,9 +46,21 @@ namespace Graphing.TestScenarios.AxisUnits
             SelectedFormat = selectedFormat;
         }
 
+        public void SetNumericFormatSpecifier(string numericFormatSpecifier)
+        {
+            NumericFormatSpecifier = string.IsNullOrWhiteSpace(numericFormatSpecifier)
+                ? DefaultNumericFormatSpecifier
+                : numericFormatSpecifier;
+        }
+
         public DateTimeCompositeFormatter WithSelectedFormat(DateTimeFormats selectedFormat)
         {
-            return new DateTimeCompositeFormatter(selectedFormat, FormatProvider);
+            return new DateTimeCompositeFormatter(selectedFormat, FormatProvider, NumericFormatSpecifier);
+        }
+
+        public DateTimeCompositeFormatter WithFormatting(DateTimeFormats selectedFormat, string numericFormatSpecifier)
+        {
+            return new DateTimeCompositeFormatter(selectedFormat, FormatProvider, numericFormatSpecifier);
         }
 
         public string Format(object value, IFormatProvider formatProvider = null)
@@ -59,7 +80,7 @@ namespace Graphing.TestScenarios.AxisUnits
             switch (SelectedFormat)
             {
                 case DateTimeFormats.ElapsedTimeShort:
-                    return FormatElapsedShort(TimeSpan.FromSeconds(value));
+                    return value.ToString(NumericFormatSpecifier, provider);
                 case DateTimeFormats.ElapsedTimeLong:
                     return FormatElapsedLong(TimeSpan.FromSeconds(value));
                 case DateTimeFormats.ShortTime:
@@ -108,6 +129,23 @@ namespace Graphing.TestScenarios.AxisUnits
             switch (SelectedFormat)
             {
                 case DateTimeFormats.ElapsedTimeShort:
+                    if (double.TryParse(
+                        trimmed,
+                        NumberStyles.Float | NumberStyles.AllowThousands,
+                        provider,
+                        out var numericValue))
+                    {
+                        value = numericValue;
+                        return true;
+                    }
+
+                    if (TryParseTimeSpan(trimmed, provider, out var elapsedShortDuration))
+                    {
+                        value = elapsedShortDuration.TotalSeconds;
+                        return true;
+                    }
+
+                    return false;
                 case DateTimeFormats.ElapsedTimeLong:
                 case DateTimeFormats.ShortTime:
                 case DateTimeFormats.LongTime:
@@ -159,19 +197,17 @@ namespace Graphing.TestScenarios.AxisUnits
                 normalized.Minutes);
         }
 
-        private static string FormatElapsedLong(TimeSpan timeSpan)
+        private static string FormatElapsedLong(TimeSpan value)
         {
-            var sign = timeSpan < TimeSpan.Zero ? "-" : string.Empty;
-            var normalized = timeSpan < TimeSpan.Zero ? timeSpan.Duration() : timeSpan;
-            var dayToken = normalized.Days == 1 ? "day" : "days";
+            bool isNegative = value < TimeSpan.Zero;
+            TimeSpan normalized = isNegative ? value.Duration() : value;
+            long totalHours = (long)normalized.TotalHours;
 
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "{0}{1} {2} {3:00}:{4:00}:{5:00}",
-                sign,
-                normalized.Days,
-                dayToken,
-                normalized.Hours,
+                "{0}{1:00}:{2:00}:{3:00}",
+                isNegative ? "-" : string.Empty,
+                totalHours,
                 normalized.Minutes,
                 normalized.Seconds);
         }
