@@ -20,11 +20,13 @@ namespace Graphing.TestHarness.AxisUnits
     {
         private const double PreviewSourceValue = 1.0d;
 
-        private readonly NumericFormatter currentFormatter;
+        private readonly IValueFormatter currentFormatter;
+        private readonly NumericFormatter numericFormatter;
+        private readonly DateTimeCompositeFormatter dateTimeFormatter;
         private readonly Unit previewSourceUnit;
         private readonly List<Unit> availableUnits;
 
-        public AxisUnitAndNumericFormatPresentationModel(AxisId axisId, Unit currentDisplayUnit, NumericFormatter numericFormatter)
+        public AxisUnitAndNumericFormatPresentationModel(AxisId axisId, Unit currentDisplayUnit, IValueFormatter formatter)
         {
             if (axisId == null)
             {
@@ -36,16 +38,21 @@ namespace Graphing.TestHarness.AxisUnits
                 throw new ArgumentNullException(nameof(currentDisplayUnit));
             }
 
-            if (numericFormatter == null)
+            if (formatter == null)
             {
-                throw new ArgumentNullException(nameof(numericFormatter));
+                throw new ArgumentNullException(nameof(formatter));
             }
 
             AxisId = axisId;
-            currentFormatter = numericFormatter;
+            currentFormatter = formatter;
+            numericFormatter = formatter as NumericFormatter;
+            dateTimeFormatter = formatter as DateTimeCompositeFormatter;
             previewSourceUnit = currentDisplayUnit;
 
-            var unitRegistry = numericFormatter.UnitRegistry ?? UnitsRegistry.Default;
+            var unitRegistry = numericFormatter != null
+                ? numericFormatter.UnitRegistry ?? UnitsRegistry.Default
+                : UnitsRegistry.Default;
+
             availableUnits = unitRegistry
                 .GetUnits(currentDisplayUnit.Dimension)
                 .OrderBy(unit => unit.Label, StringComparer.OrdinalIgnoreCase)
@@ -58,9 +65,19 @@ namespace Graphing.TestHarness.AxisUnits
 
             SelectedUnit = availableUnits.FirstOrDefault(unit => unit.Equals(currentDisplayUnit)) ?? currentDisplayUnit;
 
-            ParseFormatSpecifier(numericFormatter.FormatSpecifier, out var formatKind, out var precision);
-            SelectedFormatKind = formatKind;
-            DisplayPrecision = precision;
+            if (IsDateTimeMode)
+            {
+                SelectedDateTimeFormat = dateTimeFormatter != null
+                    ? dateTimeFormatter.SelectedFormat
+                    : DateTimeFormats.ShortDateAndShortTime;
+            }
+            else
+            {
+                var formatSpecifier = numericFormatter != null ? numericFormatter.FormatSpecifier : NumericFormat.General();
+                ParseFormatSpecifier(formatSpecifier, out var formatKind, out var precision);
+                SelectedFormatKind = formatKind;
+                DisplayPrecision = precision;
+            }
         }
 
         public AxisId AxisId { get; }
@@ -69,9 +86,34 @@ namespace Graphing.TestHarness.AxisUnits
 
         public Unit SelectedUnit { get; private set; }
 
+        public bool IsDateTimeMode
+        {
+            get
+            {
+                return currentFormatter != null
+                    && currentFormatter.Id != null
+                    && string.Equals(currentFormatter.Id.Value, DateTimeCompositeFormatter.FormatterIdentity, StringComparison.Ordinal);
+            }
+        }
+
         public AxisNumericFormatKind SelectedFormatKind { get; private set; }
 
+        public DateTimeFormats SelectedDateTimeFormat { get; private set; }
+
         public int DisplayPrecision { get; private set; }
+
+        public IReadOnlyList<DateTimeFormats> AvailableDateTimeFormats
+        {
+            get
+            {
+                if (dateTimeFormatter != null)
+                {
+                    return dateTimeFormatter.GetSupportedFormats();
+                }
+
+                return (DateTimeFormats[])Enum.GetValues(typeof(DateTimeFormats));
+            }
+        }
 
         public double PreviewValue => PreviewSourceValue;
 
@@ -94,8 +136,23 @@ namespace Graphing.TestHarness.AxisUnits
             SelectedFormatKind = formatKind;
         }
 
+        public void SetDateTimeFormat(DateTimeFormats format)
+        {
+            SelectedDateTimeFormat = format;
+
+            if (dateTimeFormatter != null)
+            {
+                dateTimeFormatter.SetSelectedFormat(format);
+            }
+        }
+
         public bool TrySetDisplayPrecision(string precisionText)
         {
+            if (IsDateTimeMode)
+            {
+                return true;
+            }
+
             if (string.IsNullOrWhiteSpace(precisionText))
             {
                 return false;
@@ -129,14 +186,88 @@ namespace Graphing.TestHarness.AxisUnits
             return previewFormatter.Format(valueInSelectedUnit);
         }
 
-        public NumericFormatter BuildFormatterToApply()
+        public IValueFormatter BuildFormatterToApply()
         {
+            if (IsDateTimeMode)
+            {
+                if (dateTimeFormatter != null)
+                {
+                    return dateTimeFormatter.WithSelectedFormat(SelectedDateTimeFormat);
+                }
+
+                return currentFormatter;
+            }
+
+            if (numericFormatter == null)
+            {
+                return currentFormatter;
+            }
+
             return new NumericFormatter(
-                currentFormatter.Id,
-                currentFormatter.UnitRegistry,
-                currentFormatter.Label,
+                numericFormatter.Id,
+                numericFormatter.UnitRegistry,
+                numericFormatter.Label,
                 BuildFormatSpecifier(),
-                currentFormatter.FormatProvider);
+                numericFormatter.FormatProvider);
+        }
+
+        public bool TryParseValue(string text, out double value)
+        {
+            value = 0d;
+
+            var parser = BuildFormatterToApply() as IValueParser;
+            if (parser == null)
+            {
+                return false;
+            }
+
+            if (!parser.TryParse(text, null, out var parsed))
+            {
+                return false;
+            }
+
+            if (!(parsed is double parsedValue))
+            {
+                return false;
+            }
+
+            value = parsedValue;
+            return true;
+        }
+
+        public string GetDateTimeFormatDisplayName(DateTimeFormats format)
+        {
+            switch (format)
+            {
+                case DateTimeFormats.ElapsedTimeShort:
+                    return "Elapsed Time (Short)";
+                case DateTimeFormats.ElapsedTimeLong:
+                    return "Elapsed Time (Long)";
+                case DateTimeFormats.ShortTime:
+                    return "Duration (Short Time)";
+                case DateTimeFormats.LongTime:
+                    return "Duration (Long Time)";
+                case DateTimeFormats.ShortDate:
+                    return "Short Date";
+                case DateTimeFormats.LongDate:
+                    return "Long Date";
+                case DateTimeFormats.ShortDateAndShortTime:
+                    return "Short Date and Short Time";
+                case DateTimeFormats.ShortDateAndLongTime:
+                    return "Short Date and Long Time";
+                case DateTimeFormats.LongDateAndShortTime:
+                    return "Long Date and Short Time";
+                case DateTimeFormats.LongDateAndLongTime:
+                    return "Long Date and Long Time";
+                case DateTimeFormats.SortableDateTime:
+                    return "Sortable Date/Time";
+                case DateTimeFormats.UniversalSortableDateTime:
+                    return "Universal Sortable Date/Time";
+                case DateTimeFormats.UniversalFullDateAndTime:
+                    return "Universal Full Date/Time";
+                default:
+                    return format.ToString();
+            }
         }
 
         private string BuildFormatSpecifier()

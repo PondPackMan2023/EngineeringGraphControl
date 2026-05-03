@@ -5,6 +5,7 @@
     <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
     <UseWindowsForms>true</UseWindowsForms>
     <Platforms>x64</Platforms>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
   </PropertyGroup>
 
   <ItemGroup>

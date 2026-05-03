@@ -12,11 +12,14 @@ namespace Graphing.TestHarness
     {
         private readonly AxisUnitAndNumericFormatPresentationModel presentationModel;
         private bool isBinding;
+        private bool isPrecisionModeActive;
 
         private readonly ComboBox comboUnit;
         private readonly ComboBox comboFormat;
         private readonly TextBox textPrecision;
         private readonly TextBox textPreview;
+        private readonly Label labelFormat;
+        private readonly Label labelPrecision;
         private readonly Label labelPreviewUnit;
         private readonly Label labelPreviewBase;
         private readonly Button buttonOk;
@@ -100,7 +103,7 @@ namespace Graphing.TestHarness
                 DisplayMember = "Label"
             };
 
-            var labelFormat = new Label
+            labelFormat = new Label
             {
                 Text = "Format:",
                 AutoSize = true,
@@ -116,7 +119,7 @@ namespace Graphing.TestHarness
                 ValueMember = "Kind"
             };
 
-            var labelPrecision = new Label
+            labelPrecision = new Label
             {
                 Text = "Display Precision:",
                 AutoSize = true,
@@ -183,6 +186,29 @@ namespace Graphing.TestHarness
             var selectedUnitIndex = units.FindIndex(unit => unit.Equals(presentationModel.SelectedUnit));
             comboUnit.SelectedIndex = selectedUnitIndex >= 0 ? selectedUnitIndex : 0;
 
+            labelPreviewBase.Text = string.Format(
+                CultureInfo.InvariantCulture,
+                "{0:G} {1}",
+                presentationModel.PreviewValue,
+                presentationModel.PreviewSourceUnitLabel);
+
+            if (presentationModel.IsDateTimeMode)
+            {
+                BindDateTimeMode();
+            }
+            else
+            {
+                BindNumericMode();
+            }
+
+            isBinding = false;
+
+            ValidateAndUpdatePrecision();
+            RefreshPreview();
+        }
+
+        private void BindNumericMode()
+        {
             var formats = new List<NumericFormatOption>
             {
                 new NumericFormatOption("Scientific", AxisNumericFormatKind.Scientific),
@@ -191,22 +217,39 @@ namespace Graphing.TestHarness
                 new NumericFormatOption("Number", AxisNumericFormatKind.Number)
             };
 
+            labelFormat.Text = "Format:";
+            comboFormat.DisplayMember = "Name";
+            comboFormat.ValueMember = "Kind";
             comboFormat.DataSource = formats;
 
             var selectedFormatIndex = formats.FindIndex(option => option.Kind == presentationModel.SelectedFormatKind);
             comboFormat.SelectedIndex = selectedFormatIndex >= 0 ? selectedFormatIndex : 0;
 
-            textPrecision.Text = presentationModel.DisplayPrecision.ToString();
-            labelPreviewBase.Text = string.Format(
-                CultureInfo.InvariantCulture,
-                "{0:G} {1}",
-                presentationModel.PreviewValue,
-                presentationModel.PreviewSourceUnitLabel);
+            textPrecision.Text = presentationModel.DisplayPrecision.ToString(CultureInfo.InvariantCulture);
+            labelPrecision.Visible = true;
+            textPrecision.Visible = true;
+            isPrecisionModeActive = true;
+        }
 
-            isBinding = false;
+        private void BindDateTimeMode()
+        {
+            var formats = presentationModel.AvailableDateTimeFormats
+                .Select(format => new DateTimeFormatOption(presentationModel.GetDateTimeFormatDisplayName(format), format))
+                .ToList();
 
-            ValidateAndUpdatePrecision();
-            RefreshPreview();
+            labelFormat.Text = "Date/Time Format:";
+            comboFormat.DisplayMember = "Name";
+            comboFormat.ValueMember = "Format";
+            comboFormat.DataSource = formats;
+
+            var selectedFormatIndex = formats.FindIndex(option => option.Format == presentationModel.SelectedDateTimeFormat);
+            comboFormat.SelectedIndex = selectedFormatIndex >= 0 ? selectedFormatIndex : 0;
+
+            labelPrecision.Visible = false;
+            textPrecision.Visible = false;
+            isPrecisionModeActive = false;
+            precisionErrorProvider.SetError(textPrecision, string.Empty);
+            buttonOk.Enabled = true;
         }
 
         private void comboUnit_SelectedIndexChanged(object sender, EventArgs e)
@@ -227,6 +270,17 @@ namespace Graphing.TestHarness
         {
             if (isBinding)
             {
+                return;
+            }
+
+            if (presentationModel.IsDateTimeMode)
+            {
+                if (comboFormat.SelectedValue is DateTimeFormats selectedDateTimeFormat)
+                {
+                    presentationModel.SetDateTimeFormat(selectedDateTimeFormat);
+                    RefreshPreview();
+                }
+
                 return;
             }
 
@@ -258,6 +312,13 @@ namespace Graphing.TestHarness
 
         private bool ValidateAndUpdatePrecision()
         {
+            if (presentationModel.IsDateTimeMode)
+            {
+                precisionErrorProvider.SetError(textPrecision, string.Empty);
+                buttonOk.Enabled = true;
+                return true;
+            }
+
             if (presentationModel.TrySetDisplayPrecision(textPrecision.Text))
             {
                 precisionErrorProvider.SetError(textPrecision, string.Empty);
@@ -276,6 +337,16 @@ namespace Graphing.TestHarness
             labelPreviewUnit.Text = presentationModel.PreviewUnitLabel;
         }
 
+        internal bool IsDateTimeModeForTesting => presentationModel.IsDateTimeMode;
+
+        internal string ActiveFormatLabelTextForTesting => labelFormat.Text;
+
+        internal bool IsPrecisionVisibleForTesting => isPrecisionModeActive;
+
+        internal string PreviewTextForTesting => textPreview.Text;
+
+        internal ComboBox FormatComboForTesting => comboFormat;
+
         private sealed class NumericFormatOption
         {
             public NumericFormatOption(string name, AxisNumericFormatKind kind)
@@ -287,6 +358,19 @@ namespace Graphing.TestHarness
             public string Name { get; }
 
             public AxisNumericFormatKind Kind { get; }
+        }
+
+        private sealed class DateTimeFormatOption
+        {
+            public DateTimeFormatOption(string name, DateTimeFormats format)
+            {
+                Name = name;
+                Format = format;
+            }
+
+            public string Name { get; }
+
+            public DateTimeFormats Format { get; }
         }
     }
 }
