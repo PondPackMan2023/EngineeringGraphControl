@@ -115,7 +115,7 @@ namespace Graphing.TestScenarios
             // 
             // buttonOptions
             // 
-            this.buttonOptions.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.buttonOptions.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonOptions.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.buttonOptions.Location = new System.Drawing.Point(689, 136);
             this.buttonOptions.Name = "buttonOptions";
