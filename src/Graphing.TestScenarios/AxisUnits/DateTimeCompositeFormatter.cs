@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.AxisUnits
+namespace Graphing.TestScenarios.AxisUnits
 {
     internal sealed class DateTimeCompositeFormatter : IValueFormatter, IValueParser
     {

@@ -6,7 +6,7 @@ using System.Linq;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.AxisUnits
+namespace Graphing.TestScenarios.AxisUnits
 {
     internal enum AxisNumericFormatKind
     {

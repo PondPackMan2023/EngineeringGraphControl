@@ -1,11 +1,11 @@
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
-using Graphing.TestHarness.Fields;
-using Graphing.TestHarness.Libraries;
+using Graphing.TestScenarios.Fields;
+using Graphing.TestScenarios.Libraries;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.Scenarios
+namespace Graphing.TestScenarios.Scenarios
 {
     internal static class ScenarioDefinitions
     {

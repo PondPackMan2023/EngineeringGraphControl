@@ -1,4 +1,4 @@
-using Graphing.TestHarness.AxisUnits;
+using Graphing.TestScenarios.AxisUnits;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace Graphing.TestHarness
+namespace Graphing.TestScenarios
 {
     internal sealed class AxisUnitAndNumericFormatDialog : Form
     {

@@ -1,4 +1,4 @@
-namespace Graphing.TestHarness.AxisUnits
+namespace Graphing.TestScenarios.AxisUnits
 {
     internal enum DateTimeFormats
     {

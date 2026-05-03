@@ -1,8 +1,8 @@
-using Graphing.TestHarness.AxisUnits;
+using Graphing.TestScenarios.AxisUnits;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.Libraries
+namespace Graphing.TestScenarios.Libraries
 {
     internal static class NumericFormatterLibrary
     {

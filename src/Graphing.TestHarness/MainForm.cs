@@ -1,9 +1,9 @@
 using Graphing.Controls.Models;
 using Graphing.Controls.Presentation;
 using Graphing.Editors;
-using Graphing.TestHarness.Libraries;
-using Graphing.TestHarness.AxisUnits;
-using Graphing.TestHarness.Scenarios;
+using Graphing.TestScenarios.Libraries;
+using Graphing.TestScenarios.AxisUnits;
+using Graphing.TestScenarios.Scenarios;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +12,7 @@ using System.Windows.Forms;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness
+namespace Graphing.TestScenarios
 {
     public partial class MainForm : Form
     {

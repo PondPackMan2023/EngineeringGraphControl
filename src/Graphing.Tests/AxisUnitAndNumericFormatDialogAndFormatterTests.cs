@@ -1,6 +1,6 @@
 using Graphing.Controls.Models;
-using Graphing.TestHarness;
-using Graphing.TestHarness.AxisUnits;
+using Graphing.TestScenarios;
+using Graphing.TestScenarios.AxisUnits;
 using NUnit.Framework;
 using System;
 using System.Globalization;

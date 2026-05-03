@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace Graphing.TestHarness
+namespace Graphing.TestScenarios
 {
     partial class MainForm
     {
