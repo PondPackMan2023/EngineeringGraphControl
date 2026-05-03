@@ -2,10 +2,10 @@ namespace Graphing.Editors.EditorModels
 {
     public class TitlesEditorModel
     {
-        public bool HasTitleTextOverride { get; set; }
+        public bool HasTitleTextOverride { get; set; } = true;
         public string TitleText { get; set; }
 
-        public bool HasSubtitleTextOverride { get; set; }
+        public bool HasSubtitleTextOverride { get; set; } = true;
         public string SubtitleText { get; set; }
 
         public bool HasTitleVisibilityOverride { get; set; }

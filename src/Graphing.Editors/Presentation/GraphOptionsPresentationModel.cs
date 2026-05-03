@@ -111,9 +111,9 @@ namespace Graphing.Editors.Presentation
         {
             var model = new TitlesEditorModel
             {
-                HasTitleTextOverride = !string.IsNullOrEmpty(existingOptions.GraphTitle),
+                HasTitleTextOverride = true,
                 TitleText = existingOptions.GraphTitle ?? string.Empty,
-                HasSubtitleTextOverride = !string.IsNullOrEmpty(existingOptions.GraphSubtitle),
+                HasSubtitleTextOverride = true,
                 SubtitleText = existingOptions.GraphSubtitle ?? string.Empty,
                 HasTitleVisibilityOverride = false,
                 IsTitleVisible = true,

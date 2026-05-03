@@ -553,7 +553,7 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void Layout_LegendTop_RemainsAboveGraphTitleBand_WhenTitleExists()
+        public void Layout_LegendTop_RendersBelowGraphTitleBand_WhenTitleExists()
         {
             var model = CreateModel(seriesType: SeriesType.Line);
             var snapshot = new GraphSnapshotBuilder().Build(model);
@@ -565,8 +565,36 @@ namespace Graphing.Tests
 
             Assert.That(legend, Is.Not.Null);
             Assert.That(title, Is.Not.Null);
-            Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(title.TopRight.Y).Within(1e-12),
-                "Top legend should not overlap title band.");
+            Assert.That(title.BottomLeft.Y, Is.GreaterThanOrEqualTo(legend.TopRight.Y).Within(1e-12),
+                "Top legend should render below the title band.");
+        }
+
+        [Test]
+        public void Layout_LegendTop_RendersBelowTitleAndSubtitle_AndAbovePlotArea()
+        {
+            var model = CreateModelWithAxisSides(seriesType: SeriesType.Line, xAxisSide: ModelAxisSide.Top, yAxisSide: ModelAxisSide.Left);
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var options = new GraphPresentationOptions(
+                graphTitle: "Title",
+                graphSubtitle: "Subtitle",
+                legendPlacement: LegendPlacement.Top);
+
+            var presentation = new GraphPresentationModel(snapshot, options);
+            var title = presentation.Layout.Title;
+            var subtitle = presentation.Layout.Subtitle;
+            var legend = presentation.Layout.Legend;
+            var plotArea = presentation.Layout.PlotArea;
+
+            Assert.That(title, Is.Not.Null);
+            Assert.That(subtitle, Is.Not.Null);
+            Assert.That(legend, Is.Not.Null);
+
+            Assert.That(title.BottomLeft.Y, Is.GreaterThanOrEqualTo(subtitle.TopRight.Y).Within(1e-12),
+                "Title must remain above subtitle.");
+            Assert.That(subtitle.BottomLeft.Y, Is.GreaterThanOrEqualTo(legend.TopRight.Y).Within(1e-12),
+                "Top legend must render below subtitle.");
+            Assert.That(legend.BottomLeft.Y, Is.GreaterThanOrEqualTo(plotArea.TopRight.Y).Within(1e-12),
+                "Top legend must remain above the plot area.");
         }
 
         [Test]

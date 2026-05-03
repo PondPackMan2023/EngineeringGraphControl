@@ -77,8 +77,12 @@ namespace Graphing.Controls.Presentation
                 case LegendPlacement.Top:
                     if (resizeChart)
                     {
-                        // ADR-0004/0005: top legend inserts at the control edge and grows inward.
-                        bandTop = 1.0 - topEdgePadding;
+                        // ADR-0004/0005: top legend occupies the band below immutable title/subtitle chrome.
+                        // Offset the band so the visible legend frame, not just the raw band, clears that chrome.
+                        var topChromeGap = titleSpaceReserved > 0d
+                            ? Math.Max(siblingGap, TitleSubtitleGap - LegendOuterPaddingY)
+                            : 0d;
+                        bandTop = 1.0 - topEdgePadding - titleSpaceReserved - topChromeGap;
                         bandBottom = bandTop - legendBandHeight;
                         bandLeft = leftEdgePadding + leftAxisBandWidth;
                         bandRight = 1.0 - rightEdgePadding - rightAxisBandWidth;

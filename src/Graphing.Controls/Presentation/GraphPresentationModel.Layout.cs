@@ -492,9 +492,7 @@ namespace Graphing.Controls.Presentation
                 new GeometryPoint3D(plotLeft, plotBottom, 0d),
                 new GeometryPoint3D(plotRight, plotTop, 0d));
 
-            var titleTopY = topLegendBandHeight > 0d
-                ? 1.0 - topEdgePadding - topLegendBandHeight - SideBandSiblingGap
-                : 1.0 - topEdgePadding;
+            var titleTopY = 1.0 - topEdgePadding;
 
             var legendBandWidthForBuild = (legendPlacement == LegendPlacement.Left)
                 ? (resizeChart ? leftLegendBandWidth : legendRequest)
