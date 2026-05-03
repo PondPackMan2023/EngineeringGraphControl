@@ -1,11 +1,11 @@
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
-using Graphing.TestHarness.Fields;
-using Graphing.TestHarness.Libraries;
+using Graphing.TestScenarios.Fields;
+using Graphing.TestScenarios.Libraries;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.Scenarios
+namespace Graphing.TestScenarios.Scenarios
 {
     internal static class ScenarioDefinitions
     {
@@ -34,7 +34,7 @@ namespace Graphing.TestHarness.Scenarios
             var hglField = new GraphFieldDefinition("HGL", "Hydraulic Grade Line", Units.Length.Meter, hgl);
 
             var xAxis = new AxisModel(new AxisId("time"), AxisOrientation.X, AxisSide.Bottom, Units.Time.Second, "sec",
-                NumericFormatterLibrary.TimeFormatter);
+                NumericFormatterLibrary.DateTimeFormatter);
             var yAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
                 NumericFormatterLibrary.ElevationFormatter);
 
@@ -98,7 +98,7 @@ namespace Graphing.TestHarness.Scenarios
             var pressureField = new GraphFieldDefinition("Pressure", "Pressure", Units.Pressure.Psi, pressures);
 
             var xAxis = new AxisModel(new AxisId("time"), AxisOrientation.X, AxisSide.Bottom, Units.Time.Second, "sec",
-                NumericFormatterLibrary.TimeFormatter);
+                NumericFormatterLibrary.DateTimeFormatter);
             var lengthYAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
                 NumericFormatterLibrary.ElevationFormatter);
             var pressureYAxis = new AxisModel(new AxisId("pressure2"), AxisOrientation.Y, AxisSide.Right, Units.Pressure.Psi, "psi",
@@ -140,7 +140,7 @@ namespace Graphing.TestHarness.Scenarios
             var hglField = new GraphFieldDefinition("HGL", "Hydraulic Grade Line", Units.Length.Meter, hgl);
 
             var xAxis = new AxisModel(new AxisId("time"), AxisOrientation.X, AxisSide.Bottom, Units.Time.Second, "sec",
-                NumericFormatterLibrary.TimeFormatter);
+                NumericFormatterLibrary.DateTimeFormatter);
             var yAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Right, Units.Length.Meter, "m",
                 NumericFormatterLibrary.ElevationFormatter);
 
@@ -204,7 +204,7 @@ namespace Graphing.TestHarness.Scenarios
             var pressureField = new GraphFieldDefinition("Pressure", "Pressure", Units.Pressure.Psi, pressures);
 
             var xAxis = new AxisModel(new AxisId("time"), AxisOrientation.X, AxisSide.Bottom, Units.Time.Second, "sec",
-                NumericFormatterLibrary.TimeFormatter);
+                NumericFormatterLibrary.DateTimeFormatter);
             var lengthYAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
                 NumericFormatterLibrary.ElevationFormatter);
             var pressureYAxis = new AxisModel(new AxisId("pressure"), AxisOrientation.Y, AxisSide.Right, Units.Pressure.Psi, "psi",

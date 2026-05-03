@@ -5,9 +5,11 @@
   <Folder Name="/Tests/">
     <Project Path="src/Graphing.TestHarness/Graphing.TestHarness.csproj" Id="080b331c-5cf1-40f8-8a5f-b6494fc6a4dd">
       <Platform Project="x64" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="src/Graphing.Tests/Graphing.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/Graphing.TestScenarios/Graphing.TestScenarios.csproj" Id="428c47f3-2cec-4aad-9eef-9c03a2103c4f" >
       <Platform Project="x64" />
     </Project>
   </Folder>

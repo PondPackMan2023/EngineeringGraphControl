@@ -1,11 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
     <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
-    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Graphing.TestScenarios</RootNamespace>
+    <AssemblyName>Graphing.TestScenarios</AssemblyName>
+    <Nullable>disable</Nullable>
     <Platforms>x64</Platforms>
-    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +14,6 @@
     <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
     <ProjectReference Include="..\Graphing.Editors\Graphing.Editors.csproj" />
-    <ProjectReference Include="..\Graphing.TestScenarios\Graphing.TestScenarios.csproj" />
   </ItemGroup>
 
 </Project>

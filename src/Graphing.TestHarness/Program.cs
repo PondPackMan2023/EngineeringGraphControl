@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace Graphing.TestHarness
+namespace Graphing.TestScenarios
 {
     internal static class Program
     {

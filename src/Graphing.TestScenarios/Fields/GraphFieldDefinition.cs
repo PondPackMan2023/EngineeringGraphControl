@@ -2,7 +2,7 @@ using Graphing.Controls.Models;
 using System;
 using UnitRegistry;
 
-namespace Graphing.TestHarness.Fields
+namespace Graphing.TestScenarios.Fields
 {
     internal class GraphFieldDefinition : GraphFieldDefinitionBase
     {

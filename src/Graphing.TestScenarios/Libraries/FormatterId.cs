@@ -1,6 +1,6 @@
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.Libraries
+namespace Graphing.TestScenarios.Libraries
 {
     internal static class FormatterIds
     {

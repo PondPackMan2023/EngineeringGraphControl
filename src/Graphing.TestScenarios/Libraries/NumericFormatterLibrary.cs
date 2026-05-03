@@ -1,8 +1,8 @@
-using System.Runtime.InteropServices;
+using Graphing.TestScenarios.AxisUnits;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.TestHarness.Libraries
+namespace Graphing.TestScenarios.Libraries
 {
     internal static class NumericFormatterLibrary
     {
@@ -10,7 +10,7 @@ namespace Graphing.TestHarness.Libraries
 
         static NumericFormatterLibrary()
         {
-            _formatterRegistry.Register(new NumericFormatter(FormatterIds.Time_Extended, UnitsRegistry.Default, "Time", NumericFormat.Fixed(2)));
+            //_formatterRegistry.Register(new DateTimeCompositeFormatter(FormatterIds.DateTime, UnitsRegistry.Default, "Time", NumericFormat.Fixed(2)));
             _formatterRegistry.Register(new NumericFormatter(FormatterIds.Elevation, UnitsRegistry.Default, "Elevation", NumericFormat.Fixed(2)));
             _formatterRegistry.Register(new NumericFormatter(FormatterIds.Pressure, UnitsRegistry.Default, "Pressure", NumericFormat.Fixed(2)));
         }
@@ -21,6 +21,17 @@ namespace Graphing.TestHarness.Libraries
         }
 
         internal static NumericFormatter TimeFormatter => _formatterRegistry.Get(FormatterIds.Time_Extended);
+
+        private static DateTimeCompositeFormatter _dateTimeFormatter;
+        internal static DateTimeCompositeFormatter DateTimeFormatter
+        {
+            get
+            {
+                if (_dateTimeFormatter == null)
+                    _dateTimeFormatter = new DateTimeCompositeFormatter(DateTimeFormats.ElapsedTimeShort);
+                return _dateTimeFormatter;
+            }
+        }
 
         internal static NumericFormatter ElevationFormatter => _formatterRegistry.Get(FormatterIds.Elevation);
 
