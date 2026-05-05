@@ -61,6 +61,61 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void LineOnly_LineSeries_EmitsSingleContinuousGeometry()
+        {
+            var model = CreateModel(SeriesType.Line, LineRenderMode.LineOnly);
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(1));
+            Assert.That(presentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Line));
+            Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Continuous));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.Line));
+        }
+
+        [Test]
+        public void PointsOnly_LineSeries_EmitsSingleDiscreteGeometry()
+        {
+            var model = CreateModel(SeriesType.Line, LineRenderMode.PointsOnly);
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(1));
+            Assert.That(presentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Line));
+            Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Discrete));
+            Assert.That(presentation.Layout.Legend.Entries.Count, Is.EqualTo(1));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.Point));
+        }
+
+        [Test]
+        public void LineAndPoints_LineSeries_EmitsContinuousAndDiscreteGeometry()
+        {
+            var model = CreateModel(SeriesType.Line, LineRenderMode.LineAndPoints);
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(2));
+            Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Continuous));
+            Assert.That(presentation.Series[1].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Discrete));
+            Assert.That(presentation.Series[0].SeriesId, Is.EqualTo(presentation.Series[1].SeriesId));
+            Assert.That(presentation.Layout.Legend.Entries.Count, Is.EqualTo(1));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.LineAndPoint));
+        }
+
+        [Test]
+        public void ScatterSeries_RemainsDiscreteGeometry()
+        {
+            var model = CreateModel(SeriesType.Scatter, LineRenderMode.LineAndPoints);
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+
+            Assert.That(presentation.Series.Count, Is.EqualTo(1));
+            Assert.That(presentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Scatter));
+            Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Discrete));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.LineAndPoint));
+        }
+
+        [Test]
         public void AxisFormatter_IsExplicitlySupplied_ByAxisModel()
         {
             var model = CreateModel(seriesType: SeriesType.Line);
@@ -3278,9 +3333,9 @@ namespace Graphing.Tests
             Assert.That(descriptor, Is.Null);
         }
 
-        private static IGraphModel CreateModel(SeriesType seriesType)
+        private static IGraphModel CreateModel(SeriesType seriesType, LineRenderMode lineRenderMode = LineRenderMode.LineOnly)
         {
-            return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left);
+            return CreateModelWithAxisSides(seriesType, ModelAxisSide.Bottom, ModelAxisSide.Left, lineRenderMode);
         }
 
         private static GraphLayoutModel CreateSyntheticLayoutWithSharedBorderRegions()
@@ -3402,7 +3457,11 @@ namespace Graphing.Tests
             return new GraphPresentationModel(snapshot);
         }
 
-        private static IGraphModel CreateModelWithAxisSides(SeriesType seriesType, ModelAxisSide xAxisSide, ModelAxisSide yAxisSide)
+        private static IGraphModel CreateModelWithAxisSides(
+            SeriesType seriesType,
+            ModelAxisSide xAxisSide,
+            ModelAxisSide yAxisSide,
+            LineRenderMode lineRenderMode = LineRenderMode.LineOnly)
         {
             var registry = UnitsRegistry.Default;
             var unit = Units.Length.Meter;
@@ -3414,7 +3473,7 @@ namespace Graphing.Tests
             var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
             var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
 
-            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", seriesType, xField, yField, xAxis, yAxis);
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", seriesType, xField, yField, xAxis, yAxis, lineRenderMode);
 
             return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
         }

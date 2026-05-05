@@ -38,7 +38,8 @@ namespace Graphing.TestScenarios.Scenarios
             var yAxis = new AxisModel(new AxisId("elevation"), AxisOrientation.Y, AxisSide.Left, Units.Length.Meter, "m",
                 NumericFormatterLibrary.ElevationFormatter);
 
-            var series = new GraphSeriesModel(new SeriesId("hgl-126"), "J-4 - Historical SCADA Simulation - Hydraulic Grade", SeriesType.Line, timeField, hglField, xAxis, yAxis);
+            var series = new GraphSeriesModel(new SeriesId("hgl-126"), "J-4 - Historical SCADA Simulation - Hydraulic Grade",
+                SeriesType.Line, timeField, hglField, xAxis, yAxis);
             var graph = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
 
             return graph;
@@ -107,7 +108,7 @@ namespace Graphing.TestScenarios.Scenarios
                 NumericFormatterLibrary.PressureFormatter);
 
             var hglSeries = new GraphSeriesModel(new SeriesId("hgl-126"), "J-4 - Historical SCADA Simulation - Hydraulic Grade", SeriesType.Line, timeField, hglField, xAxis, lengthYAxis);
-            var psiSeries = new GraphSeriesModel(new SeriesId("pressure-126"), "J-4 - Historical SCADA Simulation - Pressure", SeriesType.Line, adjTimeField, pressureField, xAxis, pressureYAxis);
+            var psiSeries = new GraphSeriesModel(new SeriesId("pressure-126"), "J-4 - Historical SCADA Simulation - Pressure", SeriesType.Line, adjTimeField, pressureField, xAxis, pressureYAxis, LineRenderMode.PointsOnly);
             var psiSeries2 = new GraphSeriesModel(new SeriesId("pressure2-126"), "J-4 - Historical SCADA Simulation - Pressure", SeriesType.Line, adjTimeField2, pressureField, xAxis, leftPressureYAxis);
 
             var graph = new GraphModel(new[] { xAxis, lengthYAxis, pressureYAxis, leftPressureYAxis }, new[] { hglSeries, psiSeries, psiSeries2 });

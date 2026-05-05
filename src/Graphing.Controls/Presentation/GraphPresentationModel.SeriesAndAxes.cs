@@ -40,18 +40,61 @@ namespace Graphing.Controls.Presentation
 
                 var points = BuildPoints(seriesSnapshot.XField, seriesSnapshot.YField);
                 var resolvedSeriesColor = ResolveSeriesColor(seriesSnapshot, result.Count, options);
-                var geometry = new SeriesPresentationGeometry(
-                    seriesSnapshot.SeriesId,
-                    seriesSnapshot.Label,
-                    seriesSnapshot.SeriesType,
-                    ResolveConnectivity(seriesSnapshot.SeriesType),
-                    points,
-                    resolvedSeriesColor);
-
-                result.Add(new SeriesGeometryContext(seriesSnapshot, geometry));
+                AddSeriesGeometry(result, seriesSnapshot, points, resolvedSeriesColor);
             }
 
             return new ReadOnlyCollection<SeriesGeometryContext>(result);
+        }
+
+        private static void AddSeriesGeometry(
+            List<SeriesGeometryContext> result,
+            ISeriesSnapshot seriesSnapshot,
+            IReadOnlyList<GeometryPoint3D> points,
+            System.Drawing.Color resolvedSeriesColor)
+        {
+            if (seriesSnapshot.SeriesType == SeriesType.Line)
+            {
+                switch (seriesSnapshot.LineRenderMode)
+                {
+                    case LineRenderMode.PointsOnly:
+                        result.Add(CreateSeriesGeometryContext(seriesSnapshot, points, SeriesConnectivityIntent.Discrete, resolvedSeriesColor));
+                        return;
+
+                    case LineRenderMode.LineAndPoints:
+                        result.Add(CreateSeriesGeometryContext(seriesSnapshot, points, SeriesConnectivityIntent.Continuous, resolvedSeriesColor));
+                        result.Add(CreateSeriesGeometryContext(seriesSnapshot, points, SeriesConnectivityIntent.Discrete, resolvedSeriesColor));
+                        return;
+
+                    case LineRenderMode.LineOnly:
+                    default:
+                        result.Add(CreateSeriesGeometryContext(seriesSnapshot, points, SeriesConnectivityIntent.Continuous, resolvedSeriesColor));
+                        return;
+                }
+            }
+
+            result.Add(
+                CreateSeriesGeometryContext(
+                    seriesSnapshot,
+                    points,
+                    ResolveConnectivity(seriesSnapshot.SeriesType),
+                    resolvedSeriesColor));
+        }
+
+        private static SeriesGeometryContext CreateSeriesGeometryContext(
+            ISeriesSnapshot seriesSnapshot,
+            IReadOnlyList<GeometryPoint3D> points,
+            SeriesConnectivityIntent connectivityIntent,
+            System.Drawing.Color resolvedSeriesColor)
+        {
+            var geometry = new SeriesPresentationGeometry(
+                seriesSnapshot.SeriesId,
+                seriesSnapshot.Label,
+                seriesSnapshot.SeriesType,
+                connectivityIntent,
+                points,
+                resolvedSeriesColor);
+
+            return new SeriesGeometryContext(seriesSnapshot, geometry);
         }
 
         private static IReadOnlyList<SeriesPresentationGeometry> BuildSeriesList(IReadOnlyList<SeriesGeometryContext> contexts)

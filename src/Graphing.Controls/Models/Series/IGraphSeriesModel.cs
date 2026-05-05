@@ -10,6 +10,8 @@ namespace Graphing.Controls.Models
 
         SeriesType SeriesType { get; }
 
+        LineRenderMode LineRenderMode { get; }
+
         IGraphFieldDefinition XField { get; }
 
         IGraphFieldDefinition YField { get; }

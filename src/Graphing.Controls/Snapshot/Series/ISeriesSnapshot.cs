@@ -25,6 +25,11 @@ namespace Graphing.Controls.Snapshot
         SeriesType SeriesType { get; }
 
         /// <summary>
+        /// Presentation intent for line rendering.
+        /// </summary>
+        LineRenderMode LineRenderMode { get; }
+
+        /// <summary>
         /// X field snapshot used by this series.
         /// </summary>
         IFieldSnapshot XField { get; }

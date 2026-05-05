@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Graphing.Controls.Models;
+using Graphing.Controls.Models.Series;
 using Graphing.Controls.Rendering.Geometry;
 
 namespace Graphing.Controls.Presentation
@@ -44,7 +46,7 @@ namespace Graphing.Controls.Presentation
         }
 
         private static LegendPresentationGeometry BuildLegendGeometry(
-            IReadOnlyList<SeriesPresentationGeometry> series,
+            IReadOnlyList<SeriesGeometryContext> seriesContexts,
             LegendPlacement placement,
             bool resizeChart,
             PlotAreaLayout plotArea,
@@ -62,7 +64,7 @@ namespace Graphing.Controls.Presentation
             double legendBandHeight,
             LegendMeasurementAdvice legendAdvice)
         {
-            if (series == null || series.Count == 0)
+            if (seriesContexts == null || seriesContexts.Count == 0)
             {
                 return null;
             }
@@ -209,7 +211,7 @@ namespace Graphing.Controls.Presentation
                 contentTop = containerTop;
             }
 
-            var entryCount = series.Count;
+            var entryCount = seriesContexts.Count;
             var entries = new List<LegendEntryPresentationGeometry>(entryCount);
 
             if (placement == LegendPlacement.Top || placement == LegendPlacement.Bottom)
@@ -228,7 +230,8 @@ namespace Graphing.Controls.Presentation
 
                 for (var index = 0; index < entryCount; index++)
                 {
-                    var seriesGeometry = series[index];
+                    var context = seriesContexts[index];
+                    var seriesGeometry = context.Geometry;
                     var entryWidth = legendAdvice != null && legendAdvice.ItemWidth > 0d
                         ? legendAdvice.ItemWidth
                         : ComputeLegendEntryWidth(seriesGeometry);
@@ -282,7 +285,8 @@ namespace Graphing.Controls.Presentation
                             new GeometryPoint3D(entryRight, entryTop, 0d),
                             new GeometryPoint3D(glyphLeft, glyphBottom, 0d),
                             new GeometryPoint3D(glyphRight, glyphTop, 0d),
-                            seriesGeometry.SeriesColor));
+                            seriesGeometry.SeriesColor,
+                            ResolveLegendGlyphKind(context)));
 
                     currentX = entryRight + LegendEntryGap;
                     itemsInRow++;
@@ -292,7 +296,7 @@ namespace Graphing.Controls.Presentation
             {
                 var columnWidth = legendAdvice != null && legendAdvice.ItemWidth > 0d
                     ? legendAdvice.ItemWidth
-                    : GetMaxLegendEntryWidth(series);
+                    : GetMaxLegendEntryWidth(BuildLegendSeriesList(seriesContexts));
                 var rowHeight = legendAdvice != null && legendAdvice.ItemHeight > 0d
                     ? legendAdvice.ItemHeight
                     : LegendEntryHeightEstimate;
@@ -340,7 +344,8 @@ namespace Graphing.Controls.Presentation
                         glyphRight = glyphLeft;
                     }
 
-                    var seriesGeometry = series[index];
+                    var context = seriesContexts[index];
+                    var seriesGeometry = context.Geometry;
                     var displayText = !string.IsNullOrWhiteSpace(seriesGeometry.Label)
                         ? seriesGeometry.Label
                         : seriesGeometry.SeriesId != null
@@ -355,7 +360,8 @@ namespace Graphing.Controls.Presentation
                             new GeometryPoint3D(entryRight, entryTop, 0d),
                             new GeometryPoint3D(glyphLeft, glyphBottom, 0d),
                             new GeometryPoint3D(glyphRight, glyphTop, 0d),
-                            seriesGeometry.SeriesColor));
+                            seriesGeometry.SeriesColor,
+                            ResolveLegendGlyphKind(context)));
 
                     currentY = entryBottom - LegendEntryGap;
                     itemsInCurrentColumn++;
@@ -461,7 +467,8 @@ namespace Graphing.Controls.Presentation
                                 new GeometryPoint3D(e.TopRight.X + horizontalOffset, e.TopRight.Y + verticalOffset, 0d),
                                 new GeometryPoint3D(e.GlyphBottomLeft.X + horizontalOffset, e.GlyphBottomLeft.Y + verticalOffset, 0d),
                                 new GeometryPoint3D(e.GlyphTopRight.X + horizontalOffset, e.GlyphTopRight.Y + verticalOffset, 0d),
-                                e.SeriesColor));
+                                e.SeriesColor,
+                                e.GlyphKind));
                         }
 
                         entries = centeredEntries;
@@ -485,6 +492,30 @@ namespace Graphing.Controls.Presentation
                 new GeometryPoint3D(frameContentRight, frameContentTop, 0d),
                 new ReadOnlyCollection<LegendEntryPresentationGeometry>(entries),
                 showBorder: true);
+        }
+
+        private static LegendGlyphKind ResolveLegendGlyphKind(SeriesGeometryContext context)
+        {
+            if (context == null || context.Source == null)
+            {
+                return LegendGlyphKind.LineAndPoint;
+            }
+
+            if (context.Source.SeriesType != SeriesType.Line)
+            {
+                return LegendGlyphKind.LineAndPoint;
+            }
+
+            switch (context.Source.LineRenderMode)
+            {
+                case LineRenderMode.PointsOnly:
+                    return LegendGlyphKind.Point;
+                case LineRenderMode.LineAndPoints:
+                    return LegendGlyphKind.LineAndPoint;
+                case LineRenderMode.LineOnly:
+                default:
+                    return LegendGlyphKind.Line;
+            }
         }
     }
 }

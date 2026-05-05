@@ -253,6 +253,8 @@ namespace Graphing.Controls.Presentation
         private static GraphLayoutModel BuildLayoutGeometry(
             IReadOnlyList<AxisPresentationGeometry> axes,
             IReadOnlyList<SeriesPresentationGeometry> series,
+            IReadOnlyList<SeriesGeometryContext> legendSeriesContexts,
+            IReadOnlyList<SeriesPresentationGeometry> legendSeries,
             GraphPresentationOptions options,
             IGraphLayoutMeasurementInput measurementInput)
         {
@@ -338,7 +340,7 @@ namespace Graphing.Controls.Presentation
             var rightEdgePadding = EdgePaddingThickness;
             var bottomEdgePadding = EdgePaddingThickness;
             var topEdgePadding = EdgePaddingThickness;
-            var hasLegend = series != null && series.Count > 0;
+            var hasLegend = legendSeries != null && legendSeries.Count > 0;
             var legendPlacement = options.LegendPlacement;
             var resizeChart = options.ResizeChart;
             var titleExists = !string.IsNullOrEmpty(options.GraphTitle);
@@ -436,7 +438,7 @@ namespace Graphing.Controls.Presentation
                 ? leftRightAvailablePrimarySpan
                 : topBottomAvailablePrimarySpan;
             legendAdvice = hasLegend
-                ? measurementInput.MeasureLegend(legendPlacement, series, legendAvailablePrimarySpan)
+                ? measurementInput.MeasureLegend(legendPlacement, legendSeries, legendAvailablePrimarySpan)
                 : null;
             legendRequest = ComputeLegendThicknessRequest(legendPlacement, legendAdvice);
 
@@ -542,7 +544,7 @@ namespace Graphing.Controls.Presentation
 
             var legendGeometry = hasLegend
                 ? BuildLegendGeometry(
-                    series,
+                    legendSeriesContexts,
                     legendPlacement,
                     resizeChart,
                     finalPlotArea,

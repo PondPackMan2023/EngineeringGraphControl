@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System;
 using Graphing.Controls.Snapshot;
 
 namespace Graphing.Controls.Presentation
@@ -26,11 +27,12 @@ namespace Graphing.Controls.Presentation
 
         private static IReadOnlyList<LegendEntrySemantic> BuildLegendEntries(IReadOnlyList<SeriesGeometryContext> seriesContexts)
         {
-            var entries = new List<LegendEntrySemantic>(seriesContexts.Count);
+            var uniqueContexts = BuildUniqueSeriesContexts(seriesContexts);
+            var entries = new List<LegendEntrySemantic>(uniqueContexts.Count);
 
-            for (var index = 0; index < seriesContexts.Count; index++)
+            for (var index = 0; index < uniqueContexts.Count; index++)
             {
-                var context = seriesContexts[index];
+                var context = uniqueContexts[index];
                 var item = context.Geometry;
                 var text = item.Label ?? string.Empty;
                 entries.Add(new LegendEntrySemantic(item.SeriesId, text));
@@ -122,6 +124,50 @@ namespace Graphing.Controls.Presentation
             }
 
             return new ReadOnlyCollection<AnnotationSemantic>(annotations);
+        }
+
+        private static IReadOnlyList<SeriesGeometryContext> BuildUniqueSeriesContexts(IReadOnlyList<SeriesGeometryContext> seriesContexts)
+        {
+            var unique = new List<SeriesGeometryContext>();
+            var seenSeriesIds = new HashSet<string>(StringComparer.Ordinal);
+
+            for (var index = 0; index < seriesContexts.Count; index++)
+            {
+                var context = seriesContexts[index];
+                if (context == null || context.Geometry == null)
+                {
+                    continue;
+                }
+
+                var seriesId = context.Geometry.SeriesId != null
+                    ? context.Geometry.SeriesId.ToString()
+                    : null;
+
+                if (seriesId != null)
+                {
+                    if (!seenSeriesIds.Add(seriesId))
+                    {
+                        continue;
+                    }
+                }
+
+                unique.Add(context);
+            }
+
+            return new ReadOnlyCollection<SeriesGeometryContext>(unique);
+        }
+
+        private static IReadOnlyList<SeriesPresentationGeometry> BuildLegendSeriesList(IReadOnlyList<SeriesGeometryContext> seriesContexts)
+        {
+            var uniqueContexts = BuildUniqueSeriesContexts(seriesContexts);
+            var legendSeries = new List<SeriesPresentationGeometry>(uniqueContexts.Count);
+
+            for (var index = 0; index < uniqueContexts.Count; index++)
+            {
+                legendSeries.Add(uniqueContexts[index].Geometry);
+            }
+
+            return new ReadOnlyCollection<SeriesPresentationGeometry>(legendSeries);
         }
     }
 }

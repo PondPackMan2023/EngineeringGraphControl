@@ -91,6 +91,45 @@ namespace Graphing.Tests
             Assert.That(presentation.Layout.Legend.Entries[2].SeriesId, Is.EqualTo(new SeriesId("series-1")));
         }
 
+        [Test]
+        public void Build_CarriesLineRenderMode_FromModelToSnapshot()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", null);
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 2d, 3d });
+            var series = new GraphSeriesModel(
+                new SeriesId("series-1"),
+                "series-1",
+                SeriesType.Line,
+                xField,
+                yField,
+                xAxis,
+                yAxis,
+                LineRenderMode.LineAndPoints);
+
+            var model = new GraphModel(new[] { xAxis, yAxis }, new IGraphSeriesModel[] { series });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+
+            Assert.That(snapshot.Series[0].LineRenderMode, Is.EqualTo(LineRenderMode.LineAndPoints));
+        }
+
+        [Test]
+        public void GraphSeriesModel_DefaultsLineRenderMode_ToLineOnly()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", null);
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 2d, 3d });
+
+            var series = new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+
+            Assert.That(series.LineRenderMode, Is.EqualTo(LineRenderMode.LineOnly));
+        }
+
         private static IGraphModel CreateGraphModelWithMultipleSeries()
         {
             var unit = Units.Length.Meter;

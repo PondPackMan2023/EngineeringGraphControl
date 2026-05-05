@@ -55,6 +55,8 @@ namespace Graphing.Controls.Rendering
         private const float LegendInnerPaddingPixels = 7f;
         private const float LegendEntryGapPixels = 4f;
         private const float LegendMeasurementSafetyMarginPixels = 8f;
+        private const float DiscretePointMarkerSize = 4f;
+        private const float DiscretePointMarkerRadius = DiscretePointMarkerSize / 2f;
         private const TextFormatFlags LegendTextFormatFlags = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
 
         private static readonly Pen AxisPen = new Pen(Color.Black, AxisLineWidth);
@@ -933,16 +935,23 @@ namespace Graphing.Controls.Rendering
 
             using (var glyphPen = new Pen(entry.SeriesColor, LegendLineWidth))
             {
-                g.DrawLine(glyphPen, glyphLeft, glyphCenterY, glyphRight, glyphCenterY);
-
                 var markerRadius = LegendMarkerSize / 2f;
                 var markerCenterX = glyphLeft + (glyphWidth / 2f);
-                g.DrawEllipse(
-                    glyphPen,
-                    markerCenterX - markerRadius,
-                    glyphCenterY - markerRadius,
-                    LegendMarkerSize,
-                    LegendMarkerSize);
+
+                if (entry.GlyphKind == LegendGlyphKind.Line || entry.GlyphKind == LegendGlyphKind.LineAndPoint)
+                {
+                    g.DrawLine(glyphPen, glyphLeft, glyphCenterY, glyphRight, glyphCenterY);
+                }
+
+                if (entry.GlyphKind == LegendGlyphKind.Point || entry.GlyphKind == LegendGlyphKind.LineAndPoint)
+                {
+                    g.DrawEllipse(
+                        glyphPen,
+                        markerCenterX - markerRadius,
+                        glyphCenterY - markerRadius,
+                        LegendMarkerSize,
+                        LegendMarkerSize);
+                }
             }
 
             if (string.IsNullOrWhiteSpace(entry.DisplayText))
@@ -1160,35 +1169,53 @@ namespace Graphing.Controls.Rendering
             double yMin, double yMax)
         {
             var points = series.Points;
-            if (points == null || points.Count < 2)
+            if (points == null || points.Count < 1)
             {
                 return;
             }
 
             // Use a clipping region to keep lines inside the plot area.
-            // Use a clipping region to keep lines inside the plot area.
             var clip = g.ClipBounds;
             g.SetClip(seriesRect, System.Drawing.Drawing2D.CombineMode.Intersect);
 
             using (var seriesPen = new Pen(series.SeriesColor, SeriesLineWidth))
+            using (var seriesBrush = new SolidBrush(series.SeriesColor))
             {
                 try
                 {
-                    PointF? previous = null;
-
-                    for (var i = 0; i < points.Count; i++)
+                    if (series.ConnectivityIntent == SeriesConnectivityIntent.Discrete)
                     {
-                        var domainPoint = points[i];
-                        var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
-                        var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
-                        var current = new PointF(deviceX, deviceY);
-
-                        if (previous.HasValue && series.ConnectivityIntent != SeriesConnectivityIntent.Discrete)
+                        for (var i = 0; i < points.Count; i++)
                         {
-                            g.DrawLine(seriesPen, previous.Value, current);
+                            var domainPoint = points[i];
+                            var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
+                            var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
+                            g.FillEllipse(
+                                seriesBrush,
+                                deviceX - DiscretePointMarkerRadius,
+                                deviceY - DiscretePointMarkerRadius,
+                                DiscretePointMarkerSize,
+                                DiscretePointMarkerSize);
                         }
+                    }
+                    else
+                    {
+                        PointF? previous = null;
 
-                        previous = current;
+                        for (var i = 0; i < points.Count; i++)
+                        {
+                            var domainPoint = points[i];
+                            var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
+                            var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
+                            var current = new PointF(deviceX, deviceY);
+
+                            if (previous.HasValue)
+                            {
+                                g.DrawLine(seriesPen, previous.Value, current);
+                            }
+
+                            previous = current;
+                        }
                     }
                 }
                 finally
