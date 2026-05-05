@@ -5,6 +5,7 @@ using Graphing.Controls.Rendering;
 using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 using System;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
@@ -12,6 +13,9 @@ namespace Graphing.Controls
 {
     public class EngineeringGraphControl : UserControl
     {
+        private const float AnimationBarLineWidth = 1.5f;
+        private static readonly Color DefaultAnimationBarColor = Color.OrangeRed;
+
         private readonly object _snapshotSync = new object();
         private readonly IGraphRenderer _renderer = new WinFormsGraphRenderer();
 
@@ -22,6 +26,7 @@ namespace Graphing.Controls
         private bool _animationBarEnabled;
         private int _animationBarXIndex;
         private bool _hasAnimationBarXIndex;
+        private Color _animationBarColor = DefaultAnimationBarColor;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -92,6 +97,21 @@ namespace Graphing.Controls
             set => SetAnimationBarXIndex(value, isUserInitiated: false);
         }
 
+        public Color AnimationBarColor
+        {
+            get => _animationBarColor;
+            set
+            {
+                if (_animationBarColor.ToArgb() == value.ToArgb())
+                {
+                    return;
+                }
+
+                _animationBarColor = value;
+                Invalidate();
+            }
+        }
+
         public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)
         {
             lock (_snapshotSync)
@@ -137,6 +157,7 @@ namespace Graphing.Controls
             if (presentation != null)
             {
                 _renderer.Render(e.Graphics, ClientRectangle, presentation, options);
+                RenderAnimationBarOverlay(e.Graphics, ClientRectangle, presentation);
             }
         }
 
@@ -328,6 +349,114 @@ namespace Graphing.Controls
                 new AnimationBarIndexChangedEventArgs(xIndex, previousXIndex, isUserInitiated));
 
             Invalidate();
+        }
+
+        private void RenderAnimationBarOverlay(Graphics graphics, Rectangle clientBounds, GraphPresentationModel presentation)
+        {
+            if (!AnimationBarEnabled || !_hasAnimationBarXIndex || graphics == null || presentation == null)
+            {
+                return;
+            }
+
+            if (!TryResolveAnimationBarAbstractX(presentation, _animationBarXIndex, out var abstractX))
+            {
+                return;
+            }
+
+            var plotRect = ComputeDevicePlotRect(clientBounds, presentation.Layout.PlotArea);
+            if (plotRect.Width <= 0f || plotRect.Height <= 0f)
+            {
+                return;
+            }
+
+            var deviceX = AbstractToDeviceX(clientBounds, abstractX);
+            var clip = graphics.ClipBounds;
+            graphics.SetClip(plotRect, CombineMode.Intersect);
+
+            try
+            {
+                using (var pen = new Pen(AnimationBarColor, AnimationBarLineWidth))
+                {
+                    graphics.DrawLine(pen, deviceX, plotRect.Top, deviceX, plotRect.Bottom);
+                }
+            }
+            finally
+            {
+                graphics.SetClip(clip);
+            }
+        }
+
+        private static bool TryResolveAnimationBarAbstractX(
+            GraphPresentationModel presentation,
+            int xIndex,
+            out double abstractX)
+        {
+            abstractX = 0d;
+
+            var layout = presentation.Layout;
+            var series = layout.Series;
+            if (series == null || series.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < series.Count; i++)
+            {
+                var candidate = series[i];
+                var xAxisEntry = candidate?.XAxisEntry;
+                var points = candidate?.Points;
+
+                if (xAxisEntry == null || points == null || xIndex >= points.Count)
+                {
+                    continue;
+                }
+
+                var xAxis = xAxisEntry.Axis;
+                if (xAxis == null || !xAxis.MinimumValue.HasValue || !xAxis.MaximumValue.HasValue)
+                {
+                    continue;
+                }
+
+                var xMin = xAxis.MinimumValue.Value;
+                var xMax = xAxis.MaximumValue.Value;
+                var xRange = xMax - xMin;
+                if (xRange <= 0d)
+                {
+                    continue;
+                }
+
+                var xValue = points[xIndex].X;
+                var normalized = (xValue - xMin) / xRange;
+                if (normalized < 0d)
+                {
+                    normalized = 0d;
+                }
+                else if (normalized > 1d)
+                {
+                    normalized = 1d;
+                }
+
+                var plotArea = layout.PlotArea;
+                abstractX = plotArea.BottomLeft.X + (normalized * (plotArea.TopRight.X - plotArea.BottomLeft.X));
+                return true;
+            }
+
+            return false;
+        }
+
+        private static RectangleF ComputeDevicePlotRect(Rectangle clientBounds, PlotAreaLayout plotArea)
+        {
+            var left = clientBounds.Left + plotArea.BottomLeft.X * clientBounds.Width;
+            var right = clientBounds.Left + plotArea.TopRight.X * clientBounds.Width;
+            var top = clientBounds.Bottom - plotArea.TopRight.Y * clientBounds.Height;
+            var bottom = clientBounds.Bottom - plotArea.BottomLeft.Y * clientBounds.Height;
+
+            return RectangleF.FromLTRB((float)left, (float)top, (float)right, (float)bottom);
+        }
+
+        private static float AbstractToDeviceX(Rectangle clientBounds, double abstractX)
+        {
+            return (float)(clientBounds.Left + (abstractX * clientBounds.Width));
         }
     }
 }
