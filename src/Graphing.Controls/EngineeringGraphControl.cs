@@ -14,6 +14,7 @@ namespace Graphing.Controls
     public class EngineeringGraphControl : UserControl
     {
         private const float AnimationBarLineWidth = 1.5f;
+        private const float AnimationBarHitTolerancePixels = 6f;
         private static readonly Color DefaultAnimationBarColor = Color.OrangeRed;
 
         private readonly object _snapshotSync = new object();
@@ -27,6 +28,7 @@ namespace Graphing.Controls
         private int _animationBarXIndex;
         private bool _hasAnimationBarXIndex;
         private Color _animationBarColor = DefaultAnimationBarColor;
+        private bool _isAnimationBarDragging;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -171,6 +173,11 @@ namespace Graphing.Controls
         {
             base.OnMouseMove(e);
 
+            if (TryHandleAnimationBarMouseMove(e))
+            {
+                return;
+            }
+
             // Phase H4 intentionally does not track hover state; this probe keeps
             // the mouse-to-presentation bridge in place for future hover phases.
             _ = TryResolveAxisInteraction(e, out _, out _, out _);
@@ -179,6 +186,11 @@ namespace Graphing.Controls
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+
+            if (TryHandleAnimationBarMouseDown(e))
+            {
+                return;
+            }
 
             if (!TryResolveAxisInteraction(e, out var descriptor, out var clientPosition, out var graphPosition) || descriptor == null)
             {
@@ -198,6 +210,11 @@ namespace Graphing.Controls
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
+
+            if (TryHandleAnimationBarMouseUp(e))
+            {
+                return;
+            }
 
             if (!TryResolveAxisInteraction(e, out var descriptor, out var clientPosition, out var graphPosition) || descriptor == null)
             {
@@ -351,6 +368,106 @@ namespace Graphing.Controls
             Invalidate();
         }
 
+        private bool TryHandleAnimationBarMouseDown(MouseEventArgs mouseEvent)
+        {
+            if (mouseEvent == null || mouseEvent.Button != MouseButtons.Left || !AnimationBarEnabled)
+            {
+                return false;
+            }
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            GraphPresentationModel presentation;
+            lock (_snapshotSync)
+            {
+                presentation = _activePresentation;
+            }
+
+            if (presentation == null)
+            {
+                return false;
+            }
+
+            if (!TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
+            {
+                return false;
+            }
+
+            var isOnBar = HitTestAnimationBar(mouseEvent.Location, clientBounds, presentation, plotRect);
+            if (isOnBar)
+            {
+                _isAnimationBarDragging = true;
+                Capture = true;
+                return true;
+            }
+
+            if (!plotRect.Contains(mouseEvent.Location))
+            {
+                return false;
+            }
+
+            if (TryResolveNearestAnimationBarXIndex(mouseEvent.Location.X, clientBounds, presentation, out var snappedXIndex))
+            {
+                SetAnimationBarXIndex(snappedXIndex, isUserInitiated: true);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryHandleAnimationBarMouseMove(MouseEventArgs mouseEvent)
+        {
+            if (!_isAnimationBarDragging || mouseEvent == null || !AnimationBarEnabled)
+            {
+                return false;
+            }
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            GraphPresentationModel presentation;
+            lock (_snapshotSync)
+            {
+                presentation = _activePresentation;
+            }
+
+            if (presentation == null)
+            {
+                return false;
+            }
+
+            if (TryResolveNearestAnimationBarXIndex(mouseEvent.Location.X, clientBounds, presentation, out var snappedXIndex))
+            {
+                SetAnimationBarXIndex(snappedXIndex, isUserInitiated: true);
+            }
+
+            return true;
+        }
+
+        private bool TryHandleAnimationBarMouseUp(MouseEventArgs mouseEvent)
+        {
+            if (mouseEvent == null || mouseEvent.Button != MouseButtons.Left)
+            {
+                return false;
+            }
+
+            if (!_isAnimationBarDragging)
+            {
+                return false;
+            }
+
+            _isAnimationBarDragging = false;
+            Capture = false;
+            return true;
+        }
+
         private void RenderAnimationBarOverlay(Graphics graphics, Rectangle clientBounds, GraphPresentationModel presentation)
         {
             if (!AnimationBarEnabled || !_hasAnimationBarXIndex || graphics == null || presentation == null)
@@ -363,8 +480,7 @@ namespace Graphing.Controls
                 return;
             }
 
-            var plotRect = ComputeDevicePlotRect(clientBounds, presentation.Layout.PlotArea);
-            if (plotRect.Width <= 0f || plotRect.Height <= 0f)
+            if (!TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
             {
                 return;
             }
@@ -386,6 +502,78 @@ namespace Graphing.Controls
             }
         }
 
+        private bool HitTestAnimationBar(
+            Point mouseClientPosition,
+            Rectangle clientBounds,
+            GraphPresentationModel presentation,
+            RectangleF plotRect)
+        {
+            if (!plotRect.Contains(mouseClientPosition))
+            {
+                return false;
+            }
+
+            if (!TryResolveAnimationBarAbstractX(presentation, _animationBarXIndex, out var abstractX))
+            {
+                return false;
+            }
+
+            var barDeviceX = AbstractToDeviceX(clientBounds, abstractX);
+            return Math.Abs(mouseClientPosition.X - barDeviceX) <= AnimationBarHitTolerancePixels;
+        }
+
+        private bool TryResolveNearestAnimationBarXIndex(
+            int mouseClientX,
+            Rectangle clientBounds,
+            GraphPresentationModel presentation,
+            out int nearestXIndex)
+        {
+            nearestXIndex = 0;
+
+            if (!TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
+            {
+                return false;
+            }
+
+            if (!TryGetAnimationBarSeriesData(presentation, out var points, out var xMin, out var xMax))
+            {
+                return false;
+            }
+
+            var clampedMouseX = mouseClientX;
+            if (clampedMouseX < plotRect.Left)
+            {
+                clampedMouseX = (int)Math.Round(plotRect.Left, MidpointRounding.AwayFromZero);
+            }
+            else if (clampedMouseX > plotRect.Right)
+            {
+                clampedMouseX = (int)Math.Round(plotRect.Right, MidpointRounding.AwayFromZero);
+            }
+
+            var abstractX = ToGraphPosition(clientBounds, new Point(clampedMouseX, clientBounds.Bottom)).X;
+            var plotLeft = presentation.Layout.PlotArea.BottomLeft.X;
+            var plotRight = presentation.Layout.PlotArea.TopRight.X;
+            var plotSpan = plotRight - plotLeft;
+            if (plotSpan <= 0d)
+            {
+                return false;
+            }
+
+            var normalizedXInPlot = (abstractX - plotLeft) / plotSpan;
+            if (normalizedXInPlot < 0d)
+            {
+                normalizedXInPlot = 0d;
+            }
+            else if (normalizedXInPlot > 1d)
+            {
+                normalizedXInPlot = 1d;
+            }
+
+            var domainX = xMin + (normalizedXInPlot * (xMax - xMin));
+            nearestXIndex = ResolveNearestXIndex(points, domainX);
+            return true;
+        }
+
         private static bool TryResolveAnimationBarAbstractX(
             GraphPresentationModel presentation,
             int xIndex,
@@ -393,8 +581,49 @@ namespace Graphing.Controls
         {
             abstractX = 0d;
 
-            var layout = presentation.Layout;
-            var series = layout.Series;
+            if (!TryGetAnimationBarSeriesData(presentation, out var points, out var xMin, out var xMax))
+            {
+                return false;
+            }
+
+            if (xIndex < 0 || xIndex >= points.Count)
+            {
+                return false;
+            }
+
+            var xRange = xMax - xMin;
+            if (xRange <= 0d)
+            {
+                return false;
+            }
+
+            var xValue = points[xIndex].X;
+            var normalized = (xValue - xMin) / xRange;
+            if (normalized < 0d)
+            {
+                normalized = 0d;
+            }
+            else if (normalized > 1d)
+            {
+                normalized = 1d;
+            }
+
+            var plotArea = presentation.Layout.PlotArea;
+            abstractX = plotArea.BottomLeft.X + (normalized * (plotArea.TopRight.X - plotArea.BottomLeft.X));
+            return true;
+        }
+
+        private static bool TryGetAnimationBarSeriesData(
+            GraphPresentationModel presentation,
+            out System.Collections.Generic.IReadOnlyList<GeometryPoint3D> points,
+            out double xMin,
+            out double xMax)
+        {
+            points = null;
+            xMin = 0d;
+            xMax = 0d;
+
+            var series = presentation.Layout.Series;
             if (series == null || series.Count == 0)
             {
                 return false;
@@ -404,9 +633,9 @@ namespace Graphing.Controls
             {
                 var candidate = series[i];
                 var xAxisEntry = candidate?.XAxisEntry;
-                var points = candidate?.Points;
+                var candidatePoints = candidate?.Points;
 
-                if (xAxisEntry == null || points == null || xIndex >= points.Count)
+                if (xAxisEntry == null || candidatePoints == null || candidatePoints.Count == 0)
                 {
                     continue;
                 }
@@ -417,31 +646,42 @@ namespace Graphing.Controls
                     continue;
                 }
 
-                var xMin = xAxis.MinimumValue.Value;
-                var xMax = xAxis.MaximumValue.Value;
-                var xRange = xMax - xMin;
-                if (xRange <= 0d)
-                {
-                    continue;
-                }
-
-                var xValue = points[xIndex].X;
-                var normalized = (xValue - xMin) / xRange;
-                if (normalized < 0d)
-                {
-                    normalized = 0d;
-                }
-                else if (normalized > 1d)
-                {
-                    normalized = 1d;
-                }
-
-                var plotArea = layout.PlotArea;
-                abstractX = plotArea.BottomLeft.X + (normalized * (plotArea.TopRight.X - plotArea.BottomLeft.X));
+                xMin = xAxis.MinimumValue.Value;
+                xMax = xAxis.MaximumValue.Value;
+                points = candidatePoints;
                 return true;
             }
 
             return false;
+        }
+
+        private static int ResolveNearestXIndex(
+            System.Collections.Generic.IReadOnlyList<GeometryPoint3D> points,
+            double domainX)
+        {
+            var nearestIndex = 0;
+            var nearestDistance = double.MaxValue;
+
+            for (var i = 0; i < points.Count; i++)
+            {
+                var distance = Math.Abs(points[i].X - domainX);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            return nearestIndex;
+        }
+
+        private static bool TryComputeAnimationBarPlotRect(
+            Rectangle clientBounds,
+            GraphPresentationModel presentation,
+            out RectangleF plotRect)
+        {
+            plotRect = ComputeDevicePlotRect(clientBounds, presentation.Layout.PlotArea);
+            return plotRect.Width > 0f && plotRect.Height > 0f;
         }
 
         private static RectangleF ComputeDevicePlotRect(Rectangle clientBounds, PlotAreaLayout plotArea)

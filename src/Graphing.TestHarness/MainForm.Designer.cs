@@ -39,6 +39,7 @@ namespace Graphing.TestScenarios
             this.buttonOptions = new System.Windows.Forms.Button();
             this.buttonExportPng = new System.Windows.Forms.Button();
             this.buttonExportEmf = new System.Windows.Forms.Button();
+            this.checkBoxAnimation = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // buttonScenarioA
@@ -85,6 +86,9 @@ namespace Graphing.TestScenarios
             this.graphControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.graphControl.AnimationBarColor = System.Drawing.Color.OrangeRed;
+            this.graphControl.AnimationBarEnabled = false;
+            this.graphControl.AnimationBarXIndex = 0;
             this.graphControl.Location = new System.Drawing.Point(12, 12);
             this.graphControl.Name = "graphControl";
             this.graphControl.Size = new System.Drawing.Size(662, 437);
@@ -151,9 +155,23 @@ namespace Graphing.TestScenarios
             this.buttonExportEmf.UseVisualStyleBackColor = true;
             this.buttonExportEmf.Click += new System.EventHandler(this.buttonExportEmf_Click);
             // 
+            // checkBoxAnimation
+            // 
+            this.checkBoxAnimation.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxAnimation.AutoSize = true;
+            this.checkBoxAnimation.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxAnimation.Location = new System.Drawing.Point(680, 271);
+            this.checkBoxAnimation.Name = "checkBoxAnimation";
+            this.checkBoxAnimation.Size = new System.Drawing.Size(78, 18);
+            this.checkBoxAnimation.TabIndex = 15;
+            this.checkBoxAnimation.Text = "Animation";
+            this.checkBoxAnimation.UseVisualStyleBackColor = true;
+            this.checkBoxAnimation.CheckedChanged += new System.EventHandler(this.checkBoxAnimation_CheckedChanged);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(784, 461);
+            this.Controls.Add(this.checkBoxAnimation);
             this.Controls.Add(this.buttonExportEmf);
             this.Controls.Add(this.buttonExportPng);
             this.Controls.Add(this.buttonOptions);
@@ -182,5 +200,6 @@ namespace Graphing.TestScenarios
         private System.Windows.Forms.Button buttonOptions;
         private System.Windows.Forms.Button buttonExportPng;
         private System.Windows.Forms.Button buttonExportEmf;
+        private System.Windows.Forms.CheckBox checkBoxAnimation;
     }
 }

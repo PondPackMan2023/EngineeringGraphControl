@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Graphing.Controls;
@@ -136,6 +137,86 @@ namespace Graphing.Tests
             }
         }
 
+        [Test]
+        public void AnimationBar_ClickInPlot_SnapsToNearestIndex_AndRaisesUserInitiatedEvent()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.AnimationBarEnabled = true;
+                control.AnimationBarXIndex = 0;
+
+                var capturedEvents = new List<AnimationBarIndexChangedEventArgs>();
+                control.AnimationBarXIndexChanged += (_, args) => capturedEvents.Add(args);
+
+                var target = GetClientPointForIndex(control, 2);
+                control.RaiseMouseDown(MouseButtons.Left, target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                Assert.That(control.AnimationBarXIndex, Is.EqualTo(2));
+                Assert.That(capturedEvents.Count, Is.GreaterThanOrEqualTo(1));
+                var last = capturedEvents[capturedEvents.Count - 1];
+                Assert.That(last.XIndex, Is.EqualTo(2));
+                Assert.That(last.PreviousXIndex, Is.EqualTo(0));
+                Assert.That(last.IsUserInitiated, Is.True);
+            }
+        }
+
+        [Test]
+        public void AnimationBar_Dragging_UpdatesIndexWithUserInitiatedEvents()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.AnimationBarEnabled = true;
+                control.AnimationBarXIndex = 1;
+
+                var capturedEvents = new List<AnimationBarIndexChangedEventArgs>();
+                control.AnimationBarXIndexChanged += (_, args) => capturedEvents.Add(args);
+
+                var dragStart = GetClientPointForIndex(control, 1);
+                var dragTarget = GetClientPointForIndex(control, 3);
+
+                control.RaiseMouseDown(MouseButtons.Left, dragStart);
+                control.RaiseMouseMove(dragTarget);
+                control.RaiseMouseUp(MouseButtons.Left, dragTarget);
+
+                Assert.That(control.AnimationBarXIndex, Is.EqualTo(3));
+                Assert.That(capturedEvents.Count, Is.GreaterThanOrEqualTo(1));
+                var last = capturedEvents[capturedEvents.Count - 1];
+                Assert.That(last.XIndex, Is.EqualTo(3));
+                Assert.That(last.IsUserInitiated, Is.True);
+            }
+        }
+
+        private static TestEngineeringGraphControl CreateInteractiveControl()
+        {
+            var control = new TestEngineeringGraphControl
+            {
+                Size = new Size(640, 480)
+            };
+
+            control.SetGraphSource(CreateSimpleGraphModel());
+            return control;
+        }
+
+        private static Point GetClientPointForIndex(TestEngineeringGraphControl control, int index)
+        {
+            var presentation = control.ActivePresentation;
+            var series = presentation.Layout.Series[0];
+            var xAxis = series.XAxisEntry.Axis;
+            var plotArea = presentation.Layout.PlotArea;
+
+            var xMin = xAxis.MinimumValue.Value;
+            var xMax = xAxis.MaximumValue.Value;
+            var xValue = series.Points[index].X;
+            var normalized = (xValue - xMin) / (xMax - xMin);
+            var abstractX = plotArea.BottomLeft.X + (normalized * (plotArea.TopRight.X - plotArea.BottomLeft.X));
+            var abstractY = (plotArea.BottomLeft.Y + plotArea.TopRight.Y) * 0.5d;
+
+            var x = (int)Math.Round(control.ClientRectangle.Left + (abstractX * control.ClientRectangle.Width), MidpointRounding.AwayFromZero);
+            var y = (int)Math.Round(control.ClientRectangle.Bottom - (abstractY * control.ClientRectangle.Height), MidpointRounding.AwayFromZero);
+            return new Point(x, y);
+        }
+
         private static IGraphModel CreateSimpleGraphModel()
         {
             var unit = Units.Length.Meter;
@@ -155,6 +236,21 @@ namespace Graphing.Tests
             public void RaisePaint(Graphics graphics)
             {
                 OnPaint(new PaintEventArgs(graphics, new Rectangle(0, 0, Width, Height)));
+            }
+
+            public void RaiseMouseDown(MouseButtons button, Point location)
+            {
+                OnMouseDown(new MouseEventArgs(button, 1, location.X, location.Y, 0));
+            }
+
+            public void RaiseMouseMove(Point location)
+            {
+                OnMouseMove(new MouseEventArgs(MouseButtons.None, 0, location.X, location.Y, 0));
+            }
+
+            public void RaiseMouseUp(MouseButtons button, Point location)
+            {
+                OnMouseUp(new MouseEventArgs(button, 1, location.X, location.Y, 0));
             }
         }
 
