@@ -13,7 +13,7 @@ namespace Graphing.Controls
 {
     public class EngineeringGraphControl : UserControl
     {
-        private const float AnimationBarLineWidth = 1.5f;
+        private const float AnimationBarLineWidth = 3f;
         private const float AnimationBarHitTolerancePixels = 6f;
         private static readonly Color DefaultAnimationBarColor = Color.OrangeRed;
 
@@ -173,6 +173,8 @@ namespace Graphing.Controls
         {
             base.OnMouseMove(e);
 
+            UpdateAnimationBarCursor(e);
+
             if (TryHandleAnimationBarMouseMove(e))
             {
                 return;
@@ -234,6 +236,12 @@ namespace Graphing.Controls
             {
                 AxisContextRequested?.Invoke(this, args);
             }
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            Cursor = Cursors.Default;
         }
 
         protected virtual GraphPresentationModel CreatePresentationModel(
@@ -402,20 +410,9 @@ namespace Graphing.Controls
             {
                 _isAnimationBarDragging = true;
                 Capture = true;
+                Cursor = Cursors.SizeAll;
                 return true;
             }
-
-            if (!plotRect.Contains(mouseEvent.Location))
-            {
-                return false;
-            }
-
-            if (TryResolveNearestAnimationBarXIndex(mouseEvent.Location.X, clientBounds, presentation, out var snappedXIndex))
-            {
-                SetAnimationBarXIndex(snappedXIndex, isUserInitiated: true);
-                return true;
-            }
-
             return false;
         }
 
@@ -448,6 +445,8 @@ namespace Graphing.Controls
                 SetAnimationBarXIndex(snappedXIndex, isUserInitiated: true);
             }
 
+            Cursor = Cursors.SizeAll;
+
             return true;
         }
 
@@ -465,7 +464,46 @@ namespace Graphing.Controls
 
             _isAnimationBarDragging = false;
             Capture = false;
+            UpdateAnimationBarCursor(mouseEvent);
             return true;
+        }
+
+        private void UpdateAnimationBarCursor(MouseEventArgs mouseEvent)
+        {
+            if (_isAnimationBarDragging)
+            {
+                Cursor = Cursors.SizeAll;
+                return;
+            }
+
+            if (mouseEvent == null || !AnimationBarEnabled)
+            {
+                Cursor = Cursors.Default;
+                return;
+            }
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                Cursor = Cursors.Default;
+                return;
+            }
+
+            GraphPresentationModel presentation;
+            lock (_snapshotSync)
+            {
+                presentation = _activePresentation;
+            }
+
+            if (presentation == null || !TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
+            {
+                Cursor = Cursors.Default;
+                return;
+            }
+
+            Cursor = HitTestAnimationBar(mouseEvent.Location, clientBounds, presentation, plotRect)
+                ? Cursors.SizeAll
+                : Cursors.Default;
         }
 
         private void RenderAnimationBarOverlay(Graphics graphics, Rectangle clientBounds, GraphPresentationModel presentation)

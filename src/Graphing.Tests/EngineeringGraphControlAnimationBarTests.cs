@@ -138,7 +138,7 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void AnimationBar_ClickInPlot_SnapsToNearestIndex_AndRaisesUserInitiatedEvent()
+        public void AnimationBar_ClickInPlot_DoesNotReposition()
         {
             using (var control = CreateInteractiveControl())
             {
@@ -148,16 +148,12 @@ namespace Graphing.Tests
                 var capturedEvents = new List<AnimationBarIndexChangedEventArgs>();
                 control.AnimationBarXIndexChanged += (_, args) => capturedEvents.Add(args);
 
-                var target = GetClientPointForIndex(control, 2);
+                var target = GetPlotInteriorPoint(control);
                 control.RaiseMouseDown(MouseButtons.Left, target);
                 control.RaiseMouseUp(MouseButtons.Left, target);
 
-                Assert.That(control.AnimationBarXIndex, Is.EqualTo(2));
-                Assert.That(capturedEvents.Count, Is.GreaterThanOrEqualTo(1));
-                var last = capturedEvents[capturedEvents.Count - 1];
-                Assert.That(last.XIndex, Is.EqualTo(2));
-                Assert.That(last.PreviousXIndex, Is.EqualTo(0));
-                Assert.That(last.IsUserInitiated, Is.True);
+                Assert.That(control.AnimationBarXIndex, Is.EqualTo(0));
+                Assert.That(capturedEvents.Count, Is.EqualTo(0));
             }
         }
 
@@ -187,6 +183,22 @@ namespace Graphing.Tests
             }
         }
 
+        [Test]
+        public void AnimationBar_HoveringOverBar_SetsMoveCursor_AndMovingAwayRestoresDefault()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.AnimationBarEnabled = true;
+                control.AnimationBarXIndex = 1;
+
+                control.RaiseMouseMove(GetClientPointForIndex(control, 1));
+                Assert.That(control.Cursor, Is.EqualTo(Cursors.SizeAll));
+
+                control.RaiseMouseMove(GetPlotInteriorPoint(control));
+                Assert.That(control.Cursor, Is.EqualTo(Cursors.Default));
+            }
+        }
+
         private static TestEngineeringGraphControl CreateInteractiveControl()
         {
             var control = new TestEngineeringGraphControl
@@ -211,6 +223,18 @@ namespace Graphing.Tests
             var normalized = (xValue - xMin) / (xMax - xMin);
             var abstractX = plotArea.BottomLeft.X + (normalized * (plotArea.TopRight.X - plotArea.BottomLeft.X));
             var abstractY = (plotArea.BottomLeft.Y + plotArea.TopRight.Y) * 0.5d;
+
+            var x = (int)Math.Round(control.ClientRectangle.Left + (abstractX * control.ClientRectangle.Width), MidpointRounding.AwayFromZero);
+            var y = (int)Math.Round(control.ClientRectangle.Bottom - (abstractY * control.ClientRectangle.Height), MidpointRounding.AwayFromZero);
+            return new Point(x, y);
+        }
+
+        private static Point GetPlotInteriorPoint(TestEngineeringGraphControl control)
+        {
+            var presentation = control.ActivePresentation;
+            var plotArea = presentation.Layout.PlotArea;
+            var abstractX = plotArea.BottomLeft.X + ((plotArea.TopRight.X - plotArea.BottomLeft.X) * 0.75d);
+            var abstractY = plotArea.BottomLeft.Y + ((plotArea.TopRight.Y - plotArea.BottomLeft.Y) * 0.5d);
 
             var x = (int)Math.Round(control.ClientRectangle.Left + (abstractX * control.ClientRectangle.Width), MidpointRounding.AwayFromZero);
             var y = (int)Math.Round(control.ClientRectangle.Bottom - (abstractY * control.ClientRectangle.Height), MidpointRounding.AwayFromZero);
