@@ -51,6 +51,7 @@ namespace Graphing.Controls.Snapshot
                             graphSeriesModel.SeriesId,
                             graphSeriesModel.Label,
                             graphSeriesModel.SeriesType,
+                            graphSeriesModel.LineRenderMode,
                             xAxisId,
                             yAxisId,
                             xFieldSnapshot,

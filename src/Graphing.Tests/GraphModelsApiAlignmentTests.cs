@@ -57,7 +57,7 @@ namespace Graphing.Tests
 
             Assert.That(
                 propertyNames,
-                Is.EqualTo(new[] { "Label", "SeriesId", "SeriesType", "XAxis", "XField", "YAxis", "YField" }));
+                Is.EqualTo(new[] { "Label", "LineRenderMode", "SeriesId", "SeriesType", "XAxis", "XField", "YAxis", "YField" }));
         }
 
         [Test]
@@ -304,11 +304,13 @@ namespace Graphing.Tests
                 IGraphFieldDefinition xField,
                 IGraphFieldDefinition yField,
                 IAxisModel xAxis,
-                IAxisModel yAxis)
+                IAxisModel yAxis,
+                LineRenderMode lineRenderMode = LineRenderMode.LineOnly)
             {
                 SeriesId = new SeriesId($"{id}");
                 Label = label;
                 SeriesType = seriesType;
+                LineRenderMode = lineRenderMode;
                 XField = xField;
                 YField = yField;
                 XAxis = xAxis;
@@ -320,6 +322,8 @@ namespace Graphing.Tests
             public string Label { get; }
 
             public SeriesType SeriesType { get; }
+
+            public LineRenderMode LineRenderMode { get; }
 
             public IGraphFieldDefinition XField { get; }
 

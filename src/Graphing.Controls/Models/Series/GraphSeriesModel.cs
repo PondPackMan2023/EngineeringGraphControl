@@ -11,11 +11,13 @@ namespace Graphing.Controls.Models
                 IGraphFieldDefinition xField,
                 IGraphFieldDefinition yField,
                 IAxisModel xAxis,
-                IAxisModel yAxis)
+                IAxisModel yAxis,
+                LineRenderMode lineRenderMode = LineRenderMode.LineOnly)
         {
             SeriesId = seriesId;
             Label = label;
             SeriesType = seriesType;
+            LineRenderMode = lineRenderMode;
             XField = xField;
             YField = yField;
             XAxis = xAxis;
@@ -25,6 +27,7 @@ namespace Graphing.Controls.Models
         public SeriesId SeriesId { get; }
         public string Label { get; }
         public SeriesType SeriesType { get; }
+        public LineRenderMode LineRenderMode { get; }
         public IGraphFieldDefinition XField { get; }
         public IGraphFieldDefinition YField { get; }
         public IAxisModel XAxis { get; }

@@ -15,6 +15,7 @@ namespace Graphing.Controls.Snapshot
         private readonly SeriesId _seriesId;
         private readonly string _label;
         private readonly SeriesType _seriesType;
+        private readonly LineRenderMode _lineRenderMode;
         private readonly string _xAxisId;
         private readonly string _yAxisId;
         private readonly IFieldSnapshot _xField;
@@ -43,6 +44,11 @@ namespace Graphing.Controls.Snapshot
         public SeriesType SeriesType
         {
             get { return _seriesType; }
+        }
+
+        public LineRenderMode LineRenderMode
+        {
+            get { return _lineRenderMode; }
         }
 
         public IFieldSnapshot XField
@@ -87,6 +93,7 @@ namespace Graphing.Controls.Snapshot
             SeriesId seriesId,
             string label,
             SeriesType seriesType,
+            LineRenderMode lineRenderMode,
             string xAxisId,
             string yAxisId,
             FieldSnapshot xField,
@@ -95,6 +102,7 @@ namespace Graphing.Controls.Snapshot
             _seriesId = seriesId;
             _label = label;
             _seriesType = seriesType;
+            _lineRenderMode = lineRenderMode;
             _xAxisId = xAxisId;
             _yAxisId = yAxisId;
             _xField = xField;
