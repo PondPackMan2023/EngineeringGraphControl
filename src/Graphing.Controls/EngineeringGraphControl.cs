@@ -13,7 +13,7 @@ namespace Graphing.Controls
     public class EngineeringGraphControl : UserControl
     {
         private readonly object _snapshotSync = new object();
-        private readonly WinFormsGraphRenderer _renderer = new WinFormsGraphRenderer();
+        private readonly IGraphRenderer _renderer = new WinFormsGraphRenderer();
 
         private IGraphModel _graphModel;
         private IGraphSnapshot _activeSnapshot;

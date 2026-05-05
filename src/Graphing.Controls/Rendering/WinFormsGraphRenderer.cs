@@ -15,7 +15,7 @@ namespace Graphing.Controls.Rendering
     /// The renderer is a pure consumer: it does not own, mutate, or cache any presentation
     /// objects, and does not participate in snapshot or control lifecycle decisions.
     /// </summary>
-    internal sealed class WinFormsGraphRenderer
+    internal sealed class WinFormsGraphRenderer : IGraphRenderer
     {
         private const int TickLength = 5;
         private const int TickLabelOffset = 3;
@@ -77,7 +77,7 @@ namespace Graphing.Controls.Rendering
         /// Renders axes and series from <paramref name="model"/> into <paramref name="g"/>
         /// within the specified <paramref name="deviceBounds"/>.
         /// </summary>
-        internal void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
+        public void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
         {
             if (g == null || model == null || deviceBounds.Width <= 0 || deviceBounds.Height <= 0)
             {
@@ -101,7 +101,7 @@ namespace Graphing.Controls.Rendering
             RenderLegend(g, deviceBounds, model.Layout.Legend);
         }
 
-        internal IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
+        public IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
         {
             return new WinFormsLayoutMeasurementInput(g, deviceBounds);
         }
