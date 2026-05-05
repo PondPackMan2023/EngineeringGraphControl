@@ -19,12 +19,17 @@ namespace Graphing.Controls
         private IGraphSnapshot _activeSnapshot;
         private GraphPresentationModel _activePresentation;
         private GraphPresentationOptions _activePresentationOptions;
+        private bool _animationBarEnabled;
+        private int _animationBarXIndex;
+        private bool _hasAnimationBarXIndex;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseUp;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisContextRequested;
+
+        public event EventHandler<AnimationBarIndexChangedEventArgs> AnimationBarXIndexChanged;
 
         public EngineeringGraphControl()
         {
@@ -65,6 +70,27 @@ namespace Graphing.Controls
         }
 
         public IGraphModel GraphModel => _graphModel;
+
+        public bool AnimationBarEnabled
+        {
+            get => _animationBarEnabled;
+            set
+            {
+                if (_animationBarEnabled == value)
+                {
+                    return;
+                }
+
+                _animationBarEnabled = value;
+                Invalidate();
+            }
+        }
+
+        public int AnimationBarXIndex
+        {
+            get => _animationBarXIndex;
+            set => SetAnimationBarXIndex(value, isUserInitiated: false);
+        }
 
         public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)
         {
@@ -278,6 +304,29 @@ namespace Graphing.Controls
             _activeSnapshot = nextSnapshot;
             _activePresentation = nextPresentation;
             _activePresentationOptions = options;
+            Invalidate();
+        }
+
+        private void SetAnimationBarXIndex(int xIndex, bool isUserInitiated)
+        {
+            if (xIndex < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(xIndex));
+            }
+
+            if (_hasAnimationBarXIndex && _animationBarXIndex == xIndex)
+            {
+                return;
+            }
+
+            var previousXIndex = _hasAnimationBarXIndex ? (int?)_animationBarXIndex : null;
+            _animationBarXIndex = xIndex;
+            _hasAnimationBarXIndex = true;
+
+            AnimationBarXIndexChanged?.Invoke(
+                this,
+                new AnimationBarIndexChangedEventArgs(xIndex, previousXIndex, isUserInitiated));
+
             Invalidate();
         }
     }
