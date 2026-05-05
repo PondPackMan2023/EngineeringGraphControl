@@ -6,6 +6,7 @@ using Graphing.Controls.Rendering;
 using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -20,7 +21,8 @@ namespace Graphing.Controls
         private static readonly Color DefaultAnimationBarColor = Color.OrangeRed;
 
         private readonly object _snapshotSync = new object();
-        private readonly IGraphRenderer _renderer = new WinFormsGraphRenderer();
+        private readonly WinFormsGraphRenderer _winFormsRenderer = new WinFormsGraphRenderer();
+        private readonly IGraphRenderer _renderer;
 
         private IGraphModel _graphModel;
         private IGraphSnapshot _activeSnapshot;
@@ -42,6 +44,7 @@ namespace Graphing.Controls
 
         public EngineeringGraphControl()
         {
+            _renderer = _winFormsRenderer;
             DoubleBuffered = true;
         }
 
@@ -160,8 +163,19 @@ namespace Graphing.Controls
 
             if (presentation != null)
             {
-                _renderer.Render(e.Graphics, ClientRectangle, presentation, options);
-                RenderAnimationBarOverlay(e.Graphics, ClientRectangle, presentation);
+                var renderedSeriesGeometries = new List<RenderedSeriesPolyline>();
+                _winFormsRenderer.SeriesGeometryRendered = renderedSeriesGeometries.Add;
+
+                try
+                {
+                    _renderer.Render(e.Graphics, ClientRectangle, presentation, options);
+                }
+                finally
+                {
+                    _winFormsRenderer.SeriesGeometryRendered = null;
+                }
+
+                RenderAnimationBarOverlay(e.Graphics, ClientRectangle, presentation, renderedSeriesGeometries);
             }
         }
 
@@ -508,7 +522,11 @@ namespace Graphing.Controls
                 : Cursors.Default;
         }
 
-        private void RenderAnimationBarOverlay(Graphics graphics, Rectangle clientBounds, GraphPresentationModel presentation)
+        private void RenderAnimationBarOverlay(
+            Graphics graphics,
+            Rectangle clientBounds,
+            GraphPresentationModel presentation,
+            IReadOnlyList<RenderedSeriesPolyline> renderedSeriesGeometries)
         {
             if (!AnimationBarEnabled || !_hasAnimationBarXIndex || graphics == null || presentation == null)
             {
@@ -536,7 +554,7 @@ namespace Graphing.Controls
                     graphics.DrawLine(pen, deviceX, plotRect.Top, deviceX, plotRect.Bottom);
                 }
 
-                RenderIntersectionMarkers(graphics, clientBounds, presentation, plotRect, _animationBarXIndex);
+                RenderIntersectionMarkers(graphics, plotRect, deviceX, renderedSeriesGeometries);
             }
             finally
             {
@@ -546,96 +564,100 @@ namespace Graphing.Controls
 
         private static void RenderIntersectionMarkers(
             Graphics graphics,
-            Rectangle clientBounds,
-            GraphPresentationModel presentation,
             RectangleF plotRect,
-            int xIndex)
+            float animationBarDeviceX,
+            IReadOnlyList<RenderedSeriesPolyline> renderedSeriesGeometries)
         {
-            var seriesList = presentation.Series;
-            if (seriesList == null || seriesList.Count == 0)
+            if (renderedSeriesGeometries == null || renderedSeriesGeometries.Count == 0)
             {
                 return;
             }
 
-            var plotArea = presentation.Layout.PlotArea;
-            var seenSeriesIds = new System.Collections.Generic.HashSet<SeriesId>();
+            var seenSeriesIds = new HashSet<SeriesId>();
 
-            for (var i = 0; i < seriesList.Count; i++)
+            for (var i = 0; i < renderedSeriesGeometries.Count; i++)
             {
-                var series = seriesList[i];
-                if (series == null || !IsEligibleForIntersectionMarker(series))
+                var seriesGeometry = renderedSeriesGeometries[i];
+                if (seriesGeometry == null || !IsEligibleForIntersectionMarker(seriesGeometry.SeriesType))
                 {
                     continue;
                 }
 
-                if (!seenSeriesIds.Add(series.SeriesId))
+                if (!seenSeriesIds.Add(seriesGeometry.SeriesId))
                 {
                     continue;
                 }
 
-                var points = series.Points;
-                if (points == null || xIndex >= points.Count)
+                if (!TryResolveVerticalPolylineIntersection(animationBarDeviceX, seriesGeometry.DevicePoints, out var deviceY))
                 {
                     continue;
                 }
-
-                var xAxisEntry = series.XAxisEntry;
-                var yAxisEntry = series.YAxisEntry;
-                if (xAxisEntry == null || yAxisEntry == null)
-                {
-                    continue;
-                }
-
-                var xAxis = xAxisEntry.Axis;
-                var yAxis = yAxisEntry.Axis;
-                if (xAxis == null || yAxis == null)
-                {
-                    continue;
-                }
-
-                if (!xAxis.MinimumValue.HasValue || !xAxis.MaximumValue.HasValue ||
-                    !yAxis.MinimumValue.HasValue || !yAxis.MaximumValue.HasValue)
-                {
-                    continue;
-                }
-
-                var xRange = xAxis.MaximumValue.Value - xAxis.MinimumValue.Value;
-                var yRange = yAxis.MaximumValue.Value - yAxis.MinimumValue.Value;
-                if (xRange <= 0d || yRange <= 0d)
-                {
-                    continue;
-                }
-
-                var xNorm = (points[xIndex].X - xAxis.MinimumValue.Value) / xRange;
-                if (xNorm < 0d) xNorm = 0d;
-                else if (xNorm > 1d) xNorm = 1d;
-
-                var yNorm = (points[xIndex].Y - yAxis.MinimumValue.Value) / yRange;
-                if (yNorm < 0d) yNorm = 0d;
-                else if (yNorm > 1d) yNorm = 1d;
-
-                var abstractX = plotArea.BottomLeft.X + (xNorm * (plotArea.TopRight.X - plotArea.BottomLeft.X));
-                var abstractY = plotArea.BottomLeft.Y + (yNorm * (plotArea.TopRight.Y - plotArea.BottomLeft.Y));
-
-                var deviceX = AbstractToDeviceX(clientBounds, abstractX);
-                var deviceY = AbstractToDeviceY(clientBounds, abstractY);
 
                 var markerRect = new RectangleF(
-                    deviceX - AnimationBarMarkerRadius,
+                    animationBarDeviceX - AnimationBarMarkerRadius,
                     deviceY - AnimationBarMarkerRadius,
                     AnimationBarMarkerRadius * 2f,
                     AnimationBarMarkerRadius * 2f);
 
-                using (var brush = new SolidBrush(series.SeriesColor))
+                using (var brush = new SolidBrush(seriesGeometry.SeriesColor))
                 {
                     graphics.FillEllipse(brush, markerRect);
                 }
             }
         }
 
-        private static bool IsEligibleForIntersectionMarker(SeriesPresentationGeometry series)
+        private static bool IsEligibleForIntersectionMarker(SeriesType seriesType)
         {
-            return series.SeriesType == SeriesType.Line || series.SeriesType == SeriesType.Scatter;
+            return seriesType == SeriesType.Line || seriesType == SeriesType.Scatter;
+        }
+
+        internal static bool TryResolveVerticalPolylineIntersection(
+            float verticalX,
+            IReadOnlyList<PointF> polyline,
+            out float intersectionY)
+        {
+            intersectionY = 0f;
+
+            if (polyline == null || polyline.Count < 2)
+            {
+                return false;
+            }
+
+            for (var i = 1; i < polyline.Count; i++)
+            {
+                var p0 = polyline[i - 1];
+                var p1 = polyline[i];
+                var minX = Math.Min(p0.X, p1.X);
+                var maxX = Math.Max(p0.X, p1.X);
+
+                if (verticalX < minX || verticalX > maxX)
+                {
+                    continue;
+                }
+
+                var dx = p1.X - p0.X;
+                if (Math.Abs(dx) < float.Epsilon)
+                {
+                    if (Math.Abs(verticalX - p0.X) <= 0.5f)
+                    {
+                        intersectionY = (p0.Y + p1.Y) * 0.5f;
+                        return true;
+                    }
+
+                    continue;
+                }
+
+                var t = (verticalX - p0.X) / dx;
+                if (t < 0f || t > 1f)
+                {
+                    continue;
+                }
+
+                intersectionY = p0.Y + ((p1.Y - p0.Y) * t);
+                return true;
+            }
+
+            return false;
         }
 
         private bool HitTestAnimationBar(
@@ -835,9 +857,5 @@ namespace Graphing.Controls
             return (float)(clientBounds.Left + (abstractX * clientBounds.Width));
         }
 
-        private static float AbstractToDeviceY(Rectangle clientBounds, double abstractY)
-        {
-            return (float)(clientBounds.Bottom - (abstractY * clientBounds.Height));
-        }
     }
 }

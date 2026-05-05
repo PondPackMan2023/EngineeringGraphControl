@@ -170,6 +170,22 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void AnimationBar_GeometricIntersection_InterpolatesAlongPolylineSegment()
+        {
+            var polyline = new[]
+            {
+                new PointF(10f, 100f),
+                new PointF(30f, 60f),
+                new PointF(50f, 20f)
+            };
+
+            var hit = EngineeringGraphControl.TryResolveVerticalPolylineIntersection(20f, polyline, out var intersectionY);
+
+            Assert.That(hit, Is.True);
+            Assert.That(intersectionY, Is.EqualTo(80f).Within(0.001f));
+        }
+
+        [Test]
         public void AnimationBar_ClickInPlot_DoesNotReposition()
         {
             using (var control = CreateInteractiveControl())

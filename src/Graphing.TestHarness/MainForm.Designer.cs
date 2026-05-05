@@ -157,7 +157,7 @@ namespace Graphing.TestScenarios
             // 
             // checkBoxAnimation
             // 
-            this.checkBoxAnimation.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxAnimation.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.checkBoxAnimation.AutoSize = true;
             this.checkBoxAnimation.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.checkBoxAnimation.Location = new System.Drawing.Point(680, 271);
