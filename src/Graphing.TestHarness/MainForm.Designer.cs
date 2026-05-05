@@ -37,6 +37,7 @@ namespace Graphing.TestScenarios
             this.buttonScenarioC = new System.Windows.Forms.Button();
             this.buttonScenarioD = new System.Windows.Forms.Button();
             this.buttonOptions = new System.Windows.Forms.Button();
+            this.buttonExportPng = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonScenarioA
@@ -125,9 +126,22 @@ namespace Graphing.TestScenarios
             this.buttonOptions.UseVisualStyleBackColor = true;
             this.buttonOptions.Click += new System.EventHandler(this.buttonOptions_Click);
             // 
+            // buttonExportPng
+            // 
+            this.buttonExportPng.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonExportPng.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonExportPng.Location = new System.Drawing.Point(689, 209);
+            this.buttonExportPng.Name = "buttonExportPng";
+            this.buttonExportPng.Size = new System.Drawing.Size(67, 25);
+            this.buttonExportPng.TabIndex = 13;
+            this.buttonExportPng.Text = "PNG";
+            this.buttonExportPng.UseVisualStyleBackColor = true;
+            this.buttonExportPng.Click += new System.EventHandler(this.buttonExportPng_Click);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(784, 461);
+            this.Controls.Add(this.buttonExportPng);
             this.Controls.Add(this.buttonOptions);
             this.Controls.Add(this.buttonScenarioD);
             this.Controls.Add(this.buttonScenarioC);
@@ -152,5 +166,6 @@ namespace Graphing.TestScenarios
         private System.Windows.Forms.Button buttonScenarioC;
         private System.Windows.Forms.Button buttonScenarioD;
         private System.Windows.Forms.Button buttonOptions;
+        private System.Windows.Forms.Button buttonExportPng;
     }
 }
