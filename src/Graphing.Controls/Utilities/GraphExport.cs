@@ -19,5 +19,27 @@ namespace Graphing.Controls.Utilities
                 PngBitmapEncoder.EncodeToStream(bitmap, output);
             }
         }
+
+        public static void ExportMetafile(
+            Size size,
+            GraphPresentationModel model,
+            Stream output,
+            GraphPresentationOptions options = null)
+        {
+            var renderer = new MetafileGraphRenderer();
+            renderer.RenderToMetafile(size.Width, size.Height, output, model, options);
+        }
+
+        public static void ExportMetafile(
+            Size size,
+            GraphPresentationModel model,
+            string filePath,
+            GraphPresentationOptions options = null)
+        {
+            using (var stream = File.Create(filePath))
+            {
+                ExportMetafile(size, model, stream, options);
+            }
+        }
     }
 }

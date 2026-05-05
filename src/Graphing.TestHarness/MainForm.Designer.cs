@@ -38,6 +38,7 @@ namespace Graphing.TestScenarios
             this.buttonScenarioD = new System.Windows.Forms.Button();
             this.buttonOptions = new System.Windows.Forms.Button();
             this.buttonExportPng = new System.Windows.Forms.Button();
+            this.buttonExportEmf = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonScenarioA
@@ -138,9 +139,22 @@ namespace Graphing.TestScenarios
             this.buttonExportPng.UseVisualStyleBackColor = true;
             this.buttonExportPng.Click += new System.EventHandler(this.buttonExportPng_Click);
             // 
+            // buttonExportEmf
+            // 
+            this.buttonExportEmf.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonExportEmf.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonExportEmf.Location = new System.Drawing.Point(689, 240);
+            this.buttonExportEmf.Name = "buttonExportEmf";
+            this.buttonExportEmf.Size = new System.Drawing.Size(67, 25);
+            this.buttonExportEmf.TabIndex = 14;
+            this.buttonExportEmf.Text = "EMF";
+            this.buttonExportEmf.UseVisualStyleBackColor = true;
+            this.buttonExportEmf.Click += new System.EventHandler(this.buttonExportEmf_Click);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(784, 461);
+            this.Controls.Add(this.buttonExportEmf);
             this.Controls.Add(this.buttonExportPng);
             this.Controls.Add(this.buttonOptions);
             this.Controls.Add(this.buttonScenarioD);
@@ -167,5 +181,6 @@ namespace Graphing.TestScenarios
         private System.Windows.Forms.Button buttonScenarioD;
         private System.Windows.Forms.Button buttonOptions;
         private System.Windows.Forms.Button buttonExportPng;
+        private System.Windows.Forms.Button buttonExportEmf;
     }
 }

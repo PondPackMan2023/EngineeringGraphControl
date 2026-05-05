@@ -137,5 +137,29 @@ namespace Graphing.TestScenarios
                 }
             }
         }
+
+        private void buttonExportEmf_Click(object sender, EventArgs e)
+        {
+            using (var saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "EMF Image|*.emf";
+                saveDialog.Title = "Export Graph as EMF";
+                saveDialog.FileName = "GraphExport.emf";
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        using (var stream = File.Create(saveDialog.FileName))
+                        {
+                            GraphExport.ExportMetafile(graphControl.Size, graphControl.ActivePresentation, stream, graphControl.ActiveOptions);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Failed to export graph: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
     }
 }
