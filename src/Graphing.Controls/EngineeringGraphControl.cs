@@ -1,5 +1,6 @@
 using Graphing.Controls.Models;
 using Graphing.Controls.Interaction;
+using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
 using Graphing.Controls.Rendering;
 using Graphing.Controls.Rendering.Geometry;
@@ -15,6 +16,7 @@ namespace Graphing.Controls
     {
         private const float AnimationBarLineWidth = 3f;
         private const float AnimationBarHitTolerancePixels = 6f;
+        private const float AnimationBarMarkerRadius = 5f;
         private static readonly Color DefaultAnimationBarColor = Color.OrangeRed;
 
         private readonly object _snapshotSync = new object();
@@ -533,11 +535,107 @@ namespace Graphing.Controls
                 {
                     graphics.DrawLine(pen, deviceX, plotRect.Top, deviceX, plotRect.Bottom);
                 }
+
+                RenderIntersectionMarkers(graphics, clientBounds, presentation, plotRect, _animationBarXIndex);
             }
             finally
             {
                 graphics.SetClip(clip);
             }
+        }
+
+        private static void RenderIntersectionMarkers(
+            Graphics graphics,
+            Rectangle clientBounds,
+            GraphPresentationModel presentation,
+            RectangleF plotRect,
+            int xIndex)
+        {
+            var seriesList = presentation.Series;
+            if (seriesList == null || seriesList.Count == 0)
+            {
+                return;
+            }
+
+            var plotArea = presentation.Layout.PlotArea;
+            var seenSeriesIds = new System.Collections.Generic.HashSet<SeriesId>();
+
+            for (var i = 0; i < seriesList.Count; i++)
+            {
+                var series = seriesList[i];
+                if (series == null || !IsEligibleForIntersectionMarker(series))
+                {
+                    continue;
+                }
+
+                if (!seenSeriesIds.Add(series.SeriesId))
+                {
+                    continue;
+                }
+
+                var points = series.Points;
+                if (points == null || xIndex >= points.Count)
+                {
+                    continue;
+                }
+
+                var xAxisEntry = series.XAxisEntry;
+                var yAxisEntry = series.YAxisEntry;
+                if (xAxisEntry == null || yAxisEntry == null)
+                {
+                    continue;
+                }
+
+                var xAxis = xAxisEntry.Axis;
+                var yAxis = yAxisEntry.Axis;
+                if (xAxis == null || yAxis == null)
+                {
+                    continue;
+                }
+
+                if (!xAxis.MinimumValue.HasValue || !xAxis.MaximumValue.HasValue ||
+                    !yAxis.MinimumValue.HasValue || !yAxis.MaximumValue.HasValue)
+                {
+                    continue;
+                }
+
+                var xRange = xAxis.MaximumValue.Value - xAxis.MinimumValue.Value;
+                var yRange = yAxis.MaximumValue.Value - yAxis.MinimumValue.Value;
+                if (xRange <= 0d || yRange <= 0d)
+                {
+                    continue;
+                }
+
+                var xNorm = (points[xIndex].X - xAxis.MinimumValue.Value) / xRange;
+                if (xNorm < 0d) xNorm = 0d;
+                else if (xNorm > 1d) xNorm = 1d;
+
+                var yNorm = (points[xIndex].Y - yAxis.MinimumValue.Value) / yRange;
+                if (yNorm < 0d) yNorm = 0d;
+                else if (yNorm > 1d) yNorm = 1d;
+
+                var abstractX = plotArea.BottomLeft.X + (xNorm * (plotArea.TopRight.X - plotArea.BottomLeft.X));
+                var abstractY = plotArea.BottomLeft.Y + (yNorm * (plotArea.TopRight.Y - plotArea.BottomLeft.Y));
+
+                var deviceX = AbstractToDeviceX(clientBounds, abstractX);
+                var deviceY = AbstractToDeviceY(clientBounds, abstractY);
+
+                var markerRect = new RectangleF(
+                    deviceX - AnimationBarMarkerRadius,
+                    deviceY - AnimationBarMarkerRadius,
+                    AnimationBarMarkerRadius * 2f,
+                    AnimationBarMarkerRadius * 2f);
+
+                using (var brush = new SolidBrush(series.SeriesColor))
+                {
+                    graphics.FillEllipse(brush, markerRect);
+                }
+            }
+        }
+
+        private static bool IsEligibleForIntersectionMarker(SeriesPresentationGeometry series)
+        {
+            return series.SeriesType == SeriesType.Line || series.SeriesType == SeriesType.Scatter;
         }
 
         private bool HitTestAnimationBar(
@@ -735,6 +833,11 @@ namespace Graphing.Controls
         private static float AbstractToDeviceX(Rectangle clientBounds, double abstractX)
         {
             return (float)(clientBounds.Left + (abstractX * clientBounds.Width));
+        }
+
+        private static float AbstractToDeviceY(Rectangle clientBounds, double abstractY)
+        {
+            return (float)(clientBounds.Bottom - (abstractY * clientBounds.Height));
         }
     }
 }

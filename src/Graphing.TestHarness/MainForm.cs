@@ -166,7 +166,6 @@ namespace Graphing.TestScenarios
         {
             graphControl.AnimationBarEnabled = checkBoxAnimation.Checked;
             graphControl.AnimationBarXIndex = 0;
-            graphControl.Refresh();
         }
     }
 }

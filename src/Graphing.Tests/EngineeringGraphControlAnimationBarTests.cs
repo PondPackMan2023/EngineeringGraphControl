@@ -138,6 +138,38 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void AnimationBar_IntersectionMarkers_IneligibleBarSeriesOnly_DoesNotThrow()
+        {
+            using (var control = new TestEngineeringGraphControl())
+            using (var bitmap = new Bitmap(640, 480))
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                control.Size = new Size(640, 480);
+                control.SetGraphSource(CreateBarSeriesGraphModel());
+                control.AnimationBarEnabled = true;
+                control.AnimationBarXIndex = 1;
+
+                Assert.DoesNotThrow(() => control.RaisePaint(graphics));
+            }
+        }
+
+        [Test]
+        public void AnimationBar_IntersectionMarkers_MultiSeriesLinePaint_DoesNotThrow()
+        {
+            using (var control = new TestEngineeringGraphControl())
+            using (var bitmap = new Bitmap(640, 480))
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                control.Size = new Size(640, 480);
+                control.SetGraphSource(CreateMultiSeriesGraphModel());
+                control.AnimationBarEnabled = true;
+                control.AnimationBarXIndex = 1;
+
+                Assert.DoesNotThrow(() => control.RaisePaint(graphics));
+            }
+        }
+
+        [Test]
         public void AnimationBar_ClickInPlot_DoesNotReposition()
         {
             using (var control = CreateInteractiveControl())
@@ -253,6 +285,36 @@ namespace Graphing.Tests
             var series = new GraphSeriesModel(new SeriesId("1"), "s1", SeriesType.Line, xField, yField, xAxis, yAxis);
 
             return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+        }
+
+        private static IGraphModel CreateBarSeriesGraphModel()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", new NumericFormatter("fmt-x", registry, "X", "F1"));
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", new NumericFormatter("fmt-y", registry, "Y", "F1"));
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d, 3d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d, 40d });
+            var series = new GraphSeriesModel(new SeriesId("bar1"), "bar", SeriesType.Bar, xField, yField, xAxis, yAxis);
+
+            return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+        }
+
+        private static IGraphModel CreateMultiSeriesGraphModel()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", new NumericFormatter("fmt-x", registry, "X", "F1"));
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", new NumericFormatter("fmt-y", registry, "Y", "F1"));
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d, 3d });
+            var yField1 = new TestFieldDefinition("Y1", "y1", unit, new[] { 10d, 20d, 30d, 40d });
+            var yField2 = new TestFieldDefinition("Y2", "y2", unit, new[] { 5d, 15d, 25d, 35d });
+            var lineSeries = new GraphSeriesModel(new SeriesId("s1"), "s1", SeriesType.Line, xField, yField1, xAxis, yAxis);
+            var scatterSeries = new GraphSeriesModel(new SeriesId("s2"), "s2", SeriesType.Scatter, xField, yField2, xAxis, yAxis);
+
+            return new GraphModel(new[] { xAxis, yAxis }, new[] { lineSeries, scatterSeries });
         }
 
         private sealed class TestEngineeringGraphControl : EngineeringGraphControl
