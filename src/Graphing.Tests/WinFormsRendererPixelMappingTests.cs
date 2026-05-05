@@ -679,6 +679,95 @@ namespace Graphing.Tests
             }
         }
 
+        [Test]
+        public void DiscreteSeries_MultiplePoints_RendersVisibleMarkers()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+
+            var xField = new TestFieldDef("X", "x", unit, new double[] { 0d, 0.5d, 1d });
+            var yField = new TestFieldDef("Y", "y", unit, new double[] { 0d, 50d, 100d });
+
+            var s = new GraphSeriesModel(new SeriesId("1"), "pts", SeriesType.Line, xField, yField, xAxis, yAxis,
+                lineRenderMode: LineRenderMode.PointsOnly);
+            var model = new GraphModel(new IAxisModel[] { xAxis, yAxis }, new IGraphSeriesModel[] { s });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+            var deviceBounds = new Rectangle(0, 0, W, H);
+
+            using (var bmp = new Bitmap(W, H))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                new WinFormsGraphRenderer().Render(g, deviceBounds, presentation);
+
+                var discreteSeries = presentation.Series.Single(ps => ps.ConnectivityIntent == SeriesConnectivityIntent.Discrete);
+                var plotRect = ComputePlotRect(deviceBounds, presentation);
+                var xEntry = discreteSeries.XAxisEntry;
+                var yEntry = discreteSeries.YAxisEntry;
+                var axisRect = ComputeAxisRectForEntry(plotRect, yEntry);
+
+                // X=0.5 in domain [0,1], Y=50 in domain [0,100] → midpoint of plot
+                var midX = (int)Math.Round(DomainToDeviceX(0.5d, xEntry.Axis.MinimumValue.Value, xEntry.Axis.MaximumValue.Value, plotRect));
+                var midY = (int)Math.Round(DomainToDeviceY(50d, yEntry.Axis.MinimumValue.Value, yEntry.Axis.MaximumValue.Value, axisRect));
+
+                Assert.That(HasColorNear2D(bmp, midX, midY, discreteSeries.SeriesColor), Is.True,
+                    "A PointsOnly series must render a visible marker at the midpoint data point.");
+            }
+        }
+
+        [Test]
+        public void DiscreteSeries_SinglePoint_RendersVisibleMarker()
+        {
+            // A companion continuous series anchors the axis range so the renderer does not
+            // skip the single-point PointsOnly series due to a degenerate (min==max) axis range.
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", null);
+
+            var xFieldFull = new TestFieldDef("X", "x", unit, new double[] { 0d, 1d });
+            var yFieldFull = new TestFieldDef("Y", "y", unit, new double[] { 0d, 100d });
+            var xFieldSingle = new TestFieldDef("X1", "x1", unit, new double[] { 0.5d });
+            var yFieldSingle = new TestFieldDef("Y1", "y1", unit, new double[] { 50d });
+
+            // Companion LineOnly series to give axes a valid [0,100] range.
+            var companion = new GraphSeriesModel(new SeriesId("anchor"), "anchor", SeriesType.Line,
+                xFieldFull, yFieldFull, xAxis, yAxis);
+            // Single-point PointsOnly series that would produce Points.Count==1 geometry.
+            var single = new GraphSeriesModel(new SeriesId("pts"), "pts", SeriesType.Line,
+                xFieldSingle, yFieldSingle, xAxis, yAxis, lineRenderMode: LineRenderMode.PointsOnly);
+
+            var model = new GraphModel(new IAxisModel[] { xAxis, yAxis }, new IGraphSeriesModel[] { companion, single });
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var presentation = new GraphPresentationModel(snapshot);
+            var deviceBounds = new Rectangle(0, 0, W, H);
+
+            using (var bmp = new Bitmap(W, H))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                new WinFormsGraphRenderer().Render(g, deviceBounds, presentation);
+
+                // The single-point PointsOnly series emits exactly 1 geometry with 1 point.
+                var discreteSeries = presentation.Series
+                    .Where(ps => ps.ConnectivityIntent == SeriesConnectivityIntent.Discrete)
+                    .Single(ps => ps.Points.Count == 1);
+
+                var plotRect = ComputePlotRect(deviceBounds, presentation);
+                var xEntry = discreteSeries.XAxisEntry;
+                var yEntry = discreteSeries.YAxisEntry;
+                var axisRect = ComputeAxisRectForEntry(plotRect, yEntry);
+
+                // X=0.5 in [0,1], Y=50 in [0,100] → centre of plot
+                var centerX = (int)Math.Round(DomainToDeviceX(0.5d, xEntry.Axis.MinimumValue.Value, xEntry.Axis.MaximumValue.Value, plotRect));
+                var centerY = (int)Math.Round(DomainToDeviceY(50d, yEntry.Axis.MinimumValue.Value, yEntry.Axis.MaximumValue.Value, axisRect));
+
+                Assert.That(HasColorNear2D(bmp, centerX, centerY, discreteSeries.SeriesColor), Is.True,
+                    "A PointsOnly series with a single data point must still render a visible marker.");
+            }
+        }
+
         private static RectangleF ComputePlotRect(Rectangle deviceBounds, GraphPresentationModel model)
         {
             var pa = model.Layout.PlotArea;
