@@ -17,7 +17,8 @@ namespace Graphing.Controls.Presentation
             GeometryPoint3D topRight,
             GeometryPoint3D glyphBottomLeft,
             GeometryPoint3D glyphTopRight,
-            Color seriesColor = default)
+            Color seriesColor = default,
+            LegendGlyphKind glyphKind = LegendGlyphKind.LineAndPoint)
         {
             SeriesId = seriesId;
             DisplayText = displayText;
@@ -26,6 +27,7 @@ namespace Graphing.Controls.Presentation
             GlyphBottomLeft = glyphBottomLeft;
             GlyphTopRight = glyphTopRight;
             SeriesColor = seriesColor == default ? Color.SteelBlue : seriesColor;
+            GlyphKind = glyphKind;
         }
 
         public SeriesId SeriesId { get; }
@@ -41,5 +43,7 @@ namespace Graphing.Controls.Presentation
         public GeometryPoint3D GlyphTopRight { get; }
 
         public Color SeriesColor { get; }
+
+        public LegendGlyphKind GlyphKind { get; }
     }
 }

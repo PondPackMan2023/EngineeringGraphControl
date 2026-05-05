@@ -93,10 +93,11 @@ namespace Graphing.Controls.Presentation
             options = options ?? new GraphPresentationOptions();
             measurementInput = measurementInput ?? new DefaultLayoutMeasurementInput();
             var seriesContexts = BuildSeriesGeometry(snapshot, options);
+            var legendSeriesContexts = BuildUniqueSeriesContexts(seriesContexts);
             var legendSeries = BuildLegendSeriesList(seriesContexts);
             _axes = BuildAxisGeometry(snapshot, seriesContexts, options);
             var initialSeriesList = BuildSeriesList(seriesContexts);
-            _layout = BuildLayoutGeometry(_axes, initialSeriesList, legendSeries, options, measurementInput);
+            _layout = BuildLayoutGeometry(_axes, initialSeriesList, legendSeriesContexts, legendSeries, options, measurementInput);
             BindSeriesAxisEntries(seriesContexts, _layout.Axes);
             _series = initialSeriesList;
             _semantics = BuildSemanticModel(snapshot, seriesContexts, _axes, options);

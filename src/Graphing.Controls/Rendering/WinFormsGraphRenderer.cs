@@ -935,16 +935,23 @@ namespace Graphing.Controls.Rendering
 
             using (var glyphPen = new Pen(entry.SeriesColor, LegendLineWidth))
             {
-                g.DrawLine(glyphPen, glyphLeft, glyphCenterY, glyphRight, glyphCenterY);
-
                 var markerRadius = LegendMarkerSize / 2f;
                 var markerCenterX = glyphLeft + (glyphWidth / 2f);
-                g.DrawEllipse(
-                    glyphPen,
-                    markerCenterX - markerRadius,
-                    glyphCenterY - markerRadius,
-                    LegendMarkerSize,
-                    LegendMarkerSize);
+
+                if (entry.GlyphKind == LegendGlyphKind.Line || entry.GlyphKind == LegendGlyphKind.LineAndPoint)
+                {
+                    g.DrawLine(glyphPen, glyphLeft, glyphCenterY, glyphRight, glyphCenterY);
+                }
+
+                if (entry.GlyphKind == LegendGlyphKind.Point || entry.GlyphKind == LegendGlyphKind.LineAndPoint)
+                {
+                    g.DrawEllipse(
+                        glyphPen,
+                        markerCenterX - markerRadius,
+                        glyphCenterY - markerRadius,
+                        LegendMarkerSize,
+                        LegendMarkerSize);
+                }
             }
 
             if (string.IsNullOrWhiteSpace(entry.DisplayText))

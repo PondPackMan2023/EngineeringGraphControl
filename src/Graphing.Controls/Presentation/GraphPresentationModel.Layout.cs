@@ -253,6 +253,7 @@ namespace Graphing.Controls.Presentation
         private static GraphLayoutModel BuildLayoutGeometry(
             IReadOnlyList<AxisPresentationGeometry> axes,
             IReadOnlyList<SeriesPresentationGeometry> series,
+            IReadOnlyList<SeriesGeometryContext> legendSeriesContexts,
             IReadOnlyList<SeriesPresentationGeometry> legendSeries,
             GraphPresentationOptions options,
             IGraphLayoutMeasurementInput measurementInput)
@@ -543,7 +544,7 @@ namespace Graphing.Controls.Presentation
 
             var legendGeometry = hasLegend
                 ? BuildLegendGeometry(
-                    legendSeries,
+                    legendSeriesContexts,
                     legendPlacement,
                     resizeChart,
                     finalPlotArea,

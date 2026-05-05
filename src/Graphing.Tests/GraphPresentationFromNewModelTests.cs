@@ -70,6 +70,7 @@ namespace Graphing.Tests
             Assert.That(presentation.Series.Count, Is.EqualTo(1));
             Assert.That(presentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Line));
             Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Continuous));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.Line));
         }
 
         [Test]
@@ -83,6 +84,7 @@ namespace Graphing.Tests
             Assert.That(presentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Line));
             Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Discrete));
             Assert.That(presentation.Layout.Legend.Entries.Count, Is.EqualTo(1));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.Point));
         }
 
         [Test]
@@ -97,6 +99,7 @@ namespace Graphing.Tests
             Assert.That(presentation.Series[1].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Discrete));
             Assert.That(presentation.Series[0].SeriesId, Is.EqualTo(presentation.Series[1].SeriesId));
             Assert.That(presentation.Layout.Legend.Entries.Count, Is.EqualTo(1));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.LineAndPoint));
         }
 
         [Test]
@@ -109,6 +112,7 @@ namespace Graphing.Tests
             Assert.That(presentation.Series.Count, Is.EqualTo(1));
             Assert.That(presentation.Series[0].SeriesType, Is.EqualTo(SeriesType.Scatter));
             Assert.That(presentation.Series[0].ConnectivityIntent, Is.EqualTo(SeriesConnectivityIntent.Discrete));
+            Assert.That(presentation.Layout.Legend.Entries[0].GlyphKind, Is.EqualTo(LegendGlyphKind.LineAndPoint));
         }
 
         [Test]
