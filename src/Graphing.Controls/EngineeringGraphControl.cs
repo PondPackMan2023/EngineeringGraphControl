@@ -40,6 +40,7 @@ namespace Graphing.Controls
         private bool _hasRenderedAnimationBarXExtent;
         private readonly Dictionary<string, AxisExtent> _defaultAxisExtents = new Dictionary<string, AxisExtent>(StringComparer.Ordinal);
         private bool _zoomEnabled;
+        private ZoomGestureKind _lastZoomGesture;
         private bool _isZoomDragging;
         private Point _zoomDragAnchorClient;
         private Point _zoomDragCurrentClient;
@@ -156,6 +157,8 @@ namespace Graphing.Controls
         internal bool ZoomDragOverlayVisible => _zoomEnabled && _isZoomDragging && _zoomDragRectangle.HasValue;
 
         internal RectangleF? ZoomDragOverlayBounds => _zoomDragRectangle;
+
+        internal ZoomGestureKind LastZoomGesture => _lastZoomGesture;
 
         public void ZoomExtents()
         {
@@ -545,10 +548,28 @@ namespace Graphing.Controls
                 return false;
             }
 
+            int dx = _zoomDragCurrentClient.X - _zoomDragAnchorClient.X;
+            int dy = _zoomDragCurrentClient.Y - _zoomDragAnchorClient.Y;
+
             _isZoomDragging = false;
             _zoomDragRectangle = null;
             Capture = false;
             Invalidate();
+
+            if (dx > 0 && dy > 0)
+            {
+                _lastZoomGesture = ZoomGestureKind.ZoomIn;
+            }
+            else if (dx < 0 && dy < 0)
+            {
+                _lastZoomGesture = ZoomGestureKind.ZoomReset;
+                ZoomExtents();
+            }
+            else
+            {
+                _lastZoomGesture = ZoomGestureKind.None;
+            }
+
             return true;
         }
 
@@ -1567,6 +1588,13 @@ namespace Graphing.Controls
             public double Maximum { get; }
 
             public double Increment { get; }
+        }
+
+        internal enum ZoomGestureKind
+        {
+            None,
+            ZoomIn,
+            ZoomReset,
         }
 
     }

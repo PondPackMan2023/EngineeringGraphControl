@@ -191,6 +191,128 @@ namespace Graphing.Tests
             return new GraphModel(new[] { xAxis, yLeft, yRight }, new[] { s1, s2 });
         }
 
+        [Test]
+        public void ZoomGesture_DownRight_ClassifiesAsZoomIn_NoAxisChanges()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var before = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                // Down+Right: dx > 0, dy > 0
+                var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
+                var target = GetPlotInteriorPoint(control, 0.8d, 0.8d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                Assert.That(control.LastZoomGesture, Is.EqualTo(EngineeringGraphControl.ZoomGestureKind.ZoomIn));
+
+                var after = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                Assert.That(after.Keys, Is.EquivalentTo(before.Keys));
+                foreach (var axisId in before.Keys)
+                {
+                    Assert.That(after[axisId].Item1, Is.EqualTo(before[axisId].Item1).Within(1e-9d));
+                    Assert.That(after[axisId].Item2, Is.EqualTo(before[axisId].Item2).Within(1e-9d));
+                }
+            }
+        }
+
+        [Test]
+        public void ZoomGesture_UpLeft_ClassifiesAsZoomReset_InvokesZoomExtents()
+        {
+            using (var control = new TestEngineeringGraphControl { Size = new Size(640, 480) })
+            {
+                _ = control.Handle;
+
+                // Load with the same model object — first call captures defaults
+                var model = CreateGraphModelWithThreeAxes();
+                control.SetGraphSource(model, new GraphPresentationOptions());
+
+                var defaultRanges = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                // Apply a zoomed state using the SAME model — same lifecycle, defaults are not overwritten
+                var zoomedOptions = new GraphPresentationOptions(
+                    axisOverrides: new Dictionary<AxisId, AxisOverrides>
+                    {
+                        { new AxisId("x-axis"), new AxisOverrides { HasFixedRange = true, Minimum = 0d, Maximum = 1d } },
+                        { new AxisId("y-left"), new AxisOverrides { HasFixedRange = true, Minimum = 10d, Maximum = 20d } },
+                        { new AxisId("y-right"), new AxisOverrides { HasFixedRange = true, Minimum = 100d, Maximum = 200d } }
+                    });
+                control.SetGraphSource(model, zoomedOptions);
+
+                control.ZoomEnabled = true;
+
+                // Up+Left drag: dx < 0, dy < 0
+                var anchor = GetPlotInteriorPoint(control, 0.8d, 0.8d);
+                var target = GetPlotInteriorPoint(control, 0.2d, 0.2d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                Assert.That(control.LastZoomGesture, Is.EqualTo(EngineeringGraphControl.ZoomGestureKind.ZoomReset));
+
+                // Axes should be back to defaults
+                var resolvedRanges = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                Assert.That(resolvedRanges.Keys, Is.EquivalentTo(defaultRanges.Keys));
+                foreach (var axisId in defaultRanges.Keys)
+                {
+                    Assert.That(resolvedRanges[axisId].Item1, Is.EqualTo(defaultRanges[axisId].Item1).Within(1e-9d), $"Axis '{axisId}' min not reset.");
+                    Assert.That(resolvedRanges[axisId].Item2, Is.EqualTo(defaultRanges[axisId].Item2).Within(1e-9d), $"Axis '{axisId}' max not reset.");
+                }
+            }
+        }
+
+        [Test]
+        public void ZoomGesture_OtherDirections_ClassifyAsNone()
+        {
+            // Horizontal (dx > 0, dy == 0) and vertical (dx == 0, dy > 0) should be None
+            var directions = new[]
+            {
+                (0.2d, 0.5d, 0.8d, 0.5d),  // purely horizontal right
+                (0.8d, 0.5d, 0.2d, 0.5d),  // purely horizontal left
+                (0.5d, 0.2d, 0.5d, 0.8d),  // purely vertical down
+                (0.5d, 0.8d, 0.5d, 0.2d),  // purely vertical up
+                (0.2d, 0.8d, 0.8d, 0.2d),  // down+left diagonal
+                (0.8d, 0.2d, 0.2d, 0.8d),  // up+right diagonal
+            };
+
+            foreach (var (ax, ay, tx, ty) in directions)
+            {
+                using (var control = CreateInteractiveControl())
+                {
+                    control.ZoomEnabled = true;
+
+                    var anchor = GetPlotInteriorPoint(control, ax, ay);
+                    var target = GetPlotInteriorPoint(control, tx, ty);
+
+                    // If anchor == target after clamping (e.g. purely horizontal on 1px boundary), skip
+                    if (anchor == target)
+                        continue;
+
+                    control.RaiseMouseDown(MouseButtons.Left, anchor);
+                    control.RaiseMouseMove(target);
+                    control.RaiseMouseUp(MouseButtons.Left, target);
+
+                    Assert.That(control.LastZoomGesture, Is.EqualTo(EngineeringGraphControl.ZoomGestureKind.None),
+                        $"Expected None for drag ({ax},{ay})->({tx},{ty})");
+                }
+            }
+        }
+
         private static TestEngineeringGraphControl CreateInteractiveControl()
         {
             var control = new TestEngineeringGraphControl
