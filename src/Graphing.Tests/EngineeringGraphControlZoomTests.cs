@@ -13,6 +13,7 @@ using UnitRegistry;
 using UnitRegistry.Formatting;
 using ModelAxisOrientation = Graphing.Controls.Models.AxisOrientation;
 using ModelAxisSide = Graphing.Controls.Models.AxisSide;
+using PresentationAxisOrientation = Graphing.Controls.Presentation.AxisOrientation;
 
 namespace Graphing.Tests
 {
@@ -86,45 +87,41 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void ZoomDrag_WhenEnabled_DoesNotChangeSecondaryYAxisRanges()
+        public void ZoomIn_WhenZoomRectOverlapsSingleYAxis_OnlyThatYAxisChanges()
         {
-            // A down+right drag (zoom-in gesture) applies X-axis + primary Y-axis zoom,
-            // but must leave the secondary Y-axis unchanged.
-            using (var control = CreateInteractiveControl())
+            using (var control = CreateInteractiveControl(CreateGraphModelWithStackedLeftYAxes()))
             {
                 control.ZoomEnabled = true;
 
-                var beforeSecondaryY = control.ActiveSnapshot.Axes
+                var beforeY = control.ActiveSnapshot.Axes
                     .Where(a => a != null
                         && !string.IsNullOrWhiteSpace(a.AxisId)
-                        && string.Equals(a.AxisId, "y-right", StringComparison.Ordinal)
                         && a.Orientation == ModelAxisOrientation.Y
                         && a.MinimumValue.HasValue
                         && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
-                var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
-                var target = GetPlotInteriorPoint(control, 0.9d, 0.8d);
+                var lowSpan = GetYAxisSpanInDevice(control, "y-left-low");
+
+                var anchor = new Point(GetPlotInteriorPoint(control, 0.2d, 0.2d).X, (int)Math.Round(lowSpan.Top + (0.2f * (lowSpan.Bottom - lowSpan.Top)), MidpointRounding.AwayFromZero));
+                var target = new Point(GetPlotInteriorPoint(control, 0.8d, 0.8d).X, (int)Math.Round(lowSpan.Top + (0.8f * (lowSpan.Bottom - lowSpan.Top)), MidpointRounding.AwayFromZero));
 
                 control.RaiseMouseDown(MouseButtons.Left, anchor);
                 control.RaiseMouseMove(target);
                 control.RaiseMouseUp(MouseButtons.Left, target);
 
-                var afterSecondaryY = control.ActiveSnapshot.Axes
+                var afterY = control.ActiveSnapshot.Axes
                     .Where(a => a != null
                         && !string.IsNullOrWhiteSpace(a.AxisId)
-                        && string.Equals(a.AxisId, "y-right", StringComparison.Ordinal)
                         && a.Orientation == ModelAxisOrientation.Y
                         && a.MinimumValue.HasValue
                         && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
-                Assert.That(afterSecondaryY.Keys, Is.EquivalentTo(beforeSecondaryY.Keys));
-                foreach (var axisId in beforeSecondaryY.Keys)
-                {
-                    Assert.That(afterSecondaryY[axisId].Item1, Is.EqualTo(beforeSecondaryY[axisId].Item1).Within(1e-9d));
-                    Assert.That(afterSecondaryY[axisId].Item2, Is.EqualTo(beforeSecondaryY[axisId].Item2).Within(1e-9d));
-                }
+                Assert.That(afterY["y-left-low"].Item1, Is.GreaterThan(beforeY["y-left-low"].Item1 - 1e-9d));
+                Assert.That(afterY["y-left-low"].Item2, Is.LessThan(beforeY["y-left-low"].Item2 + 1e-9d));
+                Assert.That(afterY["y-left-high"].Item1, Is.EqualTo(beforeY["y-left-high"].Item1).Within(1e-9d));
+                Assert.That(afterY["y-left-high"].Item2, Is.EqualTo(beforeY["y-left-high"].Item2).Within(1e-9d));
             }
         }
 
@@ -273,16 +270,18 @@ namespace Graphing.Tests
 
                 var zoomedPrimaryYAxis = GetPrimaryYAxis(control);
 
-                var top = Math.Min(anchor.Y, target.Y);
-                var bottom = Math.Max(anchor.Y, target.Y);
-                var yAtTop = DeviceYToDomainForTest(control, top, defaultYMin, defaultYMax);
-                var yAtBottom = DeviceYToDomainForTest(control, bottom, defaultYMin, defaultYMax);
+                var zoomTop = (float)Math.Min(anchor.Y, target.Y);
+                var zoomBottom = (float)Math.Max(anchor.Y, target.Y);
+                var expected = ResolveExpectedYAxisRange(
+                    control,
+                    zoomedPrimaryYAxis.AxisId,
+                    zoomTop,
+                    zoomBottom,
+                    defaultYMin,
+                    defaultYMax);
 
-                var expectedYMin = Math.Min(yAtTop, yAtBottom);
-                var expectedYMax = Math.Max(yAtTop, yAtBottom);
-
-                Assert.That(zoomedPrimaryYAxis.MinimumValue.Value, Is.EqualTo(expectedYMin).Within(1e-6d));
-                Assert.That(zoomedPrimaryYAxis.MaximumValue.Value, Is.EqualTo(expectedYMax).Within(1e-6d));
+                Assert.That(zoomedPrimaryYAxis.MinimumValue.Value, Is.EqualTo(expected.Minimum).Within(1e-6d));
+                Assert.That(zoomedPrimaryYAxis.MaximumValue.Value, Is.EqualTo(expected.Maximum).Within(1e-6d));
                 Assert.That(zoomedPrimaryYAxis.MaximumValue.Value - zoomedPrimaryYAxis.MinimumValue.Value,
                     Is.LessThan(defaultYMax - defaultYMin));
             }
@@ -351,6 +350,51 @@ namespace Graphing.Tests
                     .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue && a.MaximumValue.HasValue);
                 Assert.That(afterXAxis.MaximumValue.Value - afterXAxis.MinimumValue.Value,
                     Is.LessThan(beforeXMax - beforeXMin));
+            }
+        }
+
+        [Test]
+        public void ZoomIn_WhenZoomRectOverlapsBothYAxes_ComputesIndependentRangesPerAxis()
+        {
+            using (var control = CreateInteractiveControl(CreateGraphModelWithStackedLeftYAxes()))
+            {
+                control.ZoomEnabled = true;
+
+                var beforeById = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                var lowSpan = GetYAxisSpanInDevice(control, "y-left-low");
+                var highSpan = GetYAxisSpanInDevice(control, "y-left-high");
+
+                var topSpan = lowSpan.Top <= highSpan.Top ? lowSpan : highSpan;
+                var bottomSpan = lowSpan.Bottom >= highSpan.Bottom ? lowSpan : highSpan;
+
+                var yTop = (int)Math.Round(topSpan.Top + (0.25f * (topSpan.Bottom - topSpan.Top)), MidpointRounding.AwayFromZero);
+                var yBottom = (int)Math.Round(bottomSpan.Bottom - (0.25f * (bottomSpan.Bottom - bottomSpan.Top)), MidpointRounding.AwayFromZero);
+
+                var anchor = new Point(GetPlotInteriorPoint(control, 0.2d, 0.2d).X, yTop);
+                var target = new Point(GetPlotInteriorPoint(control, 0.8d, 0.8d).X, yBottom);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                var afterById = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                var lowExpected = ResolveExpectedYAxisRange(control, "y-left-low", yTop, yBottom, beforeById["y-left-low"].Item1, beforeById["y-left-low"].Item2);
+                var highExpected = ResolveExpectedYAxisRange(control, "y-left-high", yTop, yBottom, beforeById["y-left-high"].Item1, beforeById["y-left-high"].Item2);
+
+                Assert.That(afterById["y-left-low"].Item1, Is.EqualTo(lowExpected.Minimum).Within(1e-4d));
+                Assert.That(afterById["y-left-low"].Item2, Is.EqualTo(lowExpected.Maximum).Within(1e-4d));
+                Assert.That(afterById["y-left-high"].Item1, Is.EqualTo(highExpected.Minimum).Within(1e-4d));
+                Assert.That(afterById["y-left-high"].Item2, Is.EqualTo(highExpected.Maximum).Within(1e-4d));
+
+                // Independent ranges should generally differ because source axis domains differ.
+                Assert.That(Math.Abs(afterById["y-left-low"].Item1 - afterById["y-left-high"].Item1), Is.GreaterThan(1e-3d));
+                Assert.That(Math.Abs(afterById["y-left-low"].Item2 - afterById["y-left-high"].Item2), Is.GreaterThan(1e-3d));
             }
         }
 
@@ -454,6 +498,37 @@ namespace Graphing.Tests
             return control;
         }
 
+        private static TestEngineeringGraphControl CreateInteractiveControl(IGraphModel model)
+        {
+            var control = new TestEngineeringGraphControl
+            {
+                Size = new Size(640, 480)
+            };
+
+            _ = control.Handle;
+            control.SetGraphSource(model, new GraphPresentationOptions());
+            return control;
+        }
+
+        private static IGraphModel CreateGraphModelWithStackedLeftYAxes()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", new NumericFormatter("fmt-x", registry, "X", "F1"));
+            var yLow = new AxisModel(new AxisId("y-left-low"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-y-low", registry, "YLow", "F1"));
+            var yHigh = new AxisModel(new AxisId("y-left-high"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", new NumericFormatter("fmt-y-high", registry, "YHigh", "F1"));
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d, 3d, 4d, 5d });
+            var yFieldLow = new TestFieldDefinition("YLow", "yl", unit, new[] { -100d, -50d, 0d, 50d, 100d, 125d });
+            var yFieldHigh = new TestFieldDefinition("YHigh", "yh", unit, new[] { 200d, 225d, 250d, 300d, 350d, 400d });
+
+            var sLow = new GraphSeriesModel(new SeriesId("s-low"), "s-low", SeriesType.Line, xField, yFieldLow, xAxis, yLow);
+            var sHigh = new GraphSeriesModel(new SeriesId("s-high"), "s-high", SeriesType.Line, xField, yFieldHigh, xAxis, yHigh);
+
+            return new GraphModel(new[] { xAxis, yLow, yHigh }, new[] { sLow, sHigh });
+        }
+
         private static RectangleF GetPlotRect(TestEngineeringGraphControl control)
         {
             var plotArea = control.ActivePresentation.Layout.PlotArea;
@@ -496,6 +571,86 @@ namespace Graphing.Tests
             t = Math.Max(0d, Math.Min(1d, t));
 
             return axisMin + (t * (axisMax - axisMin));
+        }
+
+        private static (float Top, float Bottom) GetYAxisSpanInDevice(TestEngineeringGraphControl control, string axisId)
+        {
+            var entry = control.ActivePresentation.Layout.Axes
+                .First(a => a?.Axis != null
+                    && string.Equals(a.Axis.AxisId, axisId, StringComparison.Ordinal)
+                    && a.Axis.Orientation == PresentationAxisOrientation.Vertical);
+
+            var plotArea = control.ActivePresentation.Layout.PlotArea;
+            var clientBounds = control.ClientRectangle;
+            var plotBottom = plotArea.BottomLeft.Y;
+            var plotTop = plotArea.TopRight.Y;
+            var plotHeight = plotTop - plotBottom;
+
+            var normalizedStart = Math.Max(0d, Math.Min(1d, entry.NormalizedSpanStart));
+            var normalizedEnd = Math.Max(0d, Math.Min(1d, entry.NormalizedSpanEnd));
+            if (normalizedEnd < normalizedStart)
+            {
+                var swap = normalizedStart;
+                normalizedStart = normalizedEnd;
+                normalizedEnd = swap;
+            }
+
+            var inset = Math.Max(0d, entry.TickEndpointInset);
+            var abstractBottom = plotBottom + (normalizedStart * plotHeight) + inset;
+            var abstractTop = plotBottom + (normalizedEnd * plotHeight) - inset;
+            if (abstractTop < abstractBottom)
+            {
+                var center = plotBottom + (((normalizedStart + normalizedEnd) * 0.5d) * plotHeight);
+                abstractBottom = center;
+                abstractTop = center;
+            }
+
+            var top = (float)(clientBounds.Bottom - (abstractTop * clientBounds.Height));
+            var bottom = (float)(clientBounds.Bottom - (abstractBottom * clientBounds.Height));
+            if (bottom < top)
+            {
+                var swap = bottom;
+                bottom = top;
+                top = swap;
+            }
+
+            return (top, bottom);
+        }
+
+        private static (double Minimum, double Maximum) ResolveExpectedYAxisRange(
+            TestEngineeringGraphControl control,
+            string axisId,
+            float zoomTop,
+            float zoomBottom,
+            double axisMinimum,
+            double axisMaximum)
+        {
+            var span = GetYAxisSpanInDevice(control, axisId);
+            var intersectionTop = Math.Max(zoomTop, span.Top);
+            var intersectionBottom = Math.Min(zoomBottom, span.Bottom);
+
+            var yTop = DeviceYToDomainForAxisSpanForTest(control, intersectionTop, axisMinimum, axisMaximum, span.Top, span.Bottom);
+            var yBottom = DeviceYToDomainForAxisSpanForTest(control, intersectionBottom, axisMinimum, axisMaximum, span.Top, span.Bottom);
+
+            return (Math.Min(yTop, yBottom), Math.Max(yTop, yBottom));
+        }
+
+        private static double DeviceYToDomainForAxisSpanForTest(
+            TestEngineeringGraphControl control,
+            float deviceY,
+            double axisMinimum,
+            double axisMaximum,
+            float axisTop,
+            float axisBottom)
+        {
+            var clientBounds = control.ClientRectangle;
+            var abstractY = (clientBounds.Bottom - deviceY) / (double)clientBounds.Height;
+            var axisAbstractTop = (clientBounds.Bottom - axisTop) / (double)clientBounds.Height;
+            var axisAbstractBottom = (clientBounds.Bottom - axisBottom) / (double)clientBounds.Height;
+            var axisHeight = axisAbstractTop - axisAbstractBottom;
+            var t = (abstractY - axisAbstractBottom) / axisHeight;
+            t = Math.Max(0d, Math.Min(1d, t));
+            return axisMinimum + (t * (axisMaximum - axisMinimum));
         }
 
         private sealed class TestFieldDefinition : GraphFieldDefinitionBase

@@ -165,7 +165,6 @@ namespace Graphing.TestScenarios
         private void checkBoxAnimation_CheckedChanged(object sender, EventArgs e)
         {
             graphControl.AnimationBarEnabled = checkBoxAnimation.Checked;
-            graphControl.AnimationBarXIndex = 0;
         }
 
         private void checkBoxEnableZoom_CheckedChanged(object sender, EventArgs e)
