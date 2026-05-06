@@ -7,6 +7,7 @@ using Graphing.Controls;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Presentation;
+using Graphing.Controls.Snapshot;
 using NUnit.Framework;
 using UnitRegistry;
 using UnitRegistry.Formatting;
@@ -85,15 +86,21 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void ZoomDrag_WhenEnabled_DoesNotChangeYAxisRanges()
+        public void ZoomDrag_WhenEnabled_DoesNotChangeSecondaryYAxisRanges()
         {
-            // A down+right drag (zoom-in gesture) applies X-axis zoom but must leave Y-axes unchanged.
+            // A down+right drag (zoom-in gesture) applies X-axis + primary Y-axis zoom,
+            // but must leave the secondary Y-axis unchanged.
             using (var control = CreateInteractiveControl())
             {
                 control.ZoomEnabled = true;
 
-                var beforeY = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                var beforeSecondaryY = control.ActiveSnapshot.Axes
+                    .Where(a => a != null
+                        && !string.IsNullOrWhiteSpace(a.AxisId)
+                        && string.Equals(a.AxisId, "y-right", StringComparison.Ordinal)
+                        && a.Orientation == ModelAxisOrientation.Y
+                        && a.MinimumValue.HasValue
+                        && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
                 var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
@@ -103,15 +110,20 @@ namespace Graphing.Tests
                 control.RaiseMouseMove(target);
                 control.RaiseMouseUp(MouseButtons.Left, target);
 
-                var afterY = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                var afterSecondaryY = control.ActiveSnapshot.Axes
+                    .Where(a => a != null
+                        && !string.IsNullOrWhiteSpace(a.AxisId)
+                        && string.Equals(a.AxisId, "y-right", StringComparison.Ordinal)
+                        && a.Orientation == ModelAxisOrientation.Y
+                        && a.MinimumValue.HasValue
+                        && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
-                Assert.That(afterY.Keys, Is.EquivalentTo(beforeY.Keys));
-                foreach (var axisId in beforeY.Keys)
+                Assert.That(afterSecondaryY.Keys, Is.EquivalentTo(beforeSecondaryY.Keys));
+                foreach (var axisId in beforeSecondaryY.Keys)
                 {
-                    Assert.That(afterY[axisId].Item1, Is.EqualTo(beforeY[axisId].Item1).Within(1e-9d));
-                    Assert.That(afterY[axisId].Item2, Is.EqualTo(beforeY[axisId].Item2).Within(1e-9d));
+                    Assert.That(afterSecondaryY[axisId].Item1, Is.EqualTo(beforeSecondaryY[axisId].Item1).Within(1e-9d));
+                    Assert.That(afterSecondaryY[axisId].Item2, Is.EqualTo(beforeSecondaryY[axisId].Item2).Within(1e-9d));
                 }
             }
         }
@@ -242,15 +254,15 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void ZoomIn_DownRightDrag_LeavesYAxisRangesUnchanged()
+        public void ZoomIn_DownRightDrag_AppliesPrimaryYAxisRangeFromRectangle()
         {
             using (var control = CreateInteractiveControl())
             {
                 control.ZoomEnabled = true;
 
-                var beforeY = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
-                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+                var defaultPrimaryYAxis = GetPrimaryYAxis(control);
+                var defaultYMin = defaultPrimaryYAxis.MinimumValue.Value;
+                var defaultYMax = defaultPrimaryYAxis.MaximumValue.Value;
 
                 var anchor = GetPlotInteriorPoint(control, 0.25d, 0.25d);
                 var target = GetPlotInteriorPoint(control, 0.75d, 0.75d);
@@ -259,29 +271,34 @@ namespace Graphing.Tests
                 control.RaiseMouseMove(target);
                 control.RaiseMouseUp(MouseButtons.Left, target);
 
-                var afterY = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
-                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+                var zoomedPrimaryYAxis = GetPrimaryYAxis(control);
 
-                Assert.That(afterY.Keys, Is.EquivalentTo(beforeY.Keys));
-                foreach (var axisId in beforeY.Keys)
-                {
-                    Assert.That(afterY[axisId].Item1, Is.EqualTo(beforeY[axisId].Item1).Within(1e-9d), $"Y-axis '{axisId}' min must not change");
-                    Assert.That(afterY[axisId].Item2, Is.EqualTo(beforeY[axisId].Item2).Within(1e-9d), $"Y-axis '{axisId}' max must not change");
-                }
+                var top = Math.Min(anchor.Y, target.Y);
+                var bottom = Math.Max(anchor.Y, target.Y);
+                var yAtTop = DeviceYToDomainForTest(control, top, defaultYMin, defaultYMax);
+                var yAtBottom = DeviceYToDomainForTest(control, bottom, defaultYMin, defaultYMax);
+
+                var expectedYMin = Math.Min(yAtTop, yAtBottom);
+                var expectedYMax = Math.Max(yAtTop, yAtBottom);
+
+                Assert.That(zoomedPrimaryYAxis.MinimumValue.Value, Is.EqualTo(expectedYMin).Within(1e-6d));
+                Assert.That(zoomedPrimaryYAxis.MaximumValue.Value, Is.EqualTo(expectedYMax).Within(1e-6d));
+                Assert.That(zoomedPrimaryYAxis.MaximumValue.Value - zoomedPrimaryYAxis.MinimumValue.Value,
+                    Is.LessThan(defaultYMax - defaultYMin));
             }
         }
 
         [Test]
-        public void ZoomIn_DegenerateRectWidth_DoesNotChangeAnyAxis()
+        public void ZoomIn_DegenerateRectWidth_DoesNotChangeXAxis()
         {
             using (var control = CreateInteractiveControl())
             {
                 control.ZoomEnabled = true;
 
-                var before = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
-                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+                var beforeXAxis = control.ActiveSnapshot.Axes
+                    .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue && a.MaximumValue.HasValue);
+                var beforeXMin = beforeXAxis.MinimumValue.Value;
+                var beforeXMax = beforeXAxis.MaximumValue.Value;
 
                 // Drag only 2 pixels to the right (below MinZoomWidthPixels = 4f) and downward
                 var anchor = GetPlotInteriorPoint(control, 0.5d, 0.4d);
@@ -294,16 +311,46 @@ namespace Graphing.Tests
                 // Gesture should still be recognized as ZoomIn (dx > 0, dy > 0)
                 Assert.That(control.LastZoomGesture, Is.EqualTo(EngineeringGraphControl.ZoomGestureKind.ZoomIn));
 
-                var after = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
-                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+                var afterXAxis = control.ActiveSnapshot.Axes
+                    .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue && a.MaximumValue.HasValue);
 
-                Assert.That(after.Keys, Is.EquivalentTo(before.Keys));
-                foreach (var axisId in before.Keys)
-                {
-                    Assert.That(after[axisId].Item1, Is.EqualTo(before[axisId].Item1).Within(1e-9d));
-                    Assert.That(after[axisId].Item2, Is.EqualTo(before[axisId].Item2).Within(1e-9d));
-                }
+                Assert.That(afterXAxis.MinimumValue.Value, Is.EqualTo(beforeXMin).Within(1e-9d));
+                Assert.That(afterXAxis.MaximumValue.Value, Is.EqualTo(beforeXMax).Within(1e-9d));
+            }
+        }
+
+        [Test]
+        public void ZoomIn_DegenerateRectHeight_DoesNotChangePrimaryYAxis_ButStillAllowsXAxisZoom()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var beforePrimaryY = GetPrimaryYAxis(control);
+                var beforeYMin = beforePrimaryY.MinimumValue.Value;
+                var beforeYMax = beforePrimaryY.MaximumValue.Value;
+
+                var beforeXAxis = control.ActiveSnapshot.Axes
+                    .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue && a.MaximumValue.HasValue);
+                var beforeXMin = beforeXAxis.MinimumValue.Value;
+                var beforeXMax = beforeXAxis.MaximumValue.Value;
+
+                // Height is only 2 pixels (< MinZoomHeightPixels), width is large enough for X zoom.
+                var anchor = GetPlotInteriorPoint(control, 0.2d, 0.5d);
+                var target = new Point(GetPlotInteriorPoint(control, 0.8d, 0.5d).X, anchor.Y + 2);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                var afterPrimaryY = GetPrimaryYAxis(control);
+                Assert.That(afterPrimaryY.MinimumValue.Value, Is.EqualTo(beforeYMin).Within(1e-9d));
+                Assert.That(afterPrimaryY.MaximumValue.Value, Is.EqualTo(beforeYMax).Within(1e-9d));
+
+                var afterXAxis = control.ActiveSnapshot.Axes
+                    .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue && a.MaximumValue.HasValue);
+                Assert.That(afterXAxis.MaximumValue.Value - afterXAxis.MinimumValue.Value,
+                    Is.LessThan(beforeXMax - beforeXMin));
             }
         }
 
@@ -426,6 +473,29 @@ namespace Graphing.Tests
             var x = (int)Math.Round(plotRect.Left + (normalizedPlotX * plotRect.Width), MidpointRounding.AwayFromZero);
             var y = (int)Math.Round(plotRect.Top + (normalizedPlotY * plotRect.Height), MidpointRounding.AwayFromZero);
             return new Point(x, y);
+        }
+
+        private static IAxisSnapshot GetPrimaryYAxis(TestEngineeringGraphControl control)
+        {
+            var axes = control.ActiveSnapshot.Axes
+                .Where(a => a != null && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                .ToList();
+
+            var left = axes.FirstOrDefault(a => a.Side == ModelAxisSide.Left);
+            return left ?? axes.First();
+        }
+
+        private static double DeviceYToDomainForTest(TestEngineeringGraphControl control, int deviceY, double axisMin, double axisMax)
+        {
+            var clientBounds = control.ClientRectangle;
+            var plotArea = control.ActivePresentation.Layout.PlotArea;
+
+            var abstractY = (clientBounds.Bottom - deviceY) / (double)clientBounds.Height;
+            var plotHeight = plotArea.TopRight.Y - plotArea.BottomLeft.Y;
+            var t = (abstractY - plotArea.BottomLeft.Y) / plotHeight;
+            t = Math.Max(0d, Math.Min(1d, t));
+
+            return axisMin + (t * (axisMax - axisMin));
         }
 
         private sealed class TestFieldDefinition : GraphFieldDefinitionBase
