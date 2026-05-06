@@ -38,6 +38,8 @@ namespace Graphing.Controls
         private float _renderedAnimationBarMinX;
         private float _renderedAnimationBarMaxX;
         private bool _hasRenderedAnimationBarXExtent;
+        private readonly Dictionary<string, AxisExtent> _defaultAxisExtents = new Dictionary<string, AxisExtent>(StringComparer.Ordinal);
+        private bool _zoomEnabled;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -124,16 +126,56 @@ namespace Graphing.Controls
             }
         }
 
+        public bool ZoomEnabled
+        {
+            get => _zoomEnabled;
+            set => _zoomEnabled = value;
+        }
+
+        public void ZoomExtents()
+        {
+            IGraphModel graphModel;
+            GraphPresentationOptions activeOptions;
+            Dictionary<string, AxisExtent> defaultAxisExtents;
+
+            lock (_snapshotSync)
+            {
+                graphModel = _graphModel;
+                activeOptions = _activePresentationOptions;
+                defaultAxisExtents = new Dictionary<string, AxisExtent>(_defaultAxisExtents, StringComparer.Ordinal);
+            }
+
+            if (graphModel == null)
+            {
+                Invalidate();
+                return;
+            }
+
+            var zoomResetOptions = CreateZoomResetOptions(activeOptions, graphModel, defaultAxisExtents);
+            SetGraphSource(graphModel, zoomResetOptions);
+            Invalidate();
+        }
+
         public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)
         {
             lock (_snapshotSync)
             {
                 var snapshotBuilder = new GraphSnapshotBuilder();
+                var isNewGraphLifecycle = !ReferenceEquals(_graphModel, graphModel);
                 _graphModel = graphModel;
                 options = GraphPresentationOptions.EnsureSeriesStyles(graphModel, options);
                 var nextSnapshot = graphModel == null
                     ? null
                     : snapshotBuilder.Build(graphModel, options);
+
+                if (graphModel == null)
+                {
+                    _defaultAxisExtents.Clear();
+                }
+                else if (isNewGraphLifecycle || _defaultAxisExtents.Count == 0)
+                {
+                    CaptureDefaultAxisExtents(nextSnapshot);
+                }
 
                 TryInstallSnapshotAndPresentation(nextSnapshot, options);
             }
@@ -1151,6 +1193,145 @@ namespace Graphing.Controls
         private static float AbstractToDeviceX(Rectangle clientBounds, double abstractX)
         {
             return (float)(clientBounds.Left + (abstractX * clientBounds.Width));
+        }
+
+        private static GraphPresentationOptions CreateZoomResetOptions(
+            GraphPresentationOptions activeOptions,
+            IGraphModel graphModel,
+            IReadOnlyDictionary<string, AxisExtent> defaultAxisExtents)
+        {
+            var baseOptions = activeOptions ?? new GraphPresentationOptions();
+
+            var axisOverrides = new Dictionary<AxisId, AxisOverrides>();
+            if (baseOptions.AxisOverrides != null)
+            {
+                foreach (var axisOverride in baseOptions.AxisOverrides)
+                {
+                    axisOverrides[axisOverride.Key] = CloneAxisOverrides(axisOverride.Value);
+                }
+            }
+
+            var axes = graphModel?.Axes;
+            if (axes != null)
+            {
+                for (var axisIndex = 0; axisIndex < axes.Count; axisIndex++)
+                {
+                    var axis = axes[axisIndex];
+                    if (axis?.Id == null)
+                    {
+                        continue;
+                    }
+
+                    if (!defaultAxisExtents.TryGetValue(axis.Id.Value, out var extent))
+                    {
+                        continue;
+                    }
+
+                    axisOverrides.TryGetValue(axis.Id, out var existingOverride);
+                    var nextAxisOverride = CloneAxisOverrides(existingOverride);
+                    nextAxisOverride.HasFixedRange = true;
+                    nextAxisOverride.Minimum = extent.Minimum;
+                    nextAxisOverride.Maximum = extent.Maximum;
+                    axisOverrides[axis.Id] = nextAxisOverride;
+                }
+            }
+
+            var seriesStyles = new Dictionary<SeriesId, SeriesStyle>();
+            if (baseOptions.SeriesStyles != null)
+            {
+                foreach (var seriesStyle in baseOptions.SeriesStyles)
+                {
+                    if (seriesStyle.Value == null)
+                    {
+                        continue;
+                    }
+
+                    seriesStyles[seriesStyle.Key] = new SeriesStyle
+                    {
+                        HasLabelOverride = seriesStyle.Value.HasLabelOverride,
+                        Label = seriesStyle.Value.Label,
+                        Color = seriesStyle.Value.Color
+                    };
+                }
+            }
+
+            return new GraphPresentationOptions(
+                hiddenSeriesIds: baseOptions.HiddenSeriesIds,
+                hiddenAxisIds: baseOptions.HiddenAxisIds,
+                graphTitle: baseOptions.GraphTitle,
+                graphSubtitle: baseOptions.GraphSubtitle,
+                annotations: baseOptions.Annotations,
+                showGraphBorder: baseOptions.ShowGraphBorder,
+                legendPlacement: baseOptions.LegendPlacement,
+                resizeChart: baseOptions.ResizeChart,
+                axisEndpointInsetMode: baseOptions.AxisEndpointInsetMode,
+                axisEndpointInsetFixedValue: baseOptions.AxisEndpointInsetFixedValue,
+                hiddenAxisGridLineIds: baseOptions.HiddenAxisGridLineIds,
+                seriesOrder: baseOptions.SeriesOrder,
+                seriesStyles: seriesStyles,
+                axisOverrides: axisOverrides,
+                enableDenseNumericYAxisTicks: baseOptions.EnableDenseNumericYAxisTicks,
+                denseNumericYAxisExcludedDimensions: baseOptions.DenseNumericYAxisExcludedDimensions != null
+                    ? new HashSet<UnitRegistry.Dimension>(baseOptions.DenseNumericYAxisExcludedDimensions)
+                    : null);
+        }
+
+        private static AxisOverrides CloneAxisOverrides(AxisOverrides source)
+        {
+            if (source == null)
+            {
+                return new AxisOverrides();
+            }
+
+            return new AxisOverrides
+            {
+                HasTitleOverride = source.HasTitleOverride,
+                Title = source.Title,
+                HasFixedRange = source.HasFixedRange,
+                Minimum = source.Minimum,
+                Maximum = source.Maximum,
+                HasFixedIncrement = source.HasFixedIncrement,
+                Increment = source.Increment,
+                EnforceMinimumZero = source.EnforceMinimumZero
+            };
+        }
+
+        private void CaptureDefaultAxisExtents(IGraphSnapshot snapshot)
+        {
+            _defaultAxisExtents.Clear();
+
+            var axes = snapshot?.Axes;
+            if (axes == null)
+            {
+                return;
+            }
+
+            for (var axisIndex = 0; axisIndex < axes.Count; axisIndex++)
+            {
+                var axis = axes[axisIndex];
+                if (axis == null
+                    || string.IsNullOrWhiteSpace(axis.AxisId)
+                    || !axis.MinimumValue.HasValue
+                    || !axis.MaximumValue.HasValue)
+                {
+                    continue;
+                }
+
+                _defaultAxisExtents[axis.AxisId] = new AxisExtent(axis.MinimumValue.Value, axis.MaximumValue.Value);
+            }
+        }
+
+        private readonly struct AxisExtent
+        {
+            public AxisExtent(double minimum, double maximum)
+            {
+                Minimum = minimum;
+                Maximum = maximum;
+            }
+
+            public double Minimum { get; }
+
+            public double Maximum { get; }
         }
 
     }
