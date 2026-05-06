@@ -6,6 +6,7 @@ using Graphing.Controls;
 using Graphing.Controls.Interaction;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
+using Graphing.Controls.Rendering;
 using NUnit.Framework;
 using UnitRegistry;
 using UnitRegistry.Formatting;
@@ -186,6 +187,97 @@ namespace Graphing.Tests
         }
 
         [Test]
+        public void AnimationBar_PointSeriesIntersection_UsesNearestCenterWithinTolerance()
+        {
+            var points = new[]
+            {
+                new PointF(10f, 100f),
+                new PointF(20f, 80f),
+                new PointF(30f, 60f)
+            };
+
+            var hit = EngineeringGraphControl.TryResolvePointSeriesIntersectionCenter(19.6f, points, 6f, out var center);
+
+            Assert.That(hit, Is.True);
+            Assert.That(center.X, Is.EqualTo(20f));
+            Assert.That(center.Y, Is.EqualTo(80f));
+        }
+
+        [Test]
+        public void AnimationBar_PointSeriesIntersection_OutsideTolerance_ReturnsFalse()
+        {
+            var points = new[]
+            {
+                new PointF(10f, 100f),
+                new PointF(20f, 80f),
+                new PointF(30f, 60f)
+            };
+
+            var hit = EngineeringGraphControl.TryResolvePointSeriesIntersectionCenter(50f, points, 6f, out _);
+
+            Assert.That(hit, Is.False);
+        }
+
+        [Test]
+        public void AnimationBar_PointSeriesSnapX_WithinTolerance_ResolvesExactCenterX()
+        {
+            var centers = new[] { 10f, 20f, 30f };
+
+            var snapped = EngineeringGraphControl.TryResolveNearestPointCenterX(centers, 19.6f, 6f, out var centerX);
+
+            Assert.That(snapped, Is.True);
+            Assert.That(centerX, Is.EqualTo(20f));
+        }
+
+        [Test]
+        public void AnimationBar_PointSeriesSnapX_OutsideTolerance_DoesNotSnap()
+        {
+            var centers = new[] { 10f, 20f, 30f };
+
+            var snapped = EngineeringGraphControl.TryResolveNearestPointCenterX(centers, 38f, 6f, out _);
+
+            Assert.That(snapped, Is.False);
+        }
+
+        [Test]
+        public void AnimationBar_GlobalRenderedXExtent_UsesAllSeriesNotFirstOnly()
+        {
+            var rendered = new[]
+            {
+                new RenderedSeriesPolyline(
+                    new SeriesId("s1"),
+                    SeriesType.Line,
+                    Color.Red,
+                    new[] { new PointF(10f, 10f), new PointF(30f, 20f) }),
+                new RenderedSeriesPolyline(
+                    new SeriesId("s2"),
+                    SeriesType.Line,
+                    Color.Blue,
+                    new[] { new PointF(5f, 15f), new PointF(90f, 25f) })
+            };
+
+            var built = EngineeringGraphControl.TryBuildRenderedXSampleSet(rendered, out var samples, out var minX, out var maxX);
+
+            Assert.That(built, Is.True);
+            Assert.That(minX, Is.EqualTo(5f));
+            Assert.That(maxX, Is.EqualTo(90f));
+            Assert.That(samples[0], Is.EqualTo(5f));
+            Assert.That(samples[samples.Length - 1], Is.EqualTo(90f));
+        }
+
+        [Test]
+        public void AnimationBar_ResolveNearestRenderedXSampleIndex_ClampsToGlobalRightExtent()
+        {
+            var samples = new[] { 10f, 20f, 30f, 70f, 90f };
+
+            var right = EngineeringGraphControl.ResolveNearestRenderedXSampleIndex(samples, 1000f);
+            var left = EngineeringGraphControl.ResolveNearestRenderedXSampleIndex(samples, -1000f);
+
+            Assert.That(right, Is.EqualTo(samples.Length - 1));
+            Assert.That(left, Is.EqualTo(0));
+        }
+
+        [Test]
         public void AnimationBar_ClickInPlot_DoesNotReposition()
         {
             using (var control = CreateInteractiveControl())
@@ -255,6 +347,13 @@ namespace Graphing.Tests
             };
 
             control.SetGraphSource(CreateSimpleGraphModel());
+
+            using (var bitmap = new Bitmap(640, 480))
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                control.RaisePaint(graphics);
+            }
+
             return control;
         }
 

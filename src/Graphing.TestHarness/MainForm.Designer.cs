@@ -68,7 +68,7 @@ namespace Graphing.TestScenarios
             // 
             // checkBoxResizeChart
             // 
-            this.checkBoxResizeChart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxResizeChart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.checkBoxResizeChart.AutoSize = true;
             this.checkBoxResizeChart.Checked = true;
             this.checkBoxResizeChart.CheckState = System.Windows.Forms.CheckState.Checked;

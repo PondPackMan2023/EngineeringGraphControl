@@ -33,6 +33,11 @@ namespace Graphing.Controls
         private bool _hasAnimationBarXIndex;
         private Color _animationBarColor = DefaultAnimationBarColor;
         private bool _isAnimationBarDragging;
+        private float[] _renderedAnimationBarXSamples = Array.Empty<float>();
+        private float[] _renderedPointSeriesCenterXSamples = Array.Empty<float>();
+        private float _renderedAnimationBarMinX;
+        private float _renderedAnimationBarMaxX;
+        private bool _hasRenderedAnimationBarXExtent;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -174,6 +179,8 @@ namespace Graphing.Controls
                 {
                     _winFormsRenderer.SeriesGeometryRendered = null;
                 }
+
+                UpdateRenderedAnimationBarXExtent(renderedSeriesGeometries);
 
                 RenderAnimationBarOverlay(e.Graphics, ClientRectangle, presentation, renderedSeriesGeometries);
             }
@@ -533,17 +540,18 @@ namespace Graphing.Controls
                 return;
             }
 
-            if (!TryResolveAnimationBarAbstractX(presentation, _animationBarXIndex, out var abstractX))
-            {
-                return;
-            }
-
             if (!TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
             {
                 return;
             }
 
-            var deviceX = AbstractToDeviceX(clientBounds, abstractX);
+            if (!TryResolveAnimationBarDeviceX(clientBounds, presentation, out var deviceX))
+            {
+                return;
+            }
+
+            deviceX = ClampAnimationBarDeviceXToRenderedExtent(deviceX);
+            deviceX = ResolvePointSeriesSnappedBarX(deviceX);
             var clip = graphics.ClipBounds;
             graphics.SetClip(plotRect, CombineMode.Intersect);
 
@@ -588,14 +596,31 @@ namespace Graphing.Controls
                     continue;
                 }
 
-                if (!TryResolveVerticalPolylineIntersection(animationBarDeviceX, seriesGeometry.DevicePoints, out var deviceY))
+                var markerX = animationBarDeviceX;
+                var markerY = 0f;
+
+                if (seriesGeometry.SeriesType == SeriesType.Scatter)
+                {
+                    if (!TryResolvePointSeriesIntersectionCenter(
+                            animationBarDeviceX,
+                            seriesGeometry.DevicePoints,
+                            AnimationBarHitTolerancePixels,
+                            out var centerPoint))
+                    {
+                        continue;
+                    }
+
+                    markerX = centerPoint.X;
+                    markerY = centerPoint.Y;
+                }
+                else if (!TryResolveVerticalPolylineIntersection(animationBarDeviceX, seriesGeometry.DevicePoints, out markerY))
                 {
                     continue;
                 }
 
                 var markerRect = new RectangleF(
-                    animationBarDeviceX - AnimationBarMarkerRadius,
-                    deviceY - AnimationBarMarkerRadius,
+                    markerX - AnimationBarMarkerRadius,
+                    markerY - AnimationBarMarkerRadius,
                     AnimationBarMarkerRadius * 2f,
                     AnimationBarMarkerRadius * 2f);
 
@@ -660,6 +685,41 @@ namespace Graphing.Controls
             return false;
         }
 
+        internal static bool TryResolvePointSeriesIntersectionCenter(
+            float verticalX,
+            IReadOnlyList<PointF> points,
+            float tolerancePixels,
+            out PointF centerPoint)
+        {
+            centerPoint = PointF.Empty;
+
+            if (points == null || points.Count == 0)
+            {
+                return false;
+            }
+
+            var bestIndex = -1;
+            var bestDistance = float.MaxValue;
+
+            for (var i = 0; i < points.Count; i++)
+            {
+                var distance = Math.Abs(points[i].X - verticalX);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestIndex = i;
+                }
+            }
+
+            if (bestIndex < 0 || bestDistance > tolerancePixels)
+            {
+                return false;
+            }
+
+            centerPoint = points[bestIndex];
+            return true;
+        }
+
         private bool HitTestAnimationBar(
             Point mouseClientPosition,
             Rectangle clientBounds,
@@ -671,12 +731,12 @@ namespace Graphing.Controls
                 return false;
             }
 
-            if (!TryResolveAnimationBarAbstractX(presentation, _animationBarXIndex, out var abstractX))
+            if (!TryResolveAnimationBarDeviceX(clientBounds, presentation, out var barDeviceX))
             {
                 return false;
             }
 
-            var barDeviceX = AbstractToDeviceX(clientBounds, abstractX);
+            barDeviceX = ClampAnimationBarDeviceXToRenderedExtent(barDeviceX);
             return Math.Abs(mouseClientPosition.X - barDeviceX) <= AnimationBarHitTolerancePixels;
         }
 
@@ -693,42 +753,278 @@ namespace Graphing.Controls
                 return false;
             }
 
-            if (!TryGetAnimationBarSeriesData(presentation, out var points, out var xMin, out var xMax))
+            if (_renderedAnimationBarXSamples == null || _renderedAnimationBarXSamples.Length == 0)
             {
                 return false;
             }
 
             var clampedMouseX = mouseClientX;
-            if (clampedMouseX < plotRect.Left)
+            var minX = _hasRenderedAnimationBarXExtent ? _renderedAnimationBarMinX : plotRect.Left;
+            var maxX = _hasRenderedAnimationBarXExtent ? _renderedAnimationBarMaxX : plotRect.Right;
+
+            if (clampedMouseX < minX)
             {
-                clampedMouseX = (int)Math.Round(plotRect.Left, MidpointRounding.AwayFromZero);
+                clampedMouseX = (int)Math.Round(minX, MidpointRounding.AwayFromZero);
             }
-            else if (clampedMouseX > plotRect.Right)
+            else if (clampedMouseX > maxX)
             {
-                clampedMouseX = (int)Math.Round(plotRect.Right, MidpointRounding.AwayFromZero);
+                clampedMouseX = (int)Math.Round(maxX, MidpointRounding.AwayFromZero);
             }
 
-            var abstractX = ToGraphPosition(clientBounds, new Point(clampedMouseX, clientBounds.Bottom)).X;
-            var plotLeft = presentation.Layout.PlotArea.BottomLeft.X;
-            var plotRight = presentation.Layout.PlotArea.TopRight.X;
-            var plotSpan = plotRight - plotLeft;
-            if (plotSpan <= 0d)
+            var resolvedX = (float)clampedMouseX;
+            if (TryResolveNearestPointCenterX(
+                    _renderedPointSeriesCenterXSamples,
+                    resolvedX,
+                    AnimationBarHitTolerancePixels,
+                    out var snappedPointCenterX))
+            {
+                resolvedX = snappedPointCenterX;
+            }
+
+            nearestXIndex = ResolveNearestRenderedXSampleIndex(_renderedAnimationBarXSamples, resolvedX);
+            return true;
+        }
+
+        private bool TryResolveAnimationBarDeviceX(
+            Rectangle clientBounds,
+            GraphPresentationModel presentation,
+            out float deviceX)
+        {
+            deviceX = 0f;
+
+            if (_renderedAnimationBarXSamples != null && _renderedAnimationBarXSamples.Length > 0)
+            {
+                var clampedIndex = _animationBarXIndex;
+                if (clampedIndex < 0)
+                {
+                    clampedIndex = 0;
+                }
+                else if (clampedIndex >= _renderedAnimationBarXSamples.Length)
+                {
+                    clampedIndex = _renderedAnimationBarXSamples.Length - 1;
+                }
+
+                deviceX = _renderedAnimationBarXSamples[clampedIndex];
+                return true;
+            }
+
+            if (!TryResolveAnimationBarAbstractX(presentation, _animationBarXIndex, out var abstractX))
             {
                 return false;
             }
 
-            var normalizedXInPlot = (abstractX - plotLeft) / plotSpan;
-            if (normalizedXInPlot < 0d)
+            deviceX = AbstractToDeviceX(clientBounds, abstractX);
+            return true;
+        }
+
+        private float ClampAnimationBarDeviceXToRenderedExtent(float deviceX)
+        {
+            if (!_hasRenderedAnimationBarXExtent)
             {
-                normalizedXInPlot = 0d;
-            }
-            else if (normalizedXInPlot > 1d)
-            {
-                normalizedXInPlot = 1d;
+                return deviceX;
             }
 
-            var domainX = xMin + (normalizedXInPlot * (xMax - xMin));
-            nearestXIndex = ResolveNearestXIndex(points, domainX);
+            if (deviceX < _renderedAnimationBarMinX)
+            {
+                return _renderedAnimationBarMinX;
+            }
+
+            if (deviceX > _renderedAnimationBarMaxX)
+            {
+                return _renderedAnimationBarMaxX;
+            }
+
+            return deviceX;
+        }
+
+        private float ResolvePointSeriesSnappedBarX(float barDeviceX)
+        {
+            if (TryResolveNearestPointCenterX(
+                    _renderedPointSeriesCenterXSamples,
+                    barDeviceX,
+                    AnimationBarHitTolerancePixels,
+                    out var snappedPointCenterX))
+            {
+                return snappedPointCenterX;
+            }
+
+            return barDeviceX;
+        }
+
+        private void UpdateRenderedAnimationBarXExtent(IReadOnlyList<RenderedSeriesPolyline> renderedSeriesGeometries)
+        {
+            if (!TryBuildRenderedXSampleSet(renderedSeriesGeometries, out var sortedXSamples, out var minX, out var maxX))
+            {
+                _renderedAnimationBarXSamples = Array.Empty<float>();
+                _renderedPointSeriesCenterXSamples = Array.Empty<float>();
+                _hasRenderedAnimationBarXExtent = false;
+                return;
+            }
+
+            _renderedAnimationBarXSamples = sortedXSamples;
+            _renderedPointSeriesCenterXSamples = BuildPointSeriesCenterXSamples(renderedSeriesGeometries);
+            _renderedAnimationBarMinX = minX;
+            _renderedAnimationBarMaxX = maxX;
+            _hasRenderedAnimationBarXExtent = true;
+        }
+
+        private static float[] BuildPointSeriesCenterXSamples(IReadOnlyList<RenderedSeriesPolyline> renderedSeriesGeometries)
+        {
+            if (renderedSeriesGeometries == null || renderedSeriesGeometries.Count == 0)
+            {
+                return Array.Empty<float>();
+            }
+
+            var unique = new HashSet<float>();
+            for (var i = 0; i < renderedSeriesGeometries.Count; i++)
+            {
+                var geometry = renderedSeriesGeometries[i];
+                if (geometry == null || geometry.SeriesType != SeriesType.Scatter)
+                {
+                    continue;
+                }
+
+                var points = geometry.DevicePoints;
+                if (points == null)
+                {
+                    continue;
+                }
+
+                for (var p = 0; p < points.Count; p++)
+                {
+                    unique.Add(points[p].X);
+                }
+            }
+
+            if (unique.Count == 0)
+            {
+                return Array.Empty<float>();
+            }
+
+            var samples = new float[unique.Count];
+            var index = 0;
+            foreach (var x in unique)
+            {
+                samples[index++] = x;
+            }
+
+            Array.Sort(samples);
+            return samples;
+        }
+
+        internal static bool TryBuildRenderedXSampleSet(
+            IReadOnlyList<RenderedSeriesPolyline> renderedSeriesGeometries,
+            out float[] sortedXSamples,
+            out float minX,
+            out float maxX)
+        {
+            sortedXSamples = Array.Empty<float>();
+            minX = 0f;
+            maxX = 0f;
+
+            if (renderedSeriesGeometries == null || renderedSeriesGeometries.Count == 0)
+            {
+                return false;
+            }
+
+            var unique = new HashSet<float>();
+            var min = float.MaxValue;
+            var max = float.MinValue;
+
+            for (var i = 0; i < renderedSeriesGeometries.Count; i++)
+            {
+                var geometry = renderedSeriesGeometries[i];
+                var points = geometry?.DevicePoints;
+                if (points == null || points.Count == 0)
+                {
+                    continue;
+                }
+
+                for (var p = 0; p < points.Count; p++)
+                {
+                    var x = points[p].X;
+                    unique.Add(x);
+                    if (x < min)
+                    {
+                        min = x;
+                    }
+
+                    if (x > max)
+                    {
+                        max = x;
+                    }
+                }
+            }
+
+            if (unique.Count == 0)
+            {
+                return false;
+            }
+
+            var samples = new float[unique.Count];
+            var index = 0;
+            foreach (var x in unique)
+            {
+                samples[index++] = x;
+            }
+
+            Array.Sort(samples);
+
+            sortedXSamples = samples;
+            minX = min;
+            maxX = max;
+            return true;
+        }
+
+        internal static int ResolveNearestRenderedXSampleIndex(IReadOnlyList<float> sortedXSamples, float deviceX)
+        {
+            if (sortedXSamples == null || sortedXSamples.Count == 0)
+            {
+                return 0;
+            }
+
+            var nearestIndex = 0;
+            var nearestDistance = float.MaxValue;
+
+            for (var i = 0; i < sortedXSamples.Count; i++)
+            {
+                var distance = Math.Abs(sortedXSamples[i] - deviceX);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            return nearestIndex;
+        }
+
+        internal static bool TryResolveNearestPointCenterX(
+            IReadOnlyList<float> pointCenterXSamples,
+            float deviceX,
+            float tolerancePixels,
+            out float snappedCenterX)
+        {
+            snappedCenterX = 0f;
+
+            if (pointCenterXSamples == null || pointCenterXSamples.Count == 0)
+            {
+                return false;
+            }
+
+            var nearestIndex = ResolveNearestRenderedXSampleIndex(pointCenterXSamples, deviceX);
+            if (nearestIndex < 0 || nearestIndex >= pointCenterXSamples.Count)
+            {
+                return false;
+            }
+
+            var candidateX = pointCenterXSamples[nearestIndex];
+            if (Math.Abs(candidateX - deviceX) > tolerancePixels)
+            {
+                return false;
+            }
+
+            snappedCenterX = candidateX;
             return true;
         }
 
