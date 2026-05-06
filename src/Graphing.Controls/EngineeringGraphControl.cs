@@ -40,6 +40,10 @@ namespace Graphing.Controls
         private bool _hasRenderedAnimationBarXExtent;
         private readonly Dictionary<string, AxisExtent> _defaultAxisExtents = new Dictionary<string, AxisExtent>(StringComparer.Ordinal);
         private bool _zoomEnabled;
+        private bool _isZoomDragging;
+        private Point _zoomDragAnchorClient;
+        private Point _zoomDragCurrentClient;
+        private RectangleF? _zoomDragRectangle;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -129,8 +133,29 @@ namespace Graphing.Controls
         public bool ZoomEnabled
         {
             get => _zoomEnabled;
-            set => _zoomEnabled = value;
+            set
+            {
+                if (_zoomEnabled == value)
+                {
+                    return;
+                }
+
+                _zoomEnabled = value;
+
+                if (!_zoomEnabled)
+                {
+                    ClearZoomDragOverlay();
+                    Capture = false;
+                }
+
+                UpdateZoomModeCursor();
+                Invalidate();
+            }
         }
+
+        internal bool ZoomDragOverlayVisible => _zoomEnabled && _isZoomDragging && _zoomDragRectangle.HasValue;
+
+        internal RectangleF? ZoomDragOverlayBounds => _zoomDragRectangle;
 
         public void ZoomExtents()
         {
@@ -225,6 +250,7 @@ namespace Graphing.Controls
                 UpdateRenderedAnimationBarXExtent(renderedSeriesGeometries);
 
                 RenderAnimationBarOverlay(e.Graphics, ClientRectangle, presentation, renderedSeriesGeometries);
+                RenderZoomDragOverlay(e.Graphics, ClientRectangle, presentation);
             }
         }
 
@@ -237,6 +263,12 @@ namespace Graphing.Controls
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+
+            if (ZoomEnabled)
+            {
+                _ = TryHandleZoomMouseMove(e);
+                return;
+            }
 
             UpdateAnimationBarCursor(e);
 
@@ -253,6 +285,12 @@ namespace Graphing.Controls
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+
+            if (ZoomEnabled)
+            {
+                _ = TryHandleZoomMouseDown(e);
+                return;
+            }
 
             if (TryHandleAnimationBarMouseDown(e))
             {
@@ -277,6 +315,12 @@ namespace Graphing.Controls
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
+
+            if (ZoomEnabled)
+            {
+                _ = TryHandleZoomMouseUp(e);
+                return;
+            }
 
             if (TryHandleAnimationBarMouseUp(e))
             {
@@ -306,7 +350,11 @@ namespace Graphing.Controls
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
-            Cursor = Cursors.Default;
+            UpdateZoomModeCursor();
+            if (!ZoomEnabled)
+            {
+                Cursor = Cursors.Default;
+            }
         }
 
         protected virtual GraphPresentationModel CreatePresentationModel(
@@ -439,6 +487,186 @@ namespace Graphing.Controls
                 new AnimationBarIndexChangedEventArgs(xIndex, previousXIndex, isUserInitiated));
 
             Invalidate();
+        }
+
+        private bool TryHandleZoomMouseDown(MouseEventArgs mouseEvent)
+        {
+            if (mouseEvent == null || mouseEvent.Button != MouseButtons.Left)
+            {
+                return false;
+            }
+
+            if (!TryGetCurrentPlotRect(out var plotRect))
+            {
+                return false;
+            }
+
+            _zoomDragAnchorClient = ClampPointToRectangle(mouseEvent.Location, plotRect);
+            _zoomDragCurrentClient = _zoomDragAnchorClient;
+            _zoomDragRectangle = BuildZoomRectangle(_zoomDragAnchorClient, _zoomDragCurrentClient);
+            _isZoomDragging = true;
+            Capture = true;
+            UpdateZoomModeCursor();
+            Invalidate();
+            return true;
+        }
+
+        private bool TryHandleZoomMouseMove(MouseEventArgs mouseEvent)
+        {
+            UpdateZoomModeCursor();
+
+            if (!_isZoomDragging || mouseEvent == null)
+            {
+                return false;
+            }
+
+            if (!TryGetCurrentPlotRect(out var plotRect))
+            {
+                return false;
+            }
+
+            _zoomDragCurrentClient = ClampPointToRectangle(mouseEvent.Location, plotRect);
+            _zoomDragRectangle = BuildZoomRectangle(_zoomDragAnchorClient, _zoomDragCurrentClient);
+            Invalidate();
+            return true;
+        }
+
+        private bool TryHandleZoomMouseUp(MouseEventArgs mouseEvent)
+        {
+            UpdateZoomModeCursor();
+
+            if (mouseEvent == null || mouseEvent.Button != MouseButtons.Left)
+            {
+                return false;
+            }
+
+            if (!_isZoomDragging)
+            {
+                return false;
+            }
+
+            _isZoomDragging = false;
+            _zoomDragRectangle = null;
+            Capture = false;
+            Invalidate();
+            return true;
+        }
+
+        private void ClearZoomDragOverlay()
+        {
+            _isZoomDragging = false;
+            _zoomDragRectangle = null;
+        }
+
+        private void UpdateZoomModeCursor()
+        {
+            Cursor = ZoomEnabled ? Cursors.Cross : Cursors.Default;
+        }
+
+        private bool TryGetCurrentPlotRect(out RectangleF plotRect)
+        {
+            plotRect = RectangleF.Empty;
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            GraphPresentationModel presentation;
+            lock (_snapshotSync)
+            {
+                presentation = _activePresentation;
+            }
+
+            if (presentation == null)
+            {
+                return false;
+            }
+
+            return TryComputeAnimationBarPlotRect(clientBounds, presentation, out plotRect);
+        }
+
+        private static Point ClampPointToRectangle(Point point, RectangleF rectangle)
+        {
+            if (rectangle.Width <= 0f || rectangle.Height <= 0f)
+            {
+                return point;
+            }
+
+            var minX = (int)Math.Ceiling(rectangle.Left);
+            var maxX = (int)Math.Floor(rectangle.Right);
+            var minY = (int)Math.Ceiling(rectangle.Top);
+            var maxY = (int)Math.Floor(rectangle.Bottom);
+
+            var clampedX = point.X;
+            if (clampedX < minX)
+            {
+                clampedX = minX;
+            }
+            else if (clampedX > maxX)
+            {
+                clampedX = maxX;
+            }
+
+            var clampedY = point.Y;
+            if (clampedY < minY)
+            {
+                clampedY = minY;
+            }
+            else if (clampedY > maxY)
+            {
+                clampedY = maxY;
+            }
+
+            return new Point(clampedX, clampedY);
+        }
+
+        private static RectangleF BuildZoomRectangle(Point anchor, Point current)
+        {
+            var left = Math.Min(anchor.X, current.X);
+            var right = Math.Max(anchor.X, current.X);
+            var top = Math.Min(anchor.Y, current.Y);
+            var bottom = Math.Max(anchor.Y, current.Y);
+            return RectangleF.FromLTRB(left, top, right, bottom);
+        }
+
+        private void RenderZoomDragOverlay(
+            Graphics graphics,
+            Rectangle clientBounds,
+            GraphPresentationModel presentation)
+        {
+            if (!ZoomEnabled || !_isZoomDragging || !_zoomDragRectangle.HasValue || graphics == null || presentation == null)
+            {
+                return;
+            }
+
+            if (!TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
+            {
+                return;
+            }
+
+            var dragRect = _zoomDragRectangle.Value;
+            if (dragRect.Width <= 0f || dragRect.Height <= 0f)
+            {
+                return;
+            }
+
+            var clip = graphics.ClipBounds;
+            graphics.SetClip(plotRect, CombineMode.Intersect);
+
+            try
+            {
+                using (var pen = new Pen(Color.Black, 1f))
+                {
+                    pen.DashStyle = DashStyle.Dot;
+                    graphics.DrawRectangle(pen, dragRect.X, dragRect.Y, dragRect.Width, dragRect.Height);
+                }
+            }
+            finally
+            {
+                graphics.SetClip(clip);
+            }
         }
 
         private bool TryHandleAnimationBarMouseDown(MouseEventArgs mouseEvent)
@@ -1232,6 +1460,9 @@ namespace Graphing.Controls
                     nextAxisOverride.HasFixedRange = true;
                     nextAxisOverride.Minimum = extent.Minimum;
                     nextAxisOverride.Maximum = extent.Maximum;
+                    nextAxisOverride.Increment = extent.Increment;
+                    nextAxisOverride.HasFixedRange = true;
+                    nextAxisOverride.HasFixedIncrement = true;
                     axisOverrides[axis.Id] = nextAxisOverride;
                 }
             }
@@ -1312,26 +1543,30 @@ namespace Graphing.Controls
                 if (axis == null
                     || string.IsNullOrWhiteSpace(axis.AxisId)
                     || !axis.MinimumValue.HasValue
-                    || !axis.MaximumValue.HasValue)
+                    || !axis.MaximumValue.HasValue
+                    || !axis.Increment.HasValue)
                 {
                     continue;
                 }
 
-                _defaultAxisExtents[axis.AxisId] = new AxisExtent(axis.MinimumValue.Value, axis.MaximumValue.Value);
+                _defaultAxisExtents[axis.AxisId] = new AxisExtent(axis.MinimumValue.Value, axis.MaximumValue.Value, axis.Increment.Value);
             }
         }
 
         private readonly struct AxisExtent
         {
-            public AxisExtent(double minimum, double maximum)
+            public AxisExtent(double minimum, double maximum, double increment)
             {
                 Minimum = minimum;
                 Maximum = maximum;
+                Increment = increment;
             }
 
             public double Minimum { get; }
 
             public double Maximum { get; }
+
+            public double Increment { get; }
         }
 
     }

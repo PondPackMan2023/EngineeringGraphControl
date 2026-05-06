@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Windows.Forms;
 using Graphing.Controls;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
@@ -17,6 +18,103 @@ namespace Graphing.Tests
     [TestFixture]
     public class EngineeringGraphControlZoomTests
     {
+        [Test]
+        public void ZoomEnabled_Toggle_UpdatesZoomCursorAndRestoresDefault()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                Assert.That(control.Cursor, Is.EqualTo(Cursors.Default));
+
+                control.ZoomEnabled = true;
+                Assert.That(control.Cursor, Is.EqualTo(Cursors.Cross));
+
+                control.ZoomEnabled = false;
+                Assert.That(control.Cursor, Is.EqualTo(Cursors.Default));
+            }
+        }
+
+        [Test]
+        public void ZoomDragLifecycle_WhenEnabled_TracksAndClearsRectangle()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var plotRect = GetPlotRect(control);
+                var anchor = GetPlotInteriorPoint(control, 0.25d, 0.25d);
+                var outside = new Point(control.ClientRectangle.Right + 120, control.ClientRectangle.Bottom + 120);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                Assert.That(control.ZoomDragOverlayVisible, Is.True);
+                Assert.That(control.ZoomDragOverlayBounds.HasValue, Is.True);
+
+                control.RaiseMouseMove(outside);
+
+                Assert.That(control.ZoomDragOverlayVisible, Is.True);
+                Assert.That(control.ZoomDragOverlayBounds.HasValue, Is.True);
+                var dragRect = control.ZoomDragOverlayBounds.Value;
+                Assert.That(dragRect.Left, Is.GreaterThanOrEqualTo(plotRect.Left));
+                Assert.That(dragRect.Top, Is.GreaterThanOrEqualTo(plotRect.Top));
+                Assert.That(dragRect.Right, Is.LessThanOrEqualTo(plotRect.Right));
+                Assert.That(dragRect.Bottom, Is.LessThanOrEqualTo(plotRect.Bottom));
+
+                control.RaiseMouseUp(MouseButtons.Left, outside);
+
+                Assert.That(control.ZoomDragOverlayVisible, Is.False);
+                Assert.That(control.ZoomDragOverlayBounds.HasValue, Is.False);
+            }
+        }
+
+        [Test]
+        public void ZoomDrag_WhenDisabled_DoesNotTrackRectangleState()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = false;
+
+                var anchor = GetPlotInteriorPoint(control, 0.3d, 0.3d);
+                var target = GetPlotInteriorPoint(control, 0.8d, 0.7d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                Assert.That(control.ZoomDragOverlayVisible, Is.False);
+                Assert.That(control.ZoomDragOverlayBounds.HasValue, Is.False);
+            }
+        }
+
+        [Test]
+        public void ZoomDrag_WhenEnabled_DoesNotChangeAxisRanges()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var before = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
+                var target = GetPlotInteriorPoint(control, 0.9d, 0.8d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                var after = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                Assert.That(after.Keys, Is.EquivalentTo(before.Keys));
+                foreach (var axisId in before.Keys)
+                {
+                    Assert.That(after[axisId].Item1, Is.EqualTo(before[axisId].Item1).Within(1e-9d));
+                    Assert.That(after[axisId].Item2, Is.EqualTo(before[axisId].Item2).Within(1e-9d));
+                }
+            }
+        }
+
         [Test]
         public void ZoomEnabled_DefaultsToFalse()
         {
@@ -93,6 +191,39 @@ namespace Graphing.Tests
             return new GraphModel(new[] { xAxis, yLeft, yRight }, new[] { s1, s2 });
         }
 
+        private static TestEngineeringGraphControl CreateInteractiveControl()
+        {
+            var control = new TestEngineeringGraphControl
+            {
+                Size = new Size(640, 480)
+            };
+
+            _ = control.Handle;
+            control.SetGraphSource(CreateGraphModelWithThreeAxes(), new GraphPresentationOptions());
+            return control;
+        }
+
+        private static RectangleF GetPlotRect(TestEngineeringGraphControl control)
+        {
+            var plotArea = control.ActivePresentation.Layout.PlotArea;
+            var clientBounds = control.ClientRectangle;
+
+            var left = (float)(clientBounds.Left + (plotArea.BottomLeft.X * clientBounds.Width));
+            var right = (float)(clientBounds.Left + (plotArea.TopRight.X * clientBounds.Width));
+            var top = (float)(clientBounds.Bottom - (plotArea.TopRight.Y * clientBounds.Height));
+            var bottom = (float)(clientBounds.Bottom - (plotArea.BottomLeft.Y * clientBounds.Height));
+
+            return RectangleF.FromLTRB(left, top, right, bottom);
+        }
+
+        private static Point GetPlotInteriorPoint(TestEngineeringGraphControl control, double normalizedPlotX, double normalizedPlotY)
+        {
+            var plotRect = GetPlotRect(control);
+            var x = (int)Math.Round(plotRect.Left + (normalizedPlotX * plotRect.Width), MidpointRounding.AwayFromZero);
+            var y = (int)Math.Round(plotRect.Top + (normalizedPlotY * plotRect.Height), MidpointRounding.AwayFromZero);
+            return new Point(x, y);
+        }
+
         private sealed class TestFieldDefinition : GraphFieldDefinitionBase
         {
             private readonly Array _values;
@@ -106,6 +237,24 @@ namespace Graphing.Tests
             public override Array GetValues()
             {
                 return _values;
+            }
+        }
+
+        private sealed class TestEngineeringGraphControl : EngineeringGraphControl
+        {
+            public void RaiseMouseDown(MouseButtons button, Point location)
+            {
+                OnMouseDown(new MouseEventArgs(button, 1, location.X, location.Y, 0));
+            }
+
+            public void RaiseMouseMove(Point location)
+            {
+                OnMouseMove(new MouseEventArgs(MouseButtons.None, 0, location.X, location.Y, 0));
+            }
+
+            public void RaiseMouseUp(MouseButtons button, Point location)
+            {
+                OnMouseUp(new MouseEventArgs(button, 1, location.X, location.Y, 0));
             }
         }
     }
