@@ -40,6 +40,8 @@ namespace Graphing.TestScenarios
             this.buttonExportPng = new System.Windows.Forms.Button();
             this.buttonExportEmf = new System.Windows.Forms.Button();
             this.checkBoxAnimation = new System.Windows.Forms.CheckBox();
+            this.checkBoxEnableZoom = new System.Windows.Forms.CheckBox();
+            this.buttonZoomExtents = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonScenarioA
@@ -93,6 +95,7 @@ namespace Graphing.TestScenarios
             this.graphControl.Name = "graphControl";
             this.graphControl.Size = new System.Drawing.Size(662, 437);
             this.graphControl.TabIndex = 0;
+            this.graphControl.ZoomEnabled = false;
             this.graphControl.AxisContextRequested += new System.EventHandler<Graphing.Controls.Interaction.AxisInteractionMouseEventArgs>(this.graphControl_AxisContextRequested);
             // 
             // buttonScenarioC
@@ -168,9 +171,36 @@ namespace Graphing.TestScenarios
             this.checkBoxAnimation.UseVisualStyleBackColor = true;
             this.checkBoxAnimation.CheckedChanged += new System.EventHandler(this.checkBoxAnimation_CheckedChanged);
             // 
+            // checkBoxEnableZoom
+            // 
+            this.checkBoxEnableZoom.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxEnableZoom.AutoSize = true;
+            this.checkBoxEnableZoom.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxEnableZoom.Location = new System.Drawing.Point(689, 431);
+            this.checkBoxEnableZoom.Name = "checkBoxEnableZoom";
+            this.checkBoxEnableZoom.Size = new System.Drawing.Size(73, 18);
+            this.checkBoxEnableZoom.TabIndex = 16;
+            this.checkBoxEnableZoom.Text = "Zooming";
+            this.checkBoxEnableZoom.UseVisualStyleBackColor = true;
+            this.checkBoxEnableZoom.CheckedChanged += new System.EventHandler(this.checkBoxEnableZoom_CheckedChanged);
+            // 
+            // buttonZoomExtents
+            // 
+            this.buttonZoomExtents.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonZoomExtents.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonZoomExtents.Location = new System.Drawing.Point(689, 400);
+            this.buttonZoomExtents.Name = "buttonZoomExtents";
+            this.buttonZoomExtents.Size = new System.Drawing.Size(67, 25);
+            this.buttonZoomExtents.TabIndex = 17;
+            this.buttonZoomExtents.Text = "Extents";
+            this.buttonZoomExtents.UseVisualStyleBackColor = true;
+            this.buttonZoomExtents.Click += new System.EventHandler(this.buttonZoomExtents_Click);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(784, 461);
+            this.Controls.Add(this.buttonZoomExtents);
+            this.Controls.Add(this.checkBoxEnableZoom);
             this.Controls.Add(this.checkBoxAnimation);
             this.Controls.Add(this.buttonExportEmf);
             this.Controls.Add(this.buttonExportPng);
@@ -201,5 +231,7 @@ namespace Graphing.TestScenarios
         private System.Windows.Forms.Button buttonExportPng;
         private System.Windows.Forms.Button buttonExportEmf;
         private System.Windows.Forms.CheckBox checkBoxAnimation;
+        private System.Windows.Forms.CheckBox checkBoxEnableZoom;
+        private System.Windows.Forms.Button buttonZoomExtents;
     }
 }

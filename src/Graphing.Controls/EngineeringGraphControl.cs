@@ -38,6 +38,13 @@ namespace Graphing.Controls
         private float _renderedAnimationBarMinX;
         private float _renderedAnimationBarMaxX;
         private bool _hasRenderedAnimationBarXExtent;
+        private readonly Dictionary<string, AxisExtent> _defaultAxisExtents = new Dictionary<string, AxisExtent>(StringComparer.Ordinal);
+        private bool _zoomEnabled;
+        private ZoomGestureKind _lastZoomGesture;
+        private bool _isZoomDragging;
+        private Point _zoomDragAnchorClient;
+        private Point _zoomDragCurrentClient;
+        private RectangleF? _zoomDragRectangle;
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -124,16 +131,79 @@ namespace Graphing.Controls
             }
         }
 
+        public bool ZoomEnabled
+        {
+            get => _zoomEnabled;
+            set
+            {
+                if (_zoomEnabled == value)
+                {
+                    return;
+                }
+
+                _zoomEnabled = value;
+
+                if (!_zoomEnabled)
+                {
+                    ClearZoomDragOverlay();
+                    Capture = false;
+                }
+
+                UpdateZoomModeCursor();
+                Invalidate();
+            }
+        }
+
+        internal bool ZoomDragOverlayVisible => _zoomEnabled && _isZoomDragging && _zoomDragRectangle.HasValue;
+
+        internal RectangleF? ZoomDragOverlayBounds => _zoomDragRectangle;
+
+        internal ZoomGestureKind LastZoomGesture => _lastZoomGesture;
+
+        public void ZoomExtents()
+        {
+            IGraphModel graphModel;
+            GraphPresentationOptions activeOptions;
+            Dictionary<string, AxisExtent> defaultAxisExtents;
+
+            lock (_snapshotSync)
+            {
+                graphModel = _graphModel;
+                activeOptions = _activePresentationOptions;
+                defaultAxisExtents = new Dictionary<string, AxisExtent>(_defaultAxisExtents, StringComparer.Ordinal);
+            }
+
+            if (graphModel == null)
+            {
+                Invalidate();
+                return;
+            }
+
+            var zoomResetOptions = CreateZoomResetOptions(activeOptions, graphModel, defaultAxisExtents);
+            SetGraphSource(graphModel, zoomResetOptions);
+            Invalidate();
+        }
+
         public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)
         {
             lock (_snapshotSync)
             {
                 var snapshotBuilder = new GraphSnapshotBuilder();
+                var isNewGraphLifecycle = !ReferenceEquals(_graphModel, graphModel);
                 _graphModel = graphModel;
                 options = GraphPresentationOptions.EnsureSeriesStyles(graphModel, options);
                 var nextSnapshot = graphModel == null
                     ? null
                     : snapshotBuilder.Build(graphModel, options);
+
+                if (graphModel == null)
+                {
+                    _defaultAxisExtents.Clear();
+                }
+                else if (isNewGraphLifecycle || _defaultAxisExtents.Count == 0)
+                {
+                    CaptureDefaultAxisExtents(nextSnapshot);
+                }
 
                 TryInstallSnapshotAndPresentation(nextSnapshot, options);
             }
@@ -183,6 +253,7 @@ namespace Graphing.Controls
                 UpdateRenderedAnimationBarXExtent(renderedSeriesGeometries);
 
                 RenderAnimationBarOverlay(e.Graphics, ClientRectangle, presentation, renderedSeriesGeometries);
+                RenderZoomDragOverlay(e.Graphics, ClientRectangle, presentation);
             }
         }
 
@@ -195,6 +266,12 @@ namespace Graphing.Controls
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+
+            if (ZoomEnabled)
+            {
+                _ = TryHandleZoomMouseMove(e);
+                return;
+            }
 
             UpdateAnimationBarCursor(e);
 
@@ -211,6 +288,12 @@ namespace Graphing.Controls
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+
+            if (ZoomEnabled)
+            {
+                _ = TryHandleZoomMouseDown(e);
+                return;
+            }
 
             if (TryHandleAnimationBarMouseDown(e))
             {
@@ -235,6 +318,12 @@ namespace Graphing.Controls
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
+
+            if (ZoomEnabled)
+            {
+                _ = TryHandleZoomMouseUp(e);
+                return;
+            }
 
             if (TryHandleAnimationBarMouseUp(e))
             {
@@ -264,7 +353,11 @@ namespace Graphing.Controls
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
-            Cursor = Cursors.Default;
+            UpdateZoomModeCursor();
+            if (!ZoomEnabled)
+            {
+                Cursor = Cursors.Default;
+            }
         }
 
         protected virtual GraphPresentationModel CreatePresentationModel(
@@ -397,6 +490,443 @@ namespace Graphing.Controls
                 new AnimationBarIndexChangedEventArgs(xIndex, previousXIndex, isUserInitiated));
 
             Invalidate();
+        }
+
+        private bool TryHandleZoomMouseDown(MouseEventArgs mouseEvent)
+        {
+            if (mouseEvent == null || mouseEvent.Button != MouseButtons.Left)
+            {
+                return false;
+            }
+
+            if (!TryGetCurrentPlotRect(out var plotRect))
+            {
+                return false;
+            }
+
+            _zoomDragAnchorClient = ClampPointToRectangle(mouseEvent.Location, plotRect);
+            _zoomDragCurrentClient = _zoomDragAnchorClient;
+            _zoomDragRectangle = BuildZoomRectangle(_zoomDragAnchorClient, _zoomDragCurrentClient);
+            _isZoomDragging = true;
+            Capture = true;
+            UpdateZoomModeCursor();
+            Invalidate();
+            return true;
+        }
+
+        private bool TryHandleZoomMouseMove(MouseEventArgs mouseEvent)
+        {
+            UpdateZoomModeCursor();
+
+            if (!_isZoomDragging || mouseEvent == null)
+            {
+                return false;
+            }
+
+            if (!TryGetCurrentPlotRect(out var plotRect))
+            {
+                return false;
+            }
+
+            _zoomDragCurrentClient = ClampPointToRectangle(mouseEvent.Location, plotRect);
+            _zoomDragRectangle = BuildZoomRectangle(_zoomDragAnchorClient, _zoomDragCurrentClient);
+            Invalidate();
+            return true;
+        }
+
+        private bool TryHandleZoomMouseUp(MouseEventArgs mouseEvent)
+        {
+            UpdateZoomModeCursor();
+
+            if (mouseEvent == null || mouseEvent.Button != MouseButtons.Left)
+            {
+                return false;
+            }
+
+            if (!_isZoomDragging)
+            {
+                return false;
+            }
+
+            int dx = _zoomDragCurrentClient.X - _zoomDragAnchorClient.X;
+            int dy = _zoomDragCurrentClient.Y - _zoomDragAnchorClient.Y;
+
+            var capturedRect = _zoomDragRectangle;
+
+            _isZoomDragging = false;
+            _zoomDragRectangle = null;
+            Capture = false;
+            Invalidate();
+
+            if (dx > 0 && dy > 0)
+            {
+                _lastZoomGesture = ZoomGestureKind.ZoomIn;
+                if (capturedRect.HasValue)
+                {
+                    ApplyZoomInGesture(capturedRect.Value);
+                }
+            }
+            else if (dx < 0 && dy < 0)
+            {
+                _lastZoomGesture = ZoomGestureKind.ZoomReset;
+                ZoomExtents();
+            }
+            else
+            {
+                _lastZoomGesture = ZoomGestureKind.None;
+            }
+
+            return true;
+        }
+
+        private void ClearZoomDragOverlay()
+        {
+            _isZoomDragging = false;
+            _zoomDragRectangle = null;
+        }
+
+        private void ApplyZoomInGesture(RectangleF zoomRect)
+        {
+            const float MinZoomWidthPixels = 4f;
+            const float MinZoomHeightPixels = 4f;
+
+            IGraphModel graphModel;
+            GraphPresentationModel presentation;
+            GraphPresentationOptions activeOptions;
+            IGraphSnapshot snapshot;
+
+            lock (_snapshotSync)
+            {
+                graphModel = _graphModel;
+                presentation = _activePresentation;
+                activeOptions = _activePresentationOptions;
+                snapshot = _activeSnapshot;
+            }
+
+            if (graphModel == null || presentation == null || snapshot == null)
+            {
+                return;
+            }
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                return;
+            }
+
+            var plotArea = presentation.Layout.PlotArea;
+            var plotWidth = plotArea.TopRight.X - plotArea.BottomLeft.X;
+            var plotHeight = plotArea.TopRight.Y - plotArea.BottomLeft.Y;
+            if (plotWidth <= 0d || plotHeight <= 0d)
+            {
+                return;
+            }
+
+            var zoomUpdates = new Dictionary<AxisId, (double Minimum, double Maximum)>();
+
+            if (zoomRect.Width >= MinZoomWidthPixels)
+            {
+                IAxisSnapshot xAxisSnapshot = null;
+                var snapshotAxes = snapshot.Axes;
+                for (var i = 0; i < snapshotAxes.Count; i++)
+                {
+                    var axis = snapshotAxes[i];
+                    if (axis?.Orientation == Models.AxisOrientation.X)
+                    {
+                        xAxisSnapshot = axis;
+                        break;
+                    }
+                }
+
+                if (xAxisSnapshot != null && xAxisSnapshot.MinimumValue.HasValue && xAxisSnapshot.MaximumValue.HasValue)
+                {
+                    var axisMin = xAxisSnapshot.MinimumValue.Value;
+                    var axisMax = xAxisSnapshot.MaximumValue.Value;
+
+                    var newXMin = DeviceXToDomainX(clientBounds, plotArea, zoomRect.Left, axisMin, axisMax);
+                    var newXMax = DeviceXToDomainX(clientBounds, plotArea, zoomRect.Right, axisMin, axisMax);
+
+                    if (newXMax > newXMin)
+                    {
+                        var xAxisId = new AxisId(xAxisSnapshot.AxisId);
+                        zoomUpdates[xAxisId] = (newXMin, newXMax);
+                    }
+                }
+            }
+
+            if (zoomRect.Height >= MinZoomHeightPixels)
+            {
+                var yAxesById = new Dictionary<string, IAxisSnapshot>(StringComparer.Ordinal);
+                var snapshotAxes = snapshot.Axes;
+                for (var i = 0; i < snapshotAxes.Count; i++)
+                {
+                    var axis = snapshotAxes[i];
+                    if (axis == null
+                        || axis.Orientation != Models.AxisOrientation.Y
+                        || string.IsNullOrWhiteSpace(axis.AxisId)
+                        || !axis.MinimumValue.HasValue
+                        || !axis.MaximumValue.HasValue)
+                    {
+                        continue;
+                    }
+
+                    yAxesById[axis.AxisId] = axis;
+                }
+
+                var layoutAxes = presentation.Layout.Axes;
+                for (var i = 0; i < layoutAxes.Count; i++)
+                {
+                    var layoutEntry = layoutAxes[i];
+                    var layoutAxis = layoutEntry?.Axis;
+                    if (layoutAxis == null
+                        || layoutAxis.Orientation != Graphing.Controls.Presentation.AxisOrientation.Vertical
+                        || string.IsNullOrWhiteSpace(layoutAxis.AxisId))
+                    {
+                        continue;
+                    }
+
+                    if (!yAxesById.TryGetValue(layoutAxis.AxisId, out var yAxisSnapshot))
+                    {
+                        continue;
+                    }
+
+                    if (!TryResolveVerticalAxisAbstractSpan(layoutEntry, plotArea, out var axisAbstractBottom, out var axisAbstractTop))
+                    {
+                        continue;
+                    }
+
+                    var axisDeviceTop = AbstractToDeviceY(clientBounds, axisAbstractTop);
+                    var axisDeviceBottom = AbstractToDeviceY(clientBounds, axisAbstractBottom);
+                    if (axisDeviceBottom < axisDeviceTop)
+                    {
+                        var swap = axisDeviceBottom;
+                        axisDeviceBottom = axisDeviceTop;
+                        axisDeviceTop = swap;
+                    }
+
+                    var intersectionTop = Math.Max(zoomRect.Top, axisDeviceTop);
+                    var intersectionBottom = Math.Min(zoomRect.Bottom, axisDeviceBottom);
+                    if ((intersectionBottom - intersectionTop) < MinZoomHeightPixels)
+                    {
+                        continue;
+                    }
+
+                    var axisMin = yAxisSnapshot.MinimumValue.Value;
+                    var axisMax = yAxisSnapshot.MaximumValue.Value;
+
+                    var yAtTop = DeviceYToDomainY(clientBounds, intersectionTop, axisMin, axisMax, axisAbstractBottom, axisAbstractTop);
+                    var yAtBottom = DeviceYToDomainY(clientBounds, intersectionBottom, axisMin, axisMax, axisAbstractBottom, axisAbstractTop);
+
+                    var newYMin = Math.Min(yAtTop, yAtBottom);
+                    var newYMax = Math.Max(yAtTop, yAtBottom);
+                    if (newYMax <= newYMin)
+                    {
+                        continue;
+                    }
+
+                    var yAxisId = new AxisId(yAxisSnapshot.AxisId);
+                    zoomUpdates[yAxisId] = (newYMin, newYMax);
+                }
+            }
+
+            if (zoomUpdates.Count == 0)
+            {
+                return;
+            }
+
+            var zoomedOptions = CreateAxisRangeZoomOptions(activeOptions, zoomUpdates);
+            SetGraphSource(graphModel, zoomedOptions);
+        }
+
+        private static double DeviceXToDomainX(
+            Rectangle clientBounds,
+            PlotAreaLayout plotArea,
+            float deviceX,
+            double axisMin,
+            double axisMax)
+        {
+            var abstractX = (deviceX - clientBounds.Left) / (double)clientBounds.Width;
+            var plotWidth = plotArea.TopRight.X - plotArea.BottomLeft.X;
+            var t = (abstractX - plotArea.BottomLeft.X) / plotWidth;
+            t = Math.Max(0d, Math.Min(1d, t));
+            return axisMin + (t * (axisMax - axisMin));
+        }
+
+        private static bool TryResolveVerticalAxisAbstractSpan(
+            AxisLayoutEntry axisLayout,
+            PlotAreaLayout plotArea,
+            out double abstractBottom,
+            out double abstractTop)
+        {
+            abstractBottom = 0d;
+            abstractTop = 0d;
+
+            if (axisLayout == null || plotArea == null)
+            {
+                return false;
+            }
+
+            var plotBottom = plotArea.BottomLeft.Y;
+            var plotTop = plotArea.TopRight.Y;
+            var plotHeight = plotTop - plotBottom;
+            if (plotHeight <= 0d)
+            {
+                return false;
+            }
+
+            var normalizedStart = Math.Max(0d, Math.Min(1d, axisLayout.NormalizedSpanStart));
+            var normalizedEnd = Math.Max(0d, Math.Min(1d, axisLayout.NormalizedSpanEnd));
+            if (normalizedEnd < normalizedStart)
+            {
+                var swap = normalizedStart;
+                normalizedStart = normalizedEnd;
+                normalizedEnd = swap;
+            }
+
+            var inset = Math.Max(0d, axisLayout.TickEndpointInset);
+            var spanStart = plotBottom + (normalizedStart * plotHeight) + inset;
+            var spanEnd = plotBottom + (normalizedEnd * plotHeight) - inset;
+            if (spanEnd < spanStart)
+            {
+                var center = plotBottom + (((normalizedStart + normalizedEnd) * 0.5d) * plotHeight);
+                spanStart = center;
+                spanEnd = center;
+            }
+
+            abstractBottom = spanStart;
+            abstractTop = spanEnd;
+            return true;
+        }
+
+        private static float AbstractToDeviceY(Rectangle clientBounds, double abstractY)
+        {
+            return (float)(clientBounds.Bottom - (abstractY * clientBounds.Height));
+        }
+
+        private static double DeviceYToDomainY(
+            Rectangle clientBounds,
+            float deviceY,
+            double axisMin,
+            double axisMax,
+            double axisAbstractBottom,
+            double axisAbstractTop)
+        {
+            var abstractY = (clientBounds.Bottom - deviceY) / (double)clientBounds.Height;
+            var axisHeight = axisAbstractTop - axisAbstractBottom;
+            var t = (abstractY - axisAbstractBottom) / axisHeight;
+            t = Math.Max(0d, Math.Min(1d, t));
+            return axisMin + (t * (axisMax - axisMin));
+        }
+
+        private void UpdateZoomModeCursor()
+        {
+            Cursor = ZoomEnabled ? Cursors.Cross : Cursors.Default;
+        }
+
+        private bool TryGetCurrentPlotRect(out RectangleF plotRect)
+        {
+            plotRect = RectangleF.Empty;
+
+            var clientBounds = ClientRectangle;
+            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            GraphPresentationModel presentation;
+            lock (_snapshotSync)
+            {
+                presentation = _activePresentation;
+            }
+
+            if (presentation == null)
+            {
+                return false;
+            }
+
+            return TryComputeAnimationBarPlotRect(clientBounds, presentation, out plotRect);
+        }
+
+        private static Point ClampPointToRectangle(Point point, RectangleF rectangle)
+        {
+            if (rectangle.Width <= 0f || rectangle.Height <= 0f)
+            {
+                return point;
+            }
+
+            var minX = (int)Math.Ceiling(rectangle.Left);
+            var maxX = (int)Math.Floor(rectangle.Right);
+            var minY = (int)Math.Ceiling(rectangle.Top);
+            var maxY = (int)Math.Floor(rectangle.Bottom);
+
+            var clampedX = point.X;
+            if (clampedX < minX)
+            {
+                clampedX = minX;
+            }
+            else if (clampedX > maxX)
+            {
+                clampedX = maxX;
+            }
+
+            var clampedY = point.Y;
+            if (clampedY < minY)
+            {
+                clampedY = minY;
+            }
+            else if (clampedY > maxY)
+            {
+                clampedY = maxY;
+            }
+
+            return new Point(clampedX, clampedY);
+        }
+
+        private static RectangleF BuildZoomRectangle(Point anchor, Point current)
+        {
+            var left = Math.Min(anchor.X, current.X);
+            var right = Math.Max(anchor.X, current.X);
+            var top = Math.Min(anchor.Y, current.Y);
+            var bottom = Math.Max(anchor.Y, current.Y);
+            return RectangleF.FromLTRB(left, top, right, bottom);
+        }
+
+        private void RenderZoomDragOverlay(
+            Graphics graphics,
+            Rectangle clientBounds,
+            GraphPresentationModel presentation)
+        {
+            if (!ZoomEnabled || !_isZoomDragging || !_zoomDragRectangle.HasValue || graphics == null || presentation == null)
+            {
+                return;
+            }
+
+            if (!TryComputeAnimationBarPlotRect(clientBounds, presentation, out var plotRect))
+            {
+                return;
+            }
+
+            var dragRect = _zoomDragRectangle.Value;
+            if (dragRect.Width <= 0f || dragRect.Height <= 0f)
+            {
+                return;
+            }
+
+            var clip = graphics.ClipBounds;
+            graphics.SetClip(plotRect, CombineMode.Intersect);
+
+            try
+            {
+                using (var pen = new Pen(Color.Black, 1f))
+                {
+                    pen.DashStyle = DashStyle.Dot;
+                    graphics.DrawRectangle(pen, dragRect.X, dragRect.Y, dragRect.Width, dragRect.Height);
+                }
+            }
+            finally
+            {
+                graphics.SetClip(clip);
+            }
         }
 
         private bool TryHandleAnimationBarMouseDown(MouseEventArgs mouseEvent)
@@ -1151,6 +1681,246 @@ namespace Graphing.Controls
         private static float AbstractToDeviceX(Rectangle clientBounds, double abstractX)
         {
             return (float)(clientBounds.Left + (abstractX * clientBounds.Width));
+        }
+
+        private static GraphPresentationOptions CreateAxisRangeZoomOptions(
+            GraphPresentationOptions activeOptions,
+            AxisId axisId,
+            double newMinimum,
+            double newMaximum)
+        {
+            var zoomRanges = new Dictionary<AxisId, (double Minimum, double Maximum)>
+            {
+                [axisId] = (newMinimum, newMaximum)
+            };
+
+            return CreateAxisRangeZoomOptions(activeOptions, zoomRanges);
+        }
+
+        private static GraphPresentationOptions CreateAxisRangeZoomOptions(
+            GraphPresentationOptions activeOptions,
+            IReadOnlyDictionary<AxisId, (double Minimum, double Maximum)> zoomRanges)
+        {
+            var baseOptions = activeOptions ?? new GraphPresentationOptions();
+
+            var axisOverrides = new Dictionary<AxisId, AxisOverrides>();
+            if (baseOptions.AxisOverrides != null)
+            {
+                foreach (var axisOverride in baseOptions.AxisOverrides)
+                {
+                    axisOverrides[axisOverride.Key] = CloneAxisOverrides(axisOverride.Value);
+                }
+            }
+
+            if (zoomRanges != null)
+            {
+                foreach (var zoomRange in zoomRanges)
+                {
+                    var targetAxisId = zoomRange.Key;
+                    if (targetAxisId == null)
+                    {
+                        continue;
+                    }
+
+                    axisOverrides.TryGetValue(targetAxisId, out var existingAxisOverride);
+                    var nextAxisOverride = CloneAxisOverrides(existingAxisOverride);
+                    nextAxisOverride.HasFixedRange = true;
+                    nextAxisOverride.Minimum = zoomRange.Value.Minimum;
+                    nextAxisOverride.Maximum = zoomRange.Value.Maximum;
+                    axisOverrides[targetAxisId] = nextAxisOverride;
+                }
+            }
+
+            var seriesStyles = new Dictionary<SeriesId, SeriesStyle>();
+            if (baseOptions.SeriesStyles != null)
+            {
+                foreach (var seriesStyle in baseOptions.SeriesStyles)
+                {
+                    if (seriesStyle.Value == null)
+                    {
+                        continue;
+                    }
+
+                    seriesStyles[seriesStyle.Key] = new SeriesStyle
+                    {
+                        HasLabelOverride = seriesStyle.Value.HasLabelOverride,
+                        Label = seriesStyle.Value.Label,
+                        Color = seriesStyle.Value.Color
+                    };
+                }
+            }
+
+            return new GraphPresentationOptions(
+                hiddenSeriesIds: baseOptions.HiddenSeriesIds,
+                hiddenAxisIds: baseOptions.HiddenAxisIds,
+                graphTitle: baseOptions.GraphTitle,
+                graphSubtitle: baseOptions.GraphSubtitle,
+                annotations: baseOptions.Annotations,
+                showGraphBorder: baseOptions.ShowGraphBorder,
+                legendPlacement: baseOptions.LegendPlacement,
+                resizeChart: baseOptions.ResizeChart,
+                axisEndpointInsetMode: baseOptions.AxisEndpointInsetMode,
+                axisEndpointInsetFixedValue: baseOptions.AxisEndpointInsetFixedValue,
+                hiddenAxisGridLineIds: baseOptions.HiddenAxisGridLineIds,
+                seriesOrder: baseOptions.SeriesOrder,
+                seriesStyles: seriesStyles,
+                axisOverrides: axisOverrides,
+                enableDenseNumericYAxisTicks: baseOptions.EnableDenseNumericYAxisTicks,
+                denseNumericYAxisExcludedDimensions: baseOptions.DenseNumericYAxisExcludedDimensions != null
+                    ? new HashSet<UnitRegistry.Dimension>(baseOptions.DenseNumericYAxisExcludedDimensions)
+                    : null);
+        }
+
+        private static GraphPresentationOptions CreateZoomResetOptions(
+            GraphPresentationOptions activeOptions,
+            IGraphModel graphModel,
+            IReadOnlyDictionary<string, AxisExtent> defaultAxisExtents)
+        {
+            var baseOptions = activeOptions ?? new GraphPresentationOptions();
+
+            var axisOverrides = new Dictionary<AxisId, AxisOverrides>();
+            if (baseOptions.AxisOverrides != null)
+            {
+                foreach (var axisOverride in baseOptions.AxisOverrides)
+                {
+                    axisOverrides[axisOverride.Key] = CloneAxisOverrides(axisOverride.Value);
+                }
+            }
+
+            var axes = graphModel?.Axes;
+            if (axes != null)
+            {
+                for (var axisIndex = 0; axisIndex < axes.Count; axisIndex++)
+                {
+                    var axis = axes[axisIndex];
+                    if (axis?.Id == null)
+                    {
+                        continue;
+                    }
+
+                    if (!defaultAxisExtents.TryGetValue(axis.Id.Value, out var extent))
+                    {
+                        continue;
+                    }
+
+                    axisOverrides.TryGetValue(axis.Id, out var existingOverride);
+                    var nextAxisOverride = CloneAxisOverrides(existingOverride);
+                    nextAxisOverride.HasFixedRange = true;
+                    nextAxisOverride.HasFixedIncrement = true;
+                    nextAxisOverride.Minimum = extent.Minimum;
+                    nextAxisOverride.Maximum = extent.Maximum;
+                    nextAxisOverride.Increment = extent.Increment;
+                    axisOverrides[axis.Id] = nextAxisOverride;
+                }
+            }
+
+            var seriesStyles = new Dictionary<SeriesId, SeriesStyle>();
+            if (baseOptions.SeriesStyles != null)
+            {
+                foreach (var seriesStyle in baseOptions.SeriesStyles)
+                {
+                    if (seriesStyle.Value == null)
+                    {
+                        continue;
+                    }
+
+                    seriesStyles[seriesStyle.Key] = new SeriesStyle
+                    {
+                        HasLabelOverride = seriesStyle.Value.HasLabelOverride,
+                        Label = seriesStyle.Value.Label,
+                        Color = seriesStyle.Value.Color
+                    };
+                }
+            }
+
+            return new GraphPresentationOptions(
+                hiddenSeriesIds: baseOptions.HiddenSeriesIds,
+                hiddenAxisIds: baseOptions.HiddenAxisIds,
+                graphTitle: baseOptions.GraphTitle,
+                graphSubtitle: baseOptions.GraphSubtitle,
+                annotations: baseOptions.Annotations,
+                showGraphBorder: baseOptions.ShowGraphBorder,
+                legendPlacement: baseOptions.LegendPlacement,
+                resizeChart: baseOptions.ResizeChart,
+                axisEndpointInsetMode: baseOptions.AxisEndpointInsetMode,
+                axisEndpointInsetFixedValue: baseOptions.AxisEndpointInsetFixedValue,
+                hiddenAxisGridLineIds: baseOptions.HiddenAxisGridLineIds,
+                seriesOrder: baseOptions.SeriesOrder,
+                seriesStyles: seriesStyles,
+                axisOverrides: axisOverrides,
+                enableDenseNumericYAxisTicks: baseOptions.EnableDenseNumericYAxisTicks,
+                denseNumericYAxisExcludedDimensions: baseOptions.DenseNumericYAxisExcludedDimensions != null
+                    ? new HashSet<UnitRegistry.Dimension>(baseOptions.DenseNumericYAxisExcludedDimensions)
+                    : null);
+        }
+
+        private static AxisOverrides CloneAxisOverrides(AxisOverrides source)
+        {
+            if (source == null)
+            {
+                return new AxisOverrides();
+            }
+
+            return new AxisOverrides
+            {
+                HasTitleOverride = source.HasTitleOverride,
+                Title = source.Title,
+                HasFixedRange = source.HasFixedRange,
+                Minimum = source.Minimum,
+                Maximum = source.Maximum,
+                HasFixedIncrement = source.HasFixedIncrement,
+                Increment = source.Increment,
+                EnforceMinimumZero = source.EnforceMinimumZero
+            };
+        }
+
+        private void CaptureDefaultAxisExtents(IGraphSnapshot snapshot)
+        {
+            _defaultAxisExtents.Clear();
+
+            var axes = snapshot?.Axes;
+            if (axes == null)
+            {
+                return;
+            }
+
+            for (var axisIndex = 0; axisIndex < axes.Count; axisIndex++)
+            {
+                var axis = axes[axisIndex];
+                if (axis == null
+                    || string.IsNullOrWhiteSpace(axis.AxisId)
+                    || !axis.MinimumValue.HasValue
+                    || !axis.MaximumValue.HasValue
+                    || !axis.Increment.HasValue)
+                {
+                    continue;
+                }
+
+                _defaultAxisExtents[axis.AxisId] = new AxisExtent(axis.MinimumValue.Value, axis.MaximumValue.Value, axis.Increment.Value);
+            }
+        }
+
+        private readonly struct AxisExtent
+        {
+            public AxisExtent(double minimum, double maximum, double increment)
+            {
+                Minimum = minimum;
+                Maximum = maximum;
+                Increment = increment;
+            }
+
+            public double Minimum { get; }
+
+            public double Maximum { get; }
+
+            public double Increment { get; }
+        }
+
+        internal enum ZoomGestureKind
+        {
+            None,
+            ZoomIn,
+            ZoomReset,
         }
 
     }
