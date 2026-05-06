@@ -85,14 +85,15 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void ZoomDrag_WhenEnabled_DoesNotChangeAxisRanges()
+        public void ZoomDrag_WhenEnabled_DoesNotChangeYAxisRanges()
         {
+            // A down+right drag (zoom-in gesture) applies X-axis zoom but must leave Y-axes unchanged.
             using (var control = CreateInteractiveControl())
             {
                 control.ZoomEnabled = true;
 
-                var before = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                var beforeY = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
                 var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
@@ -102,15 +103,15 @@ namespace Graphing.Tests
                 control.RaiseMouseMove(target);
                 control.RaiseMouseUp(MouseButtons.Left, target);
 
-                var after = control.ActiveSnapshot.Axes
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                var afterY = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
-                Assert.That(after.Keys, Is.EquivalentTo(before.Keys));
-                foreach (var axisId in before.Keys)
+                Assert.That(afterY.Keys, Is.EquivalentTo(beforeY.Keys));
+                foreach (var axisId in beforeY.Keys)
                 {
-                    Assert.That(after[axisId].Item1, Is.EqualTo(before[axisId].Item1).Within(1e-9d));
-                    Assert.That(after[axisId].Item2, Is.EqualTo(before[axisId].Item2).Within(1e-9d));
+                    Assert.That(afterY[axisId].Item1, Is.EqualTo(beforeY[axisId].Item1).Within(1e-9d));
+                    Assert.That(afterY[axisId].Item2, Is.EqualTo(beforeY[axisId].Item2).Within(1e-9d));
                 }
             }
         }
@@ -192,7 +193,87 @@ namespace Graphing.Tests
         }
 
         [Test]
-        public void ZoomGesture_DownRight_ClassifiesAsZoomIn_NoAxisChanges()
+        public void ZoomGesture_DownRight_ClassifiesAsZoomIn()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
+                var target = GetPlotInteriorPoint(control, 0.8d, 0.8d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                Assert.That(control.LastZoomGesture, Is.EqualTo(EngineeringGraphControl.ZoomGestureKind.ZoomIn));
+            }
+        }
+
+        [Test]
+        public void ZoomIn_DownRightDrag_NarrowsXAxisRange()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var defaultXAxis = control.ActiveSnapshot.Axes
+                    .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue);
+                var defaultXMin = defaultXAxis.MinimumValue.Value;
+                var defaultXMax = defaultXAxis.MaximumValue.Value;
+
+                // Drag the left quarter → right three-quarters: zooms into a sub-range
+                var anchor = GetPlotInteriorPoint(control, 0.25d, 0.25d);
+                var target = GetPlotInteriorPoint(control, 0.75d, 0.75d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                var zoomedXAxis = control.ActiveSnapshot.Axes
+                    .First(a => a != null && a.Orientation == ModelAxisOrientation.X && a.MinimumValue.HasValue);
+
+                Assert.That(zoomedXAxis.MinimumValue.Value, Is.GreaterThan(defaultXMin - 1e-9d), "Zoomed X min should be >= default X min");
+                Assert.That(zoomedXAxis.MaximumValue.Value, Is.LessThan(defaultXMax + 1e-9d), "Zoomed X max should be <= default X max");
+                Assert.That(zoomedXAxis.MinimumValue.Value, Is.LessThan(zoomedXAxis.MaximumValue.Value), "Zoomed X range must be non-degenerate");
+                Assert.That(zoomedXAxis.MaximumValue.Value - zoomedXAxis.MinimumValue.Value,
+                    Is.LessThan(defaultXMax - defaultXMin), "Zoomed X range should be narrower than default");
+            }
+        }
+
+        [Test]
+        public void ZoomIn_DownRightDrag_LeavesYAxisRangesUnchanged()
+        {
+            using (var control = CreateInteractiveControl())
+            {
+                control.ZoomEnabled = true;
+
+                var beforeY = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                var anchor = GetPlotInteriorPoint(control, 0.25d, 0.25d);
+                var target = GetPlotInteriorPoint(control, 0.75d, 0.75d);
+
+                control.RaiseMouseDown(MouseButtons.Left, anchor);
+                control.RaiseMouseMove(target);
+                control.RaiseMouseUp(MouseButtons.Left, target);
+
+                var afterY = control.ActiveSnapshot.Axes
+                    .Where(a => a != null && a.Orientation == ModelAxisOrientation.Y && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
+                    .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
+
+                Assert.That(afterY.Keys, Is.EquivalentTo(beforeY.Keys));
+                foreach (var axisId in beforeY.Keys)
+                {
+                    Assert.That(afterY[axisId].Item1, Is.EqualTo(beforeY[axisId].Item1).Within(1e-9d), $"Y-axis '{axisId}' min must not change");
+                    Assert.That(afterY[axisId].Item2, Is.EqualTo(beforeY[axisId].Item2).Within(1e-9d), $"Y-axis '{axisId}' max must not change");
+                }
+            }
+        }
+
+        [Test]
+        public void ZoomIn_DegenerateRectWidth_DoesNotChangeAnyAxis()
         {
             using (var control = CreateInteractiveControl())
             {
@@ -202,14 +283,15 @@ namespace Graphing.Tests
                     .Where(a => a != null && !string.IsNullOrWhiteSpace(a.AxisId) && a.MinimumValue.HasValue && a.MaximumValue.HasValue)
                     .ToDictionary(a => a.AxisId, a => (a.MinimumValue.Value, a.MaximumValue.Value), StringComparer.Ordinal);
 
-                // Down+Right: dx > 0, dy > 0
-                var anchor = GetPlotInteriorPoint(control, 0.2d, 0.2d);
-                var target = GetPlotInteriorPoint(control, 0.8d, 0.8d);
+                // Drag only 2 pixels to the right (below MinZoomWidthPixels = 4f) and downward
+                var anchor = GetPlotInteriorPoint(control, 0.5d, 0.4d);
+                var target = new Point(anchor.X + 2, anchor.Y + 20);
 
                 control.RaiseMouseDown(MouseButtons.Left, anchor);
                 control.RaiseMouseMove(target);
                 control.RaiseMouseUp(MouseButtons.Left, target);
 
+                // Gesture should still be recognized as ZoomIn (dx > 0, dy > 0)
                 Assert.That(control.LastZoomGesture, Is.EqualTo(EngineeringGraphControl.ZoomGestureKind.ZoomIn));
 
                 var after = control.ActiveSnapshot.Axes
