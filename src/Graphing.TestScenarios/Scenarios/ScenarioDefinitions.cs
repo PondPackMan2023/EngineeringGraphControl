@@ -2,6 +2,7 @@ using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.TestScenarios.Fields;
 using Graphing.TestScenarios.Libraries;
+using System;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
@@ -79,17 +80,22 @@ namespace Graphing.TestScenarios.Scenarios
             {
                 pressures[i] *= 0.25;
             }
+            double[] randomeSeconds = new double[] { 3600, 7200, 10800 };
+            Random rnd = new Random(DateTime.Now.Millisecond);
+
             // Create a copy of the times array and then adjust the values by adding 60 to each.
             double[] adjustedTimes = new double[times.Length];
+            int index = rnd.Next(0, randomeSeconds.Length - 1);
             for (int i = 0; i < times.Length; i++)
             {
-                adjustedTimes[i] = times[i] + 3600;
+                adjustedTimes[i] = times[i] + randomeSeconds[index];
             }
 
             double[] adjustedTimes2 = new double[times.Length];
+            index = rnd.Next(0, randomeSeconds.Length - 1);
             for (int i = 0; i < times.Length; i++)
             {
-                adjustedTimes2[i] = times[i] + 7200;
+                adjustedTimes2[i] = times[i] + randomeSeconds[index];
             }
 
             var timeField = new GraphFieldDefinition("Time", "Time", Units.Time.Second, times);

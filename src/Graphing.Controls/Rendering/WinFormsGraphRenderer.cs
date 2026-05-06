@@ -73,6 +73,8 @@ namespace Graphing.Controls.Rendering
         private static readonly Font LegendFont = new Font("Arial", 8f);
         private static readonly Brush TickLabelBrush = Brushes.Black;
 
+        internal Action<RenderedSeriesPolyline> SeriesGeometryRendered { get; set; }
+
         /// <summary>
         /// Renders axes and series from <paramref name="model"/> into <paramref name="g"/>
         /// within the specified <paramref name="deviceBounds"/>.
@@ -95,7 +97,7 @@ namespace Graphing.Controls.Rendering
             RenderGridLines(g, plotRect, model.Layout.GridLines, model);
             RenderAxes(g, plotRect, deviceBounds, model);
             RenderPlotAreaBorder(g, plotRect);
-            RenderSeries(g, plotRect, model);
+            RenderSeries(g, plotRect, model, SeriesGeometryRendered);
             RenderAxisTitles(g, deviceBounds, model.Layout.AxisTitleBands);
             RenderTitles(g, deviceBounds, model.Layout);
             RenderLegend(g, deviceBounds, model.Layout.Legend);
@@ -1114,7 +1116,8 @@ namespace Graphing.Controls.Rendering
         private static void RenderSeries(
             Graphics g,
             RectangleF plotRect,
-            GraphPresentationModel model)
+            GraphPresentationModel model,
+            Action<RenderedSeriesPolyline> seriesGeometryRendered)
         {
             var series = model.Layout.Series;
 
@@ -1157,7 +1160,7 @@ namespace Graphing.Controls.Rendering
                 }
 
                 var seriesRect = ComputeSeriesRect(plotRect, xAxisEntry, yAxisEntry);
-                RenderOneSeries(g, seriesRect, s, xMin, xMax, yMin, yMax);
+                RenderOneSeries(g, seriesRect, s, xMin, xMax, yMin, yMax, seriesGeometryRendered);
             }
         }
 
@@ -1166,13 +1169,16 @@ namespace Graphing.Controls.Rendering
             RectangleF seriesRect,
             SeriesPresentationGeometry series,
             double xMin, double xMax,
-            double yMin, double yMax)
+            double yMin, double yMax,
+            Action<RenderedSeriesPolyline> seriesGeometryRendered)
         {
             var points = series.Points;
             if (points == null || points.Count < 1)
             {
                 return;
             }
+
+            var renderedPolyline = new List<PointF>(points.Count);
 
             // Use a clipping region to keep lines inside the plot area.
             var clip = g.ClipBounds;
@@ -1190,6 +1196,7 @@ namespace Graphing.Controls.Rendering
                             var domainPoint = points[i];
                             var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
                             var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
+                            renderedPolyline.Add(new PointF(deviceX, deviceY));
                             g.FillEllipse(
                                 seriesBrush,
                                 deviceX - DiscretePointMarkerRadius,
@@ -1208,6 +1215,7 @@ namespace Graphing.Controls.Rendering
                             var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
                             var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
                             var current = new PointF(deviceX, deviceY);
+                            renderedPolyline.Add(current);
 
                             if (previous.HasValue)
                             {
@@ -1222,6 +1230,16 @@ namespace Graphing.Controls.Rendering
                 {
                     g.SetClip(clip);
                 }
+            }
+
+            if (seriesGeometryRendered != null && renderedPolyline.Count > 0)
+            {
+                seriesGeometryRendered(
+                    new RenderedSeriesPolyline(
+                        series.SeriesId,
+                        series.SeriesType,
+                        series.SeriesColor,
+                        renderedPolyline.ToArray()));
             }
         }
 
