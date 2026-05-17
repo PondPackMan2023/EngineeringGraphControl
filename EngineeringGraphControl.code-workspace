@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+      "name": "EngineeringGraphControl",
+			"path": "../EngineeringGraphControl"
+		},
+    {
+      "name": "UnitRegistry",
+      "path": "../UnitRegistry"
+    }
+  ],
+  "settings": {
+    "chat.tools.terminal.autoApprove": {
+      "dotnet test": true,
+      "dotnet build": true,
+      "dotnet clean": true
+    },
+    "powershell.cwd": "BentleyBuildApp.Next"
+  }
+}
