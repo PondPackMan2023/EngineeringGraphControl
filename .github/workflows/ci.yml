@@ -19,7 +19,13 @@ jobs:
       - name: Checkout (with submodules)
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          path: EngineeringGraphControl
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: PondPackMan2023/UnitRegistry
+          path: UnitRegistry
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -29,14 +35,14 @@ jobs:
             10.0.x
 
       - name: Restore packages
-        run: dotnet restore EngineeringGraphControl.slnx
+        run: dotnet restore EngineeringGraphControl/EngineeringGraphControl.slnx
 
       - name: Build
-        run: dotnet build EngineeringGraphControl.slnx --no-restore --configuration Release
+        run: dotnet build EngineeringGraphControl/EngineeringGraphControl.slnx --no-restore --configuration Release
 
       - name: Test with coverage
         run: >
-          dotnet test EngineeringGraphControl.slnx
+          dotnet test EngineeringGraphControl/EngineeringGraphControl.slnx
           --no-build
           --configuration Release
           --logger "trx;LogFileName=test-results.trx"

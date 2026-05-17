@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
-    <ProjectReference Include="..\..\submodules\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
+    <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
+    <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
     <ProjectReference Include="..\Graphing.Editors\Graphing.Editors.csproj" />
     <ProjectReference Include="..\Graphing.TestScenarios\Graphing.TestScenarios.csproj" />

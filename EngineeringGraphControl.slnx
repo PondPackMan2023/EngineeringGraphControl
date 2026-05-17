@@ -14,10 +14,10 @@
     </Project>
   </Folder>
   <Folder Name="/UnitRegistry/">
-    <Project Path="submodules/UnitRegistry/src/UnitRegistry.Core/UnitRegistry.Core.csproj">
+    <Project Path="../UnitRegistry/src/UnitRegistry.Core/UnitRegistry.Core.csproj">
       <Platform Project="x64" />
     </Project>
-    <Project Path="submodules/UnitRegistry/src/UnitRegistry.Formatting/UnitRegistry.Formatting.csproj">
+    <Project Path="../UnitRegistry/src/UnitRegistry.Formatting/UnitRegistry.Formatting.csproj">
       <Platform Project="x64" />
     </Project>
   </Folder>
