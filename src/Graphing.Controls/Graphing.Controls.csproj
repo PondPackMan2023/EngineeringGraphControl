@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
+    <TargetFrameworks>net10.0-windows</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <Usewindowsforms>true</Usewindowsforms>
@@ -11,6 +11,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="EngineeringGraphControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
   </ItemGroup>
 
 </Project>
