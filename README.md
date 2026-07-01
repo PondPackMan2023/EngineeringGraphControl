@@ -40,12 +40,19 @@ dotnet test EngineeringGraphControl.slnx
 EngineeringGraphControl.slnx
 Directory.Build.props          # Redirects all build output to /out
 Directory.Packages.props       # Central NuGet version management
+docs/                          # ADRs, API notes, and design docs
 src/
-  Graphing.Controls/           # Class library (net10.0-windows)
-  Graphing.Editors/            # Editor UI for graph options
-  Graphing.Tests/              # NUnit test project (net10.0-windows)
-  Graphing.TestHarness/        # A simple application for testing changes before release
-  Graphing.TestScenarios/      # Generates test data for testing in the test harness and unit tests.
+  Graphing.Core/               # Core contracts and graphing model primitives
+  Graphing.Controls/           # Shared control contracts/abstractions
+  Graphing.Controls.WinForms/  # WinForms EngineeringGraphControl implementation
+  Graphing.Controls.WPF/       # WPF EngineeringGraphControl implementation
+  Graphing.Editors.WinForms/   # WinForms options/editor UI
+  Graphing.TestScenarios/      # Test data/scenario generation utilities
+  Graphing.Core.Tests/         # NUnit tests for core model/semantics
+  Graphing.Tests/              # NUnit tests for control/presentation behavior
+  Graphing.TestHarness/        # WinForms interactive harness
+  Graphing.TestHarness.WPF/    # WPF interactive harness
+  Graphing.TestHarness.WPF.Core/ # Shared non-UI WPF harness viewmodel layer
 .github/workflows/
   ci.yml                       # PR / push CI workflow
 ```
