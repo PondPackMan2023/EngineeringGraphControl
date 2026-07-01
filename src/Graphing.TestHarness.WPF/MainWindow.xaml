@@ -1,0 +1,46 @@
+<Window x:Class="Graphing.TestHarness.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:g="clr-namespace:Graphing.Controls;assembly=Graphing.Controls.WPF"
+    xmlns:vm="clr-namespace:Graphing.TestHarness.WPF.Core.ViewModels;assembly=Graphing.TestHarness.WPF.Core"
+        mc:Ignorable="d"
+        Title="EngineeringGraphControl - WPF Test Harness"
+        Height="760"
+        Width="1280"
+    MinHeight="640"
+    MinWidth="1024"
+    d:DataContext="{d:DesignInstance Type=vm:MainViewModel, IsDesignTimeCreatable=True}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#F6F6F6" BorderBrush="#DDDDDD" BorderThickness="0,0,1,0" Padding="12">
+            <StackPanel>
+                <TextBlock Text="WPF Rendering Harness" FontWeight="Bold" FontSize="16" Margin="0,0,0,4" />
+                <TextBlock Text="Scenario Loading" FontWeight="SemiBold" Margin="0,10,0,6" />
+
+                <Button Content="Scenario A" Margin="0,0,0,6" Height="30" Command="{Binding LoadScenarioACommand}" />
+                <Button Content="Scenario B" Margin="0,0,0,6" Height="30" Command="{Binding LoadScenarioBCommand}" />
+                <Button Content="Scenario C" Margin="0,0,0,6" Height="30" Command="{Binding LoadScenarioCCommand}" />
+                <Button Content="Scenario D" Margin="0,0,0,10" Height="30" Command="{Binding LoadScenarioDCommand}" />
+
+                <Separator Margin="0,8,0,8" />
+
+                <TextBlock Text="Interaction" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <CheckBox Content="Enable Zoom" Margin="0,0,0,8" IsChecked="{Binding ZoomEnabled, Mode=TwoWay}" />
+                <Button Content="Zoom Extents" Height="30" Command="{Binding ZoomExtentsCommand}" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Padding="10" Background="White">
+            <g:EngineeringGraphControl
+                GraphModel="{Binding GraphModel}"
+                ZoomEnabled="{Binding ZoomEnabled}"
+                ZoomExtentsRequestVersion="{Binding ZoomExtentsRequestVersion}" />
+        </Border>
+    </Grid>
+</Window>

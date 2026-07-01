@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "Graphing.TestHarness.WPF": {
+      "commandName": "Project"
+    }
+  }
+}

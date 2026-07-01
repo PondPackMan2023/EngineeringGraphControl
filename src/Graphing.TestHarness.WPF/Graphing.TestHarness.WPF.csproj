@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Platforms>x64</Platforms>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
+    <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
+    <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
+    <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
+    <ProjectReference Include="..\Graphing.Controls.WPF\Graphing.Controls.WPF.csproj" />
+    <ProjectReference Include="..\Graphing.TestHarness.WPF.Core\Graphing.TestHarness.WPF.Core.csproj" />
+    <ProjectReference Include="..\Graphing.TestScenarios\Graphing.TestScenarios.csproj" />
+  </ItemGroup>
+
+</Project>

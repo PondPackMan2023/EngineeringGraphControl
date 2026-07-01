@@ -2,7 +2,6 @@
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
-  <Folder Name="/src/" />
   <Folder Name="/Tests/">
     <Project Path="src/Graphing.TestHarness/Graphing.TestHarness.csproj" Id="080b331c-5cf1-40f8-8a5f-b6494fc6a4dd">
       <Platform Project="x64" />
@@ -35,6 +34,12 @@
   </Folder>
   <Folder Name="/WPF/">
     <Project Path="src/Graphing.Controls.WPF/Graphing.Controls.WPF.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/Graphing.TestHarness.WPF.Core/Graphing.TestHarness.WPF.Core.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/Graphing.TestHarness.WPF/Graphing.TestHarness.WPF.csproj">
       <Platform Project="x64" />
     </Project>
   </Folder>

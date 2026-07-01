@@ -42,10 +42,7 @@ namespace Graphing.Controls
         private readonly Dictionary<string, AxisExtent> _defaultAxisExtents = new Dictionary<string, AxisExtent>(StringComparer.Ordinal);
         private bool _zoomEnabled;
         private ZoomGestureKind _lastZoomGesture;
-        private bool _isZoomDragging;
-        private Point _zoomDragAnchorClient;
-        private Point _zoomDragCurrentClient;
-        private RectangleF? _zoomDragRectangle;
+        private readonly ZoomDragStateMachine _zoomDragState = new ZoomDragStateMachine();
 
         public event EventHandler<AxisInteractionMouseEventArgs> AxisMouseDown;
 
@@ -159,9 +156,9 @@ namespace Graphing.Controls
             }
         }
 
-        internal bool ZoomDragOverlayVisible => _zoomEnabled && _isZoomDragging && _zoomDragRectangle.HasValue;
+        internal bool ZoomDragOverlayVisible => _zoomEnabled && _zoomDragState.IsDragging && _zoomDragState.ZoomRectangle.HasValue;
 
-        internal RectangleF? ZoomDragOverlayBounds => _zoomDragRectangle;
+        internal RectangleF? ZoomDragOverlayBounds => _zoomDragState.ZoomRectangle;
 
         internal ZoomGestureKind LastZoomGesture => _lastZoomGesture;
 
@@ -393,26 +390,26 @@ namespace Graphing.Controls
             graphPosition = new GeometryPoint3D(0d, 0d, 0d);
 
             var clientBounds = ClientRectangle;
-            if (clientBounds.Width <= 0 || clientBounds.Height <= 0)
-            {
-                return false;
-            }
-
-            clientPosition = NormalizeMouseToClientPosition(mouseEvent.Location, clientBounds);
-            graphPosition = ToGraphPosition(clientBounds, clientPosition);
-
             GraphPresentationModel presentation;
             lock (_snapshotSync)
             {
                 presentation = _activePresentation;
             }
 
-            if (presentation == null)
+            if (!AxisInteractionOrchestrator.TryResolve(
+                clientBounds,
+                mouseEvent.Location,
+                presentation,
+                p => NormalizeMouseToClientPosition(p, clientBounds),
+                (model, position) => ResolveAxisInteractionDescriptor(model, position),
+                out var resolution))
             {
                 return false;
             }
 
-            descriptor = ResolveAxisInteractionDescriptor(presentation, graphPosition);
+            descriptor = resolution.Descriptor;
+            clientPosition = resolution.ClientPosition;
+            graphPosition = resolution.GraphPosition;
             return true;
         }
 
@@ -435,13 +432,6 @@ namespace Graphing.Controls
             // translate those to this control's client space before normalization.
             var screenPosition = hostForm.PointToScreen(inputPosition);
             return PointToClient(screenPosition);
-        }
-
-        private static GeometryPoint3D ToGraphPosition(System.Drawing.Rectangle clientBounds, System.Drawing.Point clientPosition)
-        {
-            var normalizedX = (clientPosition.X - clientBounds.Left) / (double)clientBounds.Width;
-            var normalizedY = (clientBounds.Bottom - clientPosition.Y) / (double)clientBounds.Height;
-            return new GeometryPoint3D(normalizedX, normalizedY, 0d);
         }
 
         private void TryInstallSnapshotAndPresentation(IGraphSnapshot nextSnapshot,
@@ -511,10 +501,11 @@ namespace Graphing.Controls
                 return false;
             }
 
-            _zoomDragAnchorClient = ClampPointToRectangle(mouseEvent.Location, plotRect);
-            _zoomDragCurrentClient = _zoomDragAnchorClient;
-            _zoomDragRectangle = BuildZoomRectangle(_zoomDragAnchorClient, _zoomDragCurrentClient);
-            _isZoomDragging = true;
+            if (!_zoomDragState.TryBeginDrag(mouseEvent.Location, plotRect))
+            {
+                return false;
+            }
+
             Capture = true;
             UpdateZoomModeCursor();
             Invalidate();
@@ -525,7 +516,7 @@ namespace Graphing.Controls
         {
             UpdateZoomModeCursor();
 
-            if (!_isZoomDragging || mouseEvent == null)
+            if (mouseEvent == null)
             {
                 return false;
             }
@@ -535,8 +526,11 @@ namespace Graphing.Controls
                 return false;
             }
 
-            _zoomDragCurrentClient = ClampPointToRectangle(mouseEvent.Location, plotRect);
-            _zoomDragRectangle = BuildZoomRectangle(_zoomDragAnchorClient, _zoomDragCurrentClient);
+            if (!_zoomDragState.TryMoveDrag(mouseEvent.Location, plotRect))
+            {
+                return false;
+            }
+
             Invalidate();
             return true;
         }
@@ -550,22 +544,15 @@ namespace Graphing.Controls
                 return false;
             }
 
-            if (!_isZoomDragging)
+            if (!_zoomDragState.TryEndDrag(out var gesture, out var capturedRect))
             {
                 return false;
             }
 
-            int dx = _zoomDragCurrentClient.X - _zoomDragAnchorClient.X;
-            int dy = _zoomDragCurrentClient.Y - _zoomDragAnchorClient.Y;
-
-            var capturedRect = _zoomDragRectangle;
-
-            _isZoomDragging = false;
-            _zoomDragRectangle = null;
             Capture = false;
             Invalidate();
 
-            if (dx > 0 && dy > 0)
+            if (gesture == ZoomGestureDirection.ZoomIn)
             {
                 _lastZoomGesture = ZoomGestureKind.ZoomIn;
                 if (capturedRect.HasValue)
@@ -573,7 +560,7 @@ namespace Graphing.Controls
                     ApplyZoomInGesture(capturedRect.Value);
                 }
             }
-            else if (dx < 0 && dy < 0)
+            else if (gesture == ZoomGestureDirection.ZoomReset)
             {
                 _lastZoomGesture = ZoomGestureKind.ZoomReset;
                 ZoomExtents();
@@ -588,8 +575,7 @@ namespace Graphing.Controls
 
         private void ClearZoomDragOverlay()
         {
-            _isZoomDragging = false;
-            _zoomDragRectangle = null;
+            _zoomDragState.Clear();
         }
 
         private void ApplyZoomInGesture(RectangleF zoomRect)
@@ -854,56 +840,12 @@ namespace Graphing.Controls
             return TryComputeAnimationBarPlotRect(clientBounds, presentation, out plotRect);
         }
 
-        private static Point ClampPointToRectangle(Point point, RectangleF rectangle)
-        {
-            if (rectangle.Width <= 0f || rectangle.Height <= 0f)
-            {
-                return point;
-            }
-
-            var minX = (int)Math.Ceiling(rectangle.Left);
-            var maxX = (int)Math.Floor(rectangle.Right);
-            var minY = (int)Math.Ceiling(rectangle.Top);
-            var maxY = (int)Math.Floor(rectangle.Bottom);
-
-            var clampedX = point.X;
-            if (clampedX < minX)
-            {
-                clampedX = minX;
-            }
-            else if (clampedX > maxX)
-            {
-                clampedX = maxX;
-            }
-
-            var clampedY = point.Y;
-            if (clampedY < minY)
-            {
-                clampedY = minY;
-            }
-            else if (clampedY > maxY)
-            {
-                clampedY = maxY;
-            }
-
-            return new Point(clampedX, clampedY);
-        }
-
-        private static RectangleF BuildZoomRectangle(Point anchor, Point current)
-        {
-            var left = Math.Min(anchor.X, current.X);
-            var right = Math.Max(anchor.X, current.X);
-            var top = Math.Min(anchor.Y, current.Y);
-            var bottom = Math.Max(anchor.Y, current.Y);
-            return RectangleF.FromLTRB(left, top, right, bottom);
-        }
-
         private void RenderZoomDragOverlay(
             Graphics graphics,
             Rectangle clientBounds,
             GraphPresentationModel presentation)
         {
-            if (!ZoomEnabled || !_isZoomDragging || !_zoomDragRectangle.HasValue || graphics == null || presentation == null)
+            if (!ZoomEnabled || !_zoomDragState.IsDragging || !_zoomDragState.ZoomRectangle.HasValue || graphics == null || presentation == null)
             {
                 return;
             }
@@ -913,7 +855,7 @@ namespace Graphing.Controls
                 return;
             }
 
-            var dragRect = _zoomDragRectangle.Value;
+            var dragRect = _zoomDragState.ZoomRectangle.Value;
             if (dragRect.Width <= 0f || dragRect.Height <= 0f)
             {
                 return;
@@ -1178,48 +1120,7 @@ namespace Graphing.Controls
             IReadOnlyList<PointF> polyline,
             out float intersectionY)
         {
-            intersectionY = 0f;
-
-            if (polyline == null || polyline.Count < 2)
-            {
-                return false;
-            }
-
-            for (var i = 1; i < polyline.Count; i++)
-            {
-                var p0 = polyline[i - 1];
-                var p1 = polyline[i];
-                var minX = Math.Min(p0.X, p1.X);
-                var maxX = Math.Max(p0.X, p1.X);
-
-                if (verticalX < minX || verticalX > maxX)
-                {
-                    continue;
-                }
-
-                var dx = p1.X - p0.X;
-                if (Math.Abs(dx) < float.Epsilon)
-                {
-                    if (Math.Abs(verticalX - p0.X) <= 0.5f)
-                    {
-                        intersectionY = (p0.Y + p1.Y) * 0.5f;
-                        return true;
-                    }
-
-                    continue;
-                }
-
-                var t = (verticalX - p0.X) / dx;
-                if (t < 0f || t > 1f)
-                {
-                    continue;
-                }
-
-                intersectionY = p0.Y + ((p1.Y - p0.Y) * t);
-                return true;
-            }
-
-            return false;
+            return GraphInteractionMath.TryResolveVerticalPolylineIntersection(verticalX, polyline, out intersectionY);
         }
 
         internal static bool TryResolvePointSeriesIntersectionCenter(
@@ -1228,33 +1129,7 @@ namespace Graphing.Controls
             float tolerancePixels,
             out PointF centerPoint)
         {
-            centerPoint = PointF.Empty;
-
-            if (points == null || points.Count == 0)
-            {
-                return false;
-            }
-
-            var bestIndex = -1;
-            var bestDistance = float.MaxValue;
-
-            for (var i = 0; i < points.Count; i++)
-            {
-                var distance = Math.Abs(points[i].X - verticalX);
-                if (distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    bestIndex = i;
-                }
-            }
-
-            if (bestIndex < 0 || bestDistance > tolerancePixels)
-            {
-                return false;
-            }
-
-            centerPoint = points[bestIndex];
-            return true;
+            return GraphInteractionMath.TryResolvePointSeriesIntersectionCenter(verticalX, points, tolerancePixels, out centerPoint);
         }
 
         private bool HitTestAnimationBar(
@@ -1515,25 +1390,7 @@ namespace Graphing.Controls
 
         internal static int ResolveNearestRenderedXSampleIndex(IReadOnlyList<float> sortedXSamples, float deviceX)
         {
-            if (sortedXSamples == null || sortedXSamples.Count == 0)
-            {
-                return 0;
-            }
-
-            var nearestIndex = 0;
-            var nearestDistance = float.MaxValue;
-
-            for (var i = 0; i < sortedXSamples.Count; i++)
-            {
-                var distance = Math.Abs(sortedXSamples[i] - deviceX);
-                if (distance < nearestDistance)
-                {
-                    nearestDistance = distance;
-                    nearestIndex = i;
-                }
-            }
-
-            return nearestIndex;
+            return GraphInteractionMath.ResolveNearestRenderedXSampleIndex(sortedXSamples, deviceX);
         }
 
         internal static bool TryResolveNearestPointCenterX(
@@ -1542,27 +1399,7 @@ namespace Graphing.Controls
             float tolerancePixels,
             out float snappedCenterX)
         {
-            snappedCenterX = 0f;
-
-            if (pointCenterXSamples == null || pointCenterXSamples.Count == 0)
-            {
-                return false;
-            }
-
-            var nearestIndex = ResolveNearestRenderedXSampleIndex(pointCenterXSamples, deviceX);
-            if (nearestIndex < 0 || nearestIndex >= pointCenterXSamples.Count)
-            {
-                return false;
-            }
-
-            var candidateX = pointCenterXSamples[nearestIndex];
-            if (Math.Abs(candidateX - deviceX) > tolerancePixels)
-            {
-                return false;
-            }
-
-            snappedCenterX = candidateX;
-            return true;
+            return GraphInteractionMath.TryResolveNearestPointCenterX(pointCenterXSamples, deviceX, tolerancePixels, out snappedCenterX);
         }
 
         private static bool TryResolveAnimationBarAbstractX(

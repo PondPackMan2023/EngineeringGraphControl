@@ -127,3 +127,72 @@ These trade-offs are intentional and favor clarity, correctness, and extensibili
 ## Notes
 
 This ADR establishes EngineeringGraphControl as the canonical graphing control moving forward and documents the architectural intent behind its introduction.
+
+---
+
+## Addendum A (2026-07-01): WPF Implementation and Project Structure Update
+
+### Status
+
+Accepted
+
+### Context
+
+After the initial WinForms-centric introduction, a WPF implementation was added to support framework-native hosts that require strict WPF patterns, including binding-first integration and minimal code-behind.
+
+During implementation, project structure was expanded to preserve UI boundaries and to support future host reuse.
+
+### Decision
+
+1. **WPF Control Added as First-Class Implementation**
+
+   `Graphing.Controls.WPF` now contains a WPF-native `EngineeringGraphControl` implementation that preserves the same core model/snapshot/presentation semantics as the WinForms control.
+
+2. **Binding-First Host Contract for WPF**
+
+   The WPF control exposes dependency-property-backed host inputs so consuming applications can bind from `DataContext` in strict MVVM workflows:
+
+   - `GraphModel`
+   - `GraphPresentationOptions`
+   - `ZoomEnabled`
+   - `ZoomExtentsRequestVersion` (trigger token for zoom reset requests)
+
+   Method-based APIs remain available for compatibility, but binding-based integration is the preferred host pattern.
+
+3. **Preserve Framework Boundaries**
+
+   `Graphing.Controls.WPF` remains strictly WPF with no WinForms dependencies.
+
+4. **UI-Free ViewModel Layer for WPF Harness**
+
+   A non-UI assembly, `Graphing.TestHarness.WPF.Core` (`net10.0`), was introduced to host view models and command orchestration. This avoids UI leakage into reusable harness logic and preserves clean layering.
+
+5. **Solution Structure Updated**
+
+   The solution now includes:
+
+   - `Graphing.Controls.WPF`
+   - `Graphing.TestHarness.WPF`
+   - `Graphing.TestHarness.WPF.Core`
+
+   This structure reflects explicit separation between control implementation, UI host, and non-UI host logic.
+
+### Consequences
+
+#### Positive
+
+- EngineeringGraphControl now has both WinForms and WPF implementations under a shared architectural model.
+- WPF consumers can integrate via bindings without relying on code-behind method invocations.
+- View-model orchestration is testable and reusable in a UI-free project.
+- Framework boundaries are explicit and enforceable.
+
+#### Trade-offs
+
+- WPF host integration introduces additional contract surface (dependency properties and trigger-token semantics).
+- Solution and documentation footprint increased to capture the expanded implementation.
+
+### Follow-on Work
+
+- Continue parity work for deferred interactions (for example, animation bar parity where required).
+- Keep options editor parity deferred until explicitly prioritized.
+- Maintain shared API documentation as a living contract as parity evolves.
