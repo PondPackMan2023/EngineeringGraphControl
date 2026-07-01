@@ -3,6 +3,10 @@
 A .NET class library providing engineering graph control components for Windows
 applications (WinForms / WPF), targeting both .NET Framework 4.8 and .NET 6+.
 
+> This branch, `legacy/multitarget-net48-net6` keeps the multitargeting of net48
+> and net6.0-windows intact for potential integration into OpenFlows.  There will
+> be no active development on this branch.
+
 ## Relationship to UnitRegistry
 
 This repository uses
@@ -33,7 +37,7 @@ dotnet test EngineeringGraphControl.slnx
 
 ## Repository layout
 
-```
+```plaintext
 EngineeringGraphControl.slnx
 Directory.Build.props          # Redirects all build output to /out
 Directory.Packages.props       # Central NuGet version management
