@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
     <ProjectReference Include="..\Graphing.Editors\Graphing.Editors.csproj" />
     <ProjectReference Include="..\Graphing.TestHarness\Graphing.TestHarness.csproj" />

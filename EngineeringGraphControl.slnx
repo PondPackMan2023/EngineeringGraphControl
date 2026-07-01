@@ -2,6 +2,7 @@
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
+  <Folder Name="/src/" />
   <Folder Name="/Tests/">
     <Project Path="src/Graphing.TestHarness/Graphing.TestHarness.csproj" Id="080b331c-5cf1-40f8-8a5f-b6494fc6a4dd">
       <Platform Project="x64" />
@@ -9,7 +10,7 @@
     <Project Path="src/Graphing.Tests/Graphing.Tests.csproj">
       <Platform Project="x64" />
     </Project>
-    <Project Path="src/Graphing.TestScenarios/Graphing.TestScenarios.csproj" Id="428c47f3-2cec-4aad-9eef-9c03a2103c4f" >
+    <Project Path="src/Graphing.TestScenarios/Graphing.TestScenarios.csproj" Id="428c47f3-2cec-4aad-9eef-9c03a2103c4f">
       <Platform Project="x64" />
     </Project>
   </Folder>
@@ -22,6 +23,9 @@
     </Project>
   </Folder>
   <Project Path="src/Graphing.Controls/Graphing.Controls.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="src/Graphing.Core/Graphing.Core.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="src/Graphing.Editors/Graphing.Editors.csproj">
