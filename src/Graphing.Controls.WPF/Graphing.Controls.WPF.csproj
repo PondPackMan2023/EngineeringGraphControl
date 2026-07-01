@@ -10,6 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
     <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
+    <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
+    <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
   </ItemGroup>
 
 </Project>
