@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
+    <ProjectReference Include="..\Graphing.Controls.WinForms\Graphing.Controls.WinForms.csproj" />
   </ItemGroup>
 
   <ItemGroup>

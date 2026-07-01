@@ -7,6 +7,9 @@
     <Project Path="src/Graphing.TestHarness/Graphing.TestHarness.csproj" Id="080b331c-5cf1-40f8-8a5f-b6494fc6a4dd">
       <Platform Project="x64" />
     </Project>
+    <Project Path="src/Graphing.Core.Tests/Graphing.Core.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="src/Graphing.Tests/Graphing.Tests.csproj">
       <Platform Project="x64" />
     </Project>
@@ -22,13 +25,23 @@
       <Platform Project="x64" />
     </Project>
   </Folder>
+  <Folder Name="/WinForms/">
+    <Project Path="src/Graphing.Controls.WinForms/Graphing.Controls.WinForms.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/Graphing.Editors.WinForms/Graphing.Editors.WinForms.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/WPF/">
+    <Project Path="src/Graphing.Controls.WPF/Graphing.Controls.WPF.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
   <Project Path="src/Graphing.Controls/Graphing.Controls.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="src/Graphing.Core/Graphing.Core.csproj">
-    <Platform Project="x64" />
-  </Project>
-  <Project Path="src/Graphing.Editors/Graphing.Editors.csproj">
     <Platform Project="x64" />
   </Project>
 </Solution>

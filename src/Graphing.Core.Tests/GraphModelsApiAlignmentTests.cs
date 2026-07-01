@@ -7,7 +7,7 @@ using System.Linq;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
-namespace Graphing.Tests
+namespace Graphing.Core.Tests
 {
 
     [TestFixture]

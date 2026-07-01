@@ -11,16 +11,16 @@ namespace Graphing.Controls.Rendering
     internal interface IGraphRenderer
     {
         /// <summary>
-        /// Renders <paramref name="model"/> into <paramref name="g"/> within
+        /// Renders <paramref name="model"/> into <paramref name="context"/> within
         /// <paramref name="deviceBounds"/>.
         /// </summary>
-        void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null);
+        void Render(IGraphRenderContext context, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null);
 
         /// <summary>
-        /// Creates a measurement input backed by <paramref name="g"/> for use during
+        /// Creates a measurement input backed by <paramref name="context"/> for use during
         /// layout computation. This method exists on the renderer boundary because
         /// font/text measurements are renderer-technology-specific.
         /// </summary>
-        IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds);
+        IGraphLayoutMeasurementInput CreateMeasurementInput(IGraphRenderContext context, Rectangle deviceBounds);
     }
 }

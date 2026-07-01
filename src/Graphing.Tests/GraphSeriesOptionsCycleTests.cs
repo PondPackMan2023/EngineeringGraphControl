@@ -154,12 +154,12 @@ namespace Graphing.Tests
             seriesItem.Color = customColor;
 
             var appliedOptions = pm1.BuildGraphPresentationOptions();
-            Assert.That(appliedOptions.SeriesStyles[seriesItem.SeriesId].Color, Is.EqualTo(customColor));
+            Assert.That(appliedOptions.SeriesStyles[seriesItem.SeriesId].Color, Is.EqualTo(ToGraphColor(customColor)));
 
             var pm2 = new GraphOptionsPresentationModel(model, appliedOptions);
             var seriesItem2 = pm2.Series.Series[0];
 
-            Assert.That(seriesItem2.Color, Is.EqualTo(customColor),
+            Assert.That(seriesItem2.Color.ToArgb(), Is.EqualTo(customColor.ToArgb()),
                 "Series color should round-trip as a persistent style.");
         }
 
@@ -175,7 +175,7 @@ namespace Graphing.Tests
             var editorModel = new GraphOptionsPresentationModel(model, options, snapshot);
             var seriesItem = editorModel.Series.Series[0];
 
-            Assert.That(seriesItem.Color, Is.EqualTo(presentation.Series[0].SeriesColor),
+            Assert.That(seriesItem.Color.ToArgb(), Is.EqualTo(ToDrawingColor(presentation.Series[0].SeriesColor).ToArgb()),
                 "Series editor must display the same stored color used by rendering.");
         }
 
@@ -190,7 +190,7 @@ namespace Graphing.Tests
                 {
                     [seriesId] = new SeriesStyle
                     {
-                        Color = styleColor
+                        Color = ToGraphColor(styleColor)
                     }
                 });
 
@@ -199,12 +199,12 @@ namespace Graphing.Tests
             var editorModel = new GraphOptionsPresentationModel(model, options, snapshot);
             var seriesItem = editorModel.Series.Series[0];
 
-            Assert.That(presentation.Series[0].SeriesColor, Is.EqualTo(styleColor),
+            Assert.That(presentation.Series[0].SeriesColor, Is.EqualTo(ToGraphColor(styleColor)),
                 "Presentation series color must use the stored series style color.");
             Assert.That(presentation.Layout.Legend, Is.Not.Null);
-            Assert.That(presentation.Layout.Legend.Entries[0].SeriesColor, Is.EqualTo(styleColor),
+            Assert.That(presentation.Layout.Legend.Entries[0].SeriesColor, Is.EqualTo(ToGraphColor(styleColor)),
                 "Legend entry color must match the stored rendered series color.");
-            Assert.That(seriesItem.Color, Is.EqualTo(styleColor),
+            Assert.That(seriesItem.Color.ToArgb(), Is.EqualTo(styleColor.ToArgb()),
                 "Series editor must display stored series color.");
         }
 
@@ -510,6 +510,16 @@ namespace Graphing.Tests
                 yAxis);
 
             return new GraphModel(new[] { xAxis, yAxis }, new[] { series1, series2, series3 });
+        }
+
+        private static GraphColor ToGraphColor(Color color)
+        {
+            return GraphColor.FromArgb(color.ToArgb());
+        }
+
+        private static Color ToDrawingColor(GraphColor color)
+        {
+            return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
     }
 }

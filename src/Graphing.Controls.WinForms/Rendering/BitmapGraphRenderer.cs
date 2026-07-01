@@ -4,21 +4,23 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.IO;
 
 namespace Graphing.Controls.Rendering
 {
     /// <summary>
     /// Headless, off-screen renderer that independently implements <see cref="IGraphRenderer"/>
-    /// using GDI+ metafile primitives only.
+    /// using GDI+ (<see cref="System.Drawing"/>) primitives only.
     ///
-    /// This renderer is a sibling of <see cref="WinFormsGraphRenderer"/> and
-    /// <see cref="BitmapGraphRenderer"/>: it does not compose, subclass, or delegate to either.
-    /// All rasterization and measurement behavior is implemented locally against a
-    /// metafile-backed <see cref="Graphics"/> surface.
+    /// This renderer is a sibling of <see cref="WinFormsGraphRenderer"/>: it does not
+    /// compose, subclass, or delegate to it. Both renderers consume the same presentation
+    /// model through the shared <see cref="IGraphRenderer"/> abstraction and perform all
+    /// rasterization steps independently.
+    ///
+    /// The renderer requires no UI surface, WinForms paint event, or UI thread. Callers
+    /// are responsible for disposing the <see cref="Bitmap"/> returned by
+    /// <see cref="RenderToBitmap"/>.
     /// </summary>
-    internal sealed class MetafileGraphRenderer : IGraphRenderer
+    internal sealed class BitmapGraphRenderer : GraphRendererBase
     {
         private const int TickLength = 5;
         private const int TickLabelOffset = 3;
@@ -51,25 +53,24 @@ namespace Graphing.Controls.Rendering
 
         private readonly float _dpiX;
         private readonly float _dpiY;
-        private readonly EmfType _emfType;
 
-        internal MetafileGraphRenderer(float dpiX = 96f, float dpiY = 96f, EmfType emfType = EmfType.EmfPlusDual)
+        /// <param name="dpiX">Horizontal DPI for the off-screen bitmap (default: 96).</param>
+        /// <param name="dpiY">Vertical DPI for the off-screen bitmap (default: 96).</param>
+        internal BitmapGraphRenderer(float dpiX = 96f, float dpiY = 96f)
         {
             _dpiX = dpiX;
             _dpiY = dpiY;
-            _emfType = emfType;
         }
 
-        public void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
+        // ── IGraphRenderer ────────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        protected override void RenderCore(IGraphDrawingSurface surface, RectangleF plotRect, GraphPresentationModel model, GraphPresentationOptions options)
         {
-            if (g == null || model == null || deviceBounds.Width <= 0 || deviceBounds.Height <= 0)
-            {
-                return;
-            }
-
-            var plotRect = ComputeDevicePlotRect(deviceBounds, model.Layout.PlotArea);
-
-            if (plotRect.Width <= 0 || plotRect.Height <= 0)
+            var winFormsSurface = surface as WinFormsGraphDrawingSurface;
+            var g = winFormsSurface?.Graphics;
+            var deviceBounds = winFormsSurface != null ? winFormsSurface.DeviceBounds : Rectangle.Empty;
+            if (g == null)
             {
                 return;
             }
@@ -84,63 +85,60 @@ namespace Graphing.Controls.Rendering
             RenderLegend(g, deviceBounds, model.Layout.Legend);
         }
 
-        public IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
+        internal void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
         {
-            return new MetafileLayoutMeasurementInput(g, deviceBounds);
+            Render(new WinFormsGraphRenderContext(g), deviceBounds, model, options);
         }
 
-        internal void RenderToMetafile(
+        /// <inheritdoc/>
+        protected override IGraphLayoutMeasurementInput CreateMeasurementInputCore(IGraphRenderContext context, Rectangle deviceBounds)
+        {
+            var g = TryResolveGraphics(context);
+            return new BitmapLayoutMeasurementInput(g, deviceBounds);
+        }
+
+        internal IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
+        {
+            return CreateMeasurementInput(new WinFormsGraphRenderContext(g), deviceBounds);
+        }
+
+        // ── Off-screen rendering ──────────────────────────────────────────────
+
+        /// <summary>
+        /// Renders <paramref name="model"/> into a new off-screen <see cref="Bitmap"/> of the
+        /// requested <paramref name="width"/> and <paramref name="height"/>.
+        /// The bitmap is created at the DPI specified in the constructor.
+        ///
+        /// The caller takes ownership of the returned bitmap and is responsible for disposing it.
+        /// </summary>
+        internal Bitmap RenderToBitmap(
             int width,
             int height,
-            Stream output,
             GraphPresentationModel model,
             GraphPresentationOptions options = null)
         {
-            if (output == null)
+            var bmp = new Bitmap(width, height);
+            bmp.SetResolution(_dpiX, _dpiY);
+
+            using (var g = Graphics.FromImage(bmp))
             {
-                throw new ArgumentNullException(nameof(output));
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.Clear(Color.White);
+                Render(g, new Rectangle(0, 0, width, height), model, options);
             }
 
-            using (var referenceBitmap = new Bitmap(Math.Max(1, width), Math.Max(1, height)))
-            {
-                referenceBitmap.SetResolution(_dpiX, _dpiY);
-
-                using (var referenceGraphics = Graphics.FromImage(referenceBitmap))
-                {
-                    var hdc = referenceGraphics.GetHdc();
-                    try
-                    {
-                        using (var metafile = new Metafile(
-                            output,
-                            hdc,
-                            new Rectangle(0, 0, Math.Max(1, width), Math.Max(1, height)),
-                            MetafileFrameUnit.Pixel,
-                            _emfType,
-                            "EngineeringGraphControl"))
-                        using (var metafileGraphics = Graphics.FromImage(metafile))
-                        {
-                            metafileGraphics.PageUnit = GraphicsUnit.Pixel;
-                            metafileGraphics.SmoothingMode = SmoothingMode.AntiAlias;
-                            metafileGraphics.PixelOffsetMode = PixelOffsetMode.Half;
-                            metafileGraphics.Clear(Color.White);
-                            Render(metafileGraphics, new Rectangle(0, 0, width, height), model, options);
-                            metafileGraphics.Flush();
-                        }
-                    }
-                    finally
-                    {
-                        referenceGraphics.ReleaseHdc(hdc);
-                    }
-                }
-            }
+            return bmp;
         }
 
-        private sealed class MetafileLayoutMeasurementInput : IGraphLayoutMeasurementInput
+        // ── Measurement input ─────────────────────────────────────────────────
+
+        private sealed class BitmapLayoutMeasurementInput : IGraphLayoutMeasurementInput
         {
             private readonly Graphics _graphics;
             private readonly Rectangle _deviceBounds;
 
-            internal MetafileLayoutMeasurementInput(Graphics graphics, Rectangle deviceBounds)
+            internal BitmapLayoutMeasurementInput(Graphics graphics, Rectangle deviceBounds)
             {
                 _graphics = graphics;
                 _deviceBounds = deviceBounds;
@@ -336,6 +334,8 @@ namespace Graphing.Controls.Rendering
             }
         }
 
+        // ── Border rendering ──────────────────────────────────────────────────
+
         private static void RenderOuterGraphBorder(Graphics g, Rectangle deviceBounds, GraphPresentationOptions options)
         {
             var showBorder = options?.ShowGraphBorder ?? true;
@@ -351,6 +351,8 @@ namespace Graphing.Controls.Rendering
         {
             g.DrawRectangle(PlotAreaBorderPen, plotRect.X, plotRect.Y, plotRect.Width, plotRect.Height);
         }
+
+        // ── Grid line rendering ───────────────────────────────────────────────
 
         private static void RenderGridLines(Graphics g, RectangleF plotRect, GridLinesGeometry gridLines, GraphPresentationModel model)
         {
@@ -446,6 +448,8 @@ namespace Graphing.Controls.Rendering
             }
         }
 
+        // ── Axis rendering ────────────────────────────────────────────────────
+
         private static void RenderAxes(Graphics g, RectangleF plotRect, Rectangle deviceBounds, GraphPresentationModel model)
         {
             var axisEntries = model.Layout.Axes;
@@ -483,7 +487,12 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static void RenderBottomAxis(Graphics g, RectangleF plotRect, RectangleF? sideBandRect, AxisPresentationGeometry axis, double endpointInset)
+        private static void RenderBottomAxis(
+            Graphics g,
+            RectangleF plotRect,
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
             _ = endpointInset;
             if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
@@ -499,7 +508,11 @@ namespace Graphing.Controls.Rendering
             var clip = g.ClipBounds;
             if (sideBandRect.HasValue)
             {
-                var relaxed = new RectangleF(clip.Left, sideBandRect.Value.Top, clip.Width, sideBandRect.Value.Height);
+                var relaxed = new RectangleF(
+                    clip.Left,
+                    sideBandRect.Value.Top,
+                    clip.Width,
+                    sideBandRect.Value.Height);
                 g.SetClip(relaxed, CombineMode.Intersect);
             }
 
@@ -540,7 +553,12 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static void RenderLeftAxis(Graphics g, RectangleF plotRect, RectangleF? sideBandRect, AxisPresentationGeometry axis, double endpointInset)
+        private static void RenderLeftAxis(
+            Graphics g,
+            RectangleF plotRect,
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
             _ = endpointInset;
             if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
@@ -560,7 +578,7 @@ namespace Graphing.Controls.Rendering
             }
 
             var ticks = axis.Ticks;
-            const int Step = 1;
+            const int step = 1;
             try
             {
                 for (var i = 0; i < ticks.Count; i++)
@@ -571,7 +589,7 @@ namespace Graphing.Controls.Rendering
                     var end = MapVerticalTickPointToDevice(tick.End, domainMin, domainMax, plotRect, axisX);
                     g.DrawLine(AxisPen, start, end);
 
-                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, Step))
+                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
                         var label = FitLabelToWidth(g, tick.Label, TickFont, sideBandRect.HasValue ? sideBandRect.Value.Width : float.MaxValue);
                         if (string.IsNullOrEmpty(label))
@@ -597,7 +615,12 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static void RenderRightAxis(Graphics g, RectangleF plotRect, RectangleF? sideBandRect, AxisPresentationGeometry axis, double endpointInset)
+        private static void RenderRightAxis(
+            Graphics g,
+            RectangleF plotRect,
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
             _ = endpointInset;
             if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
@@ -617,7 +640,7 @@ namespace Graphing.Controls.Rendering
             }
 
             var ticks = axis.Ticks;
-            const int Step = 1;
+            const int step = 1;
             try
             {
                 for (var i = 0; i < ticks.Count; i++)
@@ -628,7 +651,7 @@ namespace Graphing.Controls.Rendering
                     var end = MapVerticalTickPointToDevice(tick.End, domainMin, domainMax, plotRect, axisX);
                     g.DrawLine(AxisPen, start, end);
 
-                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, Step))
+                    if (!string.IsNullOrEmpty(tick.Label) && ShouldRenderTickLabel(i, step))
                     {
                         var label = FitLabelToWidth(g, tick.Label, TickFont, sideBandRect.HasValue ? sideBandRect.Value.Width : float.MaxValue);
                         if (string.IsNullOrEmpty(label))
@@ -654,7 +677,12 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static void RenderTopAxis(Graphics g, RectangleF plotRect, RectangleF? sideBandRect, AxisPresentationGeometry axis, double endpointInset)
+        private static void RenderTopAxis(
+            Graphics g,
+            RectangleF plotRect,
+            RectangleF? sideBandRect,
+            AxisPresentationGeometry axis,
+            double endpointInset)
         {
             _ = endpointInset;
             if (!axis.MinimumValue.HasValue || !axis.MaximumValue.HasValue)
@@ -710,7 +738,10 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static RectangleF? FindAxisTickLabelRegionRect(Rectangle deviceBounds, IReadOnlyList<AxisTitleBandGeometry> bands, AxisSide side)
+        private static RectangleF? FindAxisTickLabelRegionRect(
+            Rectangle deviceBounds,
+            IReadOnlyList<AxisTitleBandGeometry> bands,
+            AxisSide side)
         {
             if (bands == null)
             {
@@ -724,13 +755,21 @@ namespace Graphing.Controls.Rendering
                     continue;
                 }
 
-                return ComputeDeviceBoundsForGeometry(deviceBounds, bands[i].AxisTickLabelRegion.BottomLeft, bands[i].AxisTickLabelRegion.TopRight);
+                return ComputeDeviceBoundsForGeometry(
+                    deviceBounds,
+                    bands[i].AxisTickLabelRegion.BottomLeft,
+                    bands[i].AxisTickLabelRegion.TopRight);
             }
 
             return null;
         }
 
-        private static void RenderAxisTitles(Graphics g, Rectangle deviceBounds, IReadOnlyList<AxisTitleBandGeometry> bands)
+        // ── Axis title rendering ──────────────────────────────────────────────
+
+        private static void RenderAxisTitles(
+            Graphics g,
+            Rectangle deviceBounds,
+            IReadOnlyList<AxisTitleBandGeometry> bands)
         {
             if (bands == null)
             {
@@ -748,7 +787,10 @@ namespace Graphing.Controls.Rendering
                         continue;
                     }
 
-                    var itemRect = ComputeDeviceBoundsForGeometry(deviceBounds, item.AxisTitleRegion.BottomLeft, item.AxisTitleRegion.TopRight);
+                    var itemRect = ComputeDeviceBoundsForGeometry(
+                        deviceBounds,
+                        item.AxisTitleRegion.BottomLeft,
+                        item.AxisTitleRegion.TopRight);
 
                     if (itemRect.Width <= 0 || itemRect.Height <= 0)
                     {
@@ -776,6 +818,8 @@ namespace Graphing.Controls.Rendering
                 }
             }
         }
+
+        // ── Title rendering ───────────────────────────────────────────────────
 
         private static void RenderTitles(Graphics g, Rectangle deviceBounds, GraphLayoutModel layout)
         {
@@ -822,6 +866,8 @@ namespace Graphing.Controls.Rendering
             var centerY = subtitleRect.Top + (subtitleRect.Height - subtitleSize.Height) / 2f;
             g.DrawString(subtitle.Text, GraphSubtitleFont, TickLabelBrush, centerX, centerY);
         }
+
+        // ── Legend rendering ──────────────────────────────────────────────────
 
         private static void RenderLegend(Graphics g, Rectangle deviceBounds, LegendPresentationGeometry legend)
         {
@@ -877,7 +923,7 @@ namespace Graphing.Controls.Rendering
             var glyphRight = glyphLeft + glyphWidth;
             var glyphCenterY = glyphRect.Top + (glyphRect.Height / 2f);
 
-            using (var glyphPen = new Pen(entry.SeriesColor, LegendLineWidth))
+            using (var glyphPen = new Pen(ToDrawingColor(entry.SeriesColor), LegendLineWidth))
             {
                 var markerRadius = LegendMarkerSize / 2f;
                 var markerCenterX = glyphLeft + (glyphWidth / 2f);
@@ -889,7 +935,12 @@ namespace Graphing.Controls.Rendering
 
                 if (entry.GlyphKind == LegendGlyphKind.Point || entry.GlyphKind == LegendGlyphKind.LineAndPoint)
                 {
-                    g.DrawEllipse(glyphPen, markerCenterX - markerRadius, glyphCenterY - markerRadius, LegendMarkerSize, LegendMarkerSize);
+                    g.DrawEllipse(
+                        glyphPen,
+                        markerCenterX - markerRadius,
+                        glyphCenterY - markerRadius,
+                        LegendMarkerSize,
+                        LegendMarkerSize);
                 }
             }
 
@@ -903,6 +954,8 @@ namespace Graphing.Controls.Rendering
             var textY = entryRect.Top + ((entryRect.Height - textSize.Height) / 2f);
             g.DrawString(entry.DisplayText, LegendFont, TickLabelBrush, textX, textY);
         }
+
+        // ── Series rendering ──────────────────────────────────────────────────
 
         private static void RenderSeries(Graphics g, RectangleF plotRect, GraphPresentationModel model)
         {
@@ -932,15 +985,15 @@ namespace Graphing.Controls.Rendering
                     continue;
                 }
 
-                var xMin = xAxis.MinimumValue.Value;
-                var xMax = xAxis.MaximumValue.Value;
+                double xMin = xAxis.MinimumValue.Value;
+                double xMax = xAxis.MaximumValue.Value;
                 if (xMin >= xMax)
                 {
                     continue;
                 }
 
-                var yMin = yAxis.MinimumValue.Value;
-                var yMax = yAxis.MaximumValue.Value;
+                double yMin = yAxis.MinimumValue.Value;
+                double yMax = yAxis.MaximumValue.Value;
                 if (yMin >= yMax)
                 {
                     continue;
@@ -951,7 +1004,12 @@ namespace Graphing.Controls.Rendering
             }
         }
 
-        private static void RenderOneSeries(Graphics g, RectangleF seriesRect, SeriesPresentationGeometry series, double xMin, double xMax, double yMin, double yMax)
+        private static void RenderOneSeries(
+            Graphics g,
+            RectangleF seriesRect,
+            SeriesPresentationGeometry series,
+            double xMin, double xMax,
+            double yMin, double yMax)
         {
             var points = series.Points;
             if (points == null || points.Count < 1)
@@ -962,8 +1020,8 @@ namespace Graphing.Controls.Rendering
             var clip = g.ClipBounds;
             g.SetClip(seriesRect, CombineMode.Intersect);
 
-            using (var seriesPen = new Pen(series.SeriesColor, SeriesLineWidth))
-            using (var seriesBrush = new SolidBrush(series.SeriesColor))
+            using (var seriesPen = new Pen(ToDrawingColor(series.SeriesColor), SeriesLineWidth))
+            using (var seriesBrush = new SolidBrush(ToDrawingColor(series.SeriesColor)))
             {
                 try
                 {
@@ -974,7 +1032,12 @@ namespace Graphing.Controls.Rendering
                             var domainPoint = points[i];
                             var deviceX = DomainToDeviceX(domainPoint.X, xMin, xMax, seriesRect);
                             var deviceY = DomainToDeviceY(domainPoint.Y, yMin, yMax, seriesRect);
-                            g.FillEllipse(seriesBrush, deviceX - DiscretePointMarkerRadius, deviceY - DiscretePointMarkerRadius, DiscretePointMarkerSize, DiscretePointMarkerSize);
+                            g.FillEllipse(
+                                seriesBrush,
+                                deviceX - DiscretePointMarkerRadius,
+                                deviceY - DiscretePointMarkerRadius,
+                                DiscretePointMarkerSize,
+                                DiscretePointMarkerSize);
                         }
                     }
                     else
@@ -1004,6 +1067,29 @@ namespace Graphing.Controls.Rendering
             }
         }
 
+        private static Color ToDrawingColor(GraphColor color)
+        {
+            return Color.FromArgb(color.A, color.R, color.G, color.B);
+        }
+
+        private static Graphics TryResolveGraphics(IGraphRenderContext context)
+        {
+            return (context as WinFormsGraphRenderContext)?.Graphics;
+        }
+
+        protected override IGraphDrawingSurface TryCreateDrawingSurface(IGraphRenderContext context, Rectangle deviceBounds)
+        {
+            var g = TryResolveGraphics(context);
+            if (g == null)
+            {
+                return null;
+            }
+
+            return new WinFormsGraphDrawingSurface(g, deviceBounds);
+        }
+
+        // ── Geometry helpers ──────────────────────────────────────────────────
+
         private static RectangleF ComputeAxisRect(RectangleF plotRect, AxisLayoutEntry entry)
         {
             if (entry == null)
@@ -1030,7 +1116,10 @@ namespace Graphing.Controls.Rendering
             return RectangleF.FromLTRB(insetRect.Left, top, insetRect.Right, bottom);
         }
 
-        private static RectangleF ComputeSeriesRect(RectangleF plotRect, AxisLayoutEntry xAxisEntry, AxisLayoutEntry yAxisEntry)
+        private static RectangleF ComputeSeriesRect(
+            RectangleF plotRect,
+            AxisLayoutEntry xAxisEntry,
+            AxisLayoutEntry yAxisEntry)
         {
             var rect = plotRect;
             if (xAxisEntry != null)
@@ -1083,7 +1172,8 @@ namespace Graphing.Controls.Rendering
             return RectangleF.FromLTRB(left, plotRect.Top, right, plotRect.Bottom);
         }
 
-        private static RectangleF ComputeDeviceBoundsForGeometry(Rectangle deviceBounds, GeometryPoint3D bottomLeft, GeometryPoint3D topRight)
+        private static RectangleF ComputeDeviceBoundsForGeometry(
+            Rectangle deviceBounds, GeometryPoint3D bottomLeft, GeometryPoint3D topRight)
         {
             var left = deviceBounds.Left + bottomLeft.X * deviceBounds.Width;
             var right = deviceBounds.Left + topRight.X * deviceBounds.Width;
@@ -1092,16 +1182,10 @@ namespace Graphing.Controls.Rendering
             return RectangleF.FromLTRB((float)left, (float)top, (float)right, (float)bottom);
         }
 
-        private static RectangleF ComputeDevicePlotRect(Rectangle deviceBounds, PlotAreaLayout plotArea)
-        {
-            var left = deviceBounds.Left + plotArea.BottomLeft.X * deviceBounds.Width;
-            var right = deviceBounds.Left + plotArea.TopRight.X * deviceBounds.Width;
-            var top = deviceBounds.Bottom - plotArea.TopRight.Y * deviceBounds.Height;
-            var bottom = deviceBounds.Bottom - plotArea.BottomLeft.Y * deviceBounds.Height;
-            return RectangleF.FromLTRB((float)left, (float)top, (float)right, (float)bottom);
-        }
+        // ── Coordinate transforms ─────────────────────────────────────────────
 
-        private static float DomainToDeviceX(double domainValue, double domainMin, double domainMax, RectangleF plotRect)
+        private static float DomainToDeviceX(
+            double domainValue, double domainMin, double domainMax, RectangleF plotRect)
         {
             var range = domainMax - domainMin;
             if (Math.Abs(range) < double.Epsilon)
@@ -1113,7 +1197,8 @@ namespace Graphing.Controls.Rendering
             return plotRect.Left + (float)(t * plotRect.Width);
         }
 
-        private static float DomainToDeviceY(double domainValue, double domainMin, double domainMax, RectangleF plotRect)
+        private static float DomainToDeviceY(
+            double domainValue, double domainMin, double domainMax, RectangleF plotRect)
         {
             var range = domainMax - domainMin;
             if (Math.Abs(range) < double.Epsilon)
@@ -1125,27 +1210,38 @@ namespace Graphing.Controls.Rendering
             return plotRect.Bottom - (float)(t * plotRect.Height);
         }
 
-        private static PointF MapHorizontalTickPointToDevice(GeometryPoint3D point, double domainMin, double domainMax, RectangleF axisRect, float axisY)
+        // ── Tick helpers ──────────────────────────────────────────────────────
+
+        private static PointF MapHorizontalTickPointToDevice(
+            GeometryPoint3D point,
+            double domainMin,
+            double domainMax,
+            RectangleF axisRect,
+            float axisY)
         {
             var x = DomainToDeviceX(point.X, domainMin, domainMax, axisRect);
             var y = axisY + (float)(point.Y * axisRect.Height);
             return new PointF(x, y);
         }
 
-        private static PointF MapVerticalTickPointToDevice(GeometryPoint3D point, double domainMin, double domainMax, RectangleF axisRect, float axisX)
+        private static PointF MapVerticalTickPointToDevice(
+            GeometryPoint3D point,
+            double domainMin,
+            double domainMax,
+            RectangleF axisRect,
+            float axisX)
         {
             var x = axisX + (float)(point.X * axisRect.Width);
             var y = DomainToDeviceY(point.Y, domainMin, domainMax, axisRect);
             return new PointF(x, y);
         }
 
-        private static int ComputeTickLabelStep(Graphics g, IReadOnlyList<AxisTickPresentation> ticks, RectangleF? tickLabelRegion, AxisSide side)
+        private static int ComputeTickLabelStep(
+            Graphics g,
+            IReadOnlyList<AxisTickPresentation> ticks,
+            RectangleF? tickLabelRegion,
+            AxisSide side)
         {
-            if (!tickLabelRegion.HasValue)
-            {
-                return 1;
-            }
-
             var region = tickLabelRegion.Value;
             if (region.Width <= 1f || region.Height <= 1f)
             {
@@ -1241,7 +1337,14 @@ namespace Graphing.Controls.Rendering
             return value;
         }
 
-        private static void DrawRotatedCenteredText(Graphics g, string text, Font font, Brush brush, float centerX, float centerY, float angle)
+        private static void DrawRotatedCenteredText(
+            Graphics g,
+            string text,
+            Font font,
+            Brush brush,
+            float centerX,
+            float centerY,
+            float angle)
         {
             var textSize = g.MeasureString(text, font);
             var state = g.Save();

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using Graphing.Controls.Rendering.Geometry;
 using Graphing.Controls.Snapshot;
 
@@ -58,7 +57,7 @@ namespace Graphing.Controls.Presentation
         private const double LegendMinBandWidth = 0.05;
         private const double LegendMinBandHeight = 0.04;
 
-        internal static Color ResolveSeriesColor(
+        internal static GraphColor ResolveSeriesColor(
             ISeriesSnapshot seriesSnapshot,
             int visibleSeriesIndex,
             GraphPresentationOptions options)

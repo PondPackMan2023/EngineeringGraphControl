@@ -73,7 +73,7 @@ namespace Graphing.Editors.Presentation
                 {
                     HasLabelOverride = series.HasLabelOverride,
                     Label = series.HasLabelOverride ? series.Label : null,
-                    Color = series.Color
+                    Color = ToGraphColor(series.Color)
                 };
             }
 
@@ -152,7 +152,7 @@ namespace Graphing.Editors.Presentation
                 {
                     item.HasLabelOverride = style.HasLabelOverride;
                     item.Label = style.Label ?? series.Label;
-                    item.Color = style.Color;
+                    item.Color = ToDrawingColor(style.Color);
                 }
 
                 model.Series.Add(item);
@@ -178,7 +178,7 @@ namespace Graphing.Editors.Presentation
                 var seriesGeometry = presentation.Series[seriesIndex];
                 if (seriesGeometry != null && seriesGeometry.SeriesId != null)
                 {
-                    lookup[seriesGeometry.SeriesId] = seriesGeometry.SeriesColor;
+                    lookup[seriesGeometry.SeriesId] = ToDrawingColor(seriesGeometry.SeriesColor);
                 }
             }
 
@@ -283,6 +283,16 @@ namespace Graphing.Editors.Presentation
                 Position = existingOptions.LegendPlacement
             };
             return model;
+        }
+
+        private static GraphColor ToGraphColor(Color color)
+        {
+            return GraphColor.FromArgb(color.ToArgb());
+        }
+
+        private static Color ToDrawingColor(GraphColor color)
+        {
+            return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
     }
 }

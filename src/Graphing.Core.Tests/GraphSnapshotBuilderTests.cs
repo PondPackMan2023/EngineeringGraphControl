@@ -1,10 +1,11 @@
+using System;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Snapshot;
 using NUnit.Framework;
 using UnitRegistry;
 
-namespace Graphing.Tests
+namespace Graphing.Core.Tests
 {
     [TestFixture]
     public class GraphSnapshotBuilderTests
@@ -172,6 +173,30 @@ namespace Graphing.Tests
                     new GraphSeriesModel(new SeriesId("series-3"), "series-3", SeriesType.Line, xField, yField3, xAxis, yAxis),
                     new GraphSeriesModel(new SeriesId("series-4"), "series-4", SeriesType.Line, xField, yField4, xAxis, yAxis)
                 });
+        }
+
+        private sealed class TestFieldDefinition : IGraphFieldDefinition
+        {
+            private readonly Array _values;
+
+            public TestFieldDefinition(string label, string name, Unit unit, Array values)
+            {
+                Label = label;
+                Name = name;
+                Unit = unit;
+                _values = values;
+            }
+
+            public string Label { get; }
+
+            public string Name { get; }
+
+            public Unit Unit { get; }
+
+            public Array GetValues()
+            {
+                return _values;
+            }
         }
     }
 }
