@@ -1,23 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-windows</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <Usewindowsforms>true</Usewindowsforms>
     <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="EngineeringGraphControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
   </ItemGroup>
 
 </Project>
