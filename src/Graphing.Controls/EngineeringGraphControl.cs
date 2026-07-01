@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Graphing.Controls
 {
@@ -95,6 +96,7 @@ namespace Graphing.Controls
 
         public IGraphModel GraphModel => _graphModel;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AnimationBarEnabled
         {
             get => _animationBarEnabled;
@@ -110,12 +112,14 @@ namespace Graphing.Controls
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public int AnimationBarXIndex
         {
             get => _animationBarXIndex;
             set => SetAnimationBarXIndex(value, isUserInitiated: false);
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color AnimationBarColor
         {
             get => _animationBarColor;
@@ -131,6 +135,7 @@ namespace Graphing.Controls
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ZoomEnabled
         {
             get => _zoomEnabled;

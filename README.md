@@ -20,8 +20,11 @@ which takes a project reference to this library.
 ## Getting Started
 
 ```bash
-# Clone including submodules
-git clone --recurse-submodules https://github.com/PondPackMan2023/EngineeringGraphControl.git
+# Clone UnitRegistry
+git clone https://github.com/PondPackMan2023/UnitRegistry.git
+
+# Clone EngineeringGraphControl
+git clone https://github.com/PondPackMan2023/EngineeringGraphControl.git
 
 # Restore & build
 dotnet restore
@@ -33,15 +36,16 @@ dotnet test EngineeringGraphControl.slnx
 
 ## Repository layout
 
-```
+```plaintext
 EngineeringGraphControl.slnx
 Directory.Build.props          # Redirects all build output to /out
 Directory.Packages.props       # Central NuGet version management
 src/
-  Graphing.Controls/           # Class library (net48 + net6.0-windows)
-  Graphing.Tests/              # NUnit test project (net10.0)
-submodules/
-  UnitRegistry/                # Git submodule
+  Graphing.Controls/           # Class library (net10.0-windows)
+  Graphing.Editors/            # Editor UI for graph options
+  Graphing.Tests/              # NUnit test project (net10.0-windows)
+  Graphing.TestHarness/        # A simple application for testing changes before release
+  Graphing.TestScenarios/      # Generates test data for testing in the test harness and unit tests.
 .github/workflows/
   ci.yml                       # PR / push CI workflow
 ```
