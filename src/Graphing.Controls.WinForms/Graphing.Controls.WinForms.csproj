@@ -2,18 +2,23 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0-windows</TargetFrameworks>
-    <RootNamespace>Graphing.TestScenarios</RootNamespace>
-    <AssemblyName>Graphing.TestScenarios</AssemblyName>
+    <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
     <Platforms>x64</Platforms>
-    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
+    <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
-    <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
-    <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="EngineeringGraphControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
   </ItemGroup>
 
 </Project>

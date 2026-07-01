@@ -50,7 +50,7 @@ namespace Graphing.Controls.Presentation
             List<SeriesGeometryContext> result,
             ISeriesSnapshot seriesSnapshot,
             IReadOnlyList<GeometryPoint3D> points,
-            System.Drawing.Color resolvedSeriesColor)
+            GraphColor resolvedSeriesColor)
         {
             if (seriesSnapshot.SeriesType == SeriesType.Line)
             {
@@ -84,7 +84,7 @@ namespace Graphing.Controls.Presentation
             ISeriesSnapshot seriesSnapshot,
             IReadOnlyList<GeometryPoint3D> points,
             SeriesConnectivityIntent connectivityIntent,
-            System.Drawing.Color resolvedSeriesColor)
+            GraphColor resolvedSeriesColor)
         {
             var geometry = new SeriesPresentationGeometry(
                 seriesSnapshot.SeriesId,

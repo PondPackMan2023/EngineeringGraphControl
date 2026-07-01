@@ -13,7 +13,8 @@
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
     <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
-    <ProjectReference Include="..\Graphing.Editors\Graphing.Editors.csproj" />
+    <ProjectReference Include="..\Graphing.Controls.WinForms\Graphing.Controls.WinForms.csproj" />
+    <ProjectReference Include="..\Graphing.Editors.WinForms\Graphing.Editors.WinForms.csproj" />
     <ProjectReference Include="..\Graphing.TestScenarios\Graphing.TestScenarios.csproj" />
   </ItemGroup>
 

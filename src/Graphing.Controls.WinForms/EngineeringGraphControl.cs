@@ -233,7 +233,8 @@ namespace Graphing.Controls
 
             if (snapshot != null)
             {
-                var measurementInput = _renderer.CreateMeasurementInput(e.Graphics, ClientRectangle);
+                var renderContext = new WinFormsGraphRenderContext(e.Graphics);
+                var measurementInput = _renderer.CreateMeasurementInput(renderContext, ClientRectangle);
                 presentation = CreatePresentationModel(snapshot, options, measurementInput);
                 lock (_snapshotSync)
                 {
@@ -248,7 +249,8 @@ namespace Graphing.Controls
 
                 try
                 {
-                    _renderer.Render(e.Graphics, ClientRectangle, presentation, options);
+                    var renderContext = new WinFormsGraphRenderContext(e.Graphics);
+                    _renderer.Render(renderContext, ClientRectangle, presentation, options);
                 }
                 finally
                 {

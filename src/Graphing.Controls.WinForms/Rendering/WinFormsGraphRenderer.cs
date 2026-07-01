@@ -15,7 +15,7 @@ namespace Graphing.Controls.Rendering
     /// The renderer is a pure consumer: it does not own, mutate, or cache any presentation
     /// objects, and does not participate in snapshot or control lifecycle decisions.
     /// </summary>
-    internal sealed class WinFormsGraphRenderer : IGraphRenderer
+    internal sealed class WinFormsGraphRenderer : GraphRendererBase
     {
         private const int TickLength = 5;
         private const int TickLabelOffset = 3;
@@ -79,16 +79,12 @@ namespace Graphing.Controls.Rendering
         /// Renders axes and series from <paramref name="model"/> into <paramref name="g"/>
         /// within the specified <paramref name="deviceBounds"/>.
         /// </summary>
-        public void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
+        protected override void RenderCore(IGraphDrawingSurface surface, RectangleF plotRect, GraphPresentationModel model, GraphPresentationOptions options)
         {
-            if (g == null || model == null || deviceBounds.Width <= 0 || deviceBounds.Height <= 0)
-            {
-                return;
-            }
-
-            var plotRect = ComputeDevicePlotRect(deviceBounds, model.Layout.PlotArea);
-
-            if (plotRect.Width <= 0 || plotRect.Height <= 0)
+            var winFormsSurface = surface as WinFormsGraphDrawingSurface;
+            var g = winFormsSurface?.Graphics;
+            var deviceBounds = winFormsSurface != null ? winFormsSurface.DeviceBounds : Rectangle.Empty;
+            if (g == null)
             {
                 return;
             }
@@ -103,9 +99,36 @@ namespace Graphing.Controls.Rendering
             RenderLegend(g, deviceBounds, model.Layout.Legend);
         }
 
-        public IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
+        internal void Render(Graphics g, Rectangle deviceBounds, GraphPresentationModel model, GraphPresentationOptions options = null)
         {
+            Render(new WinFormsGraphRenderContext(g), deviceBounds, model, options);
+        }
+
+        protected override IGraphLayoutMeasurementInput CreateMeasurementInputCore(IGraphRenderContext context, Rectangle deviceBounds)
+        {
+            var g = TryResolveGraphics(context);
             return new WinFormsLayoutMeasurementInput(g, deviceBounds);
+        }
+
+        internal IGraphLayoutMeasurementInput CreateMeasurementInput(Graphics g, Rectangle deviceBounds)
+        {
+            return CreateMeasurementInput(new WinFormsGraphRenderContext(g), deviceBounds);
+        }
+
+        protected override IGraphDrawingSurface TryCreateDrawingSurface(IGraphRenderContext context, Rectangle deviceBounds)
+        {
+            var g = TryResolveGraphics(context);
+            if (g == null)
+            {
+                return null;
+            }
+
+            return new WinFormsGraphDrawingSurface(g, deviceBounds);
+        }
+
+        private static Graphics TryResolveGraphics(IGraphRenderContext context)
+        {
+            return (context as WinFormsGraphRenderContext)?.Graphics;
         }
 
         private sealed class WinFormsLayoutMeasurementInput : IGraphLayoutMeasurementInput
@@ -935,7 +958,7 @@ namespace Graphing.Controls.Rendering
             var glyphRight = glyphLeft + glyphWidth;
             var glyphCenterY = glyphRect.Top + (glyphRect.Height / 2f);
 
-            using (var glyphPen = new Pen(entry.SeriesColor, LegendLineWidth))
+            using (var glyphPen = new Pen(ToDrawingColor(entry.SeriesColor), LegendLineWidth))
             {
                 var markerRadius = LegendMarkerSize / 2f;
                 var markerCenterX = glyphLeft + (glyphWidth / 2f);
@@ -1184,8 +1207,8 @@ namespace Graphing.Controls.Rendering
             var clip = g.ClipBounds;
             g.SetClip(seriesRect, System.Drawing.Drawing2D.CombineMode.Intersect);
 
-            using (var seriesPen = new Pen(series.SeriesColor, SeriesLineWidth))
-            using (var seriesBrush = new SolidBrush(series.SeriesColor))
+            using (var seriesPen = new Pen(ToDrawingColor(series.SeriesColor), SeriesLineWidth))
+            using (var seriesBrush = new SolidBrush(ToDrawingColor(series.SeriesColor)))
             {
                 try
                 {
@@ -1238,9 +1261,14 @@ namespace Graphing.Controls.Rendering
                     new RenderedSeriesPolyline(
                         series.SeriesId,
                         series.SeriesType,
-                        series.SeriesColor,
+                        ToDrawingColor(series.SeriesColor),
                         renderedPolyline.ToArray()));
             }
+        }
+
+        private static Color ToDrawingColor(GraphColor color)
+        {
+            return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
 
         // ── Axis rect helpers ─────────────────────────────────────────────────
@@ -1344,20 +1372,6 @@ namespace Graphing.Controls.Rendering
         }
 
         // ── Coordinate transforms ─────────────────────────────────────────────
-
-        /// <summary>
-        /// Maps the abstract normalized plot area [0,1]×[0,1] to device pixel bounds.
-        /// Abstract space uses math orientation (Y up); device space uses screen orientation (Y down).
-        /// </summary>
-        private static RectangleF ComputeDevicePlotRect(Rectangle deviceBounds, PlotAreaLayout plotArea)
-        {
-            var left = deviceBounds.Left + plotArea.BottomLeft.X * deviceBounds.Width;
-            var right = deviceBounds.Left + plotArea.TopRight.X * deviceBounds.Width;
-            var top = deviceBounds.Bottom - plotArea.TopRight.Y * deviceBounds.Height;
-            var bottom = deviceBounds.Bottom - plotArea.BottomLeft.Y * deviceBounds.Height;
-
-            return RectangleF.FromLTRB((float)left, (float)top, (float)right, (float)bottom);
-        }
 
         /// <summary>
         /// Maps a domain X value to a device X coordinate within the plot area.

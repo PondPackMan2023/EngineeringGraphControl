@@ -907,6 +907,11 @@ namespace Graphing.Tests
             return false;
         }
 
+        private static bool HasColorNear(Bitmap bmp, int x, int y, GraphColor expected)
+        {
+            return HasColorNear(bmp, x, y, ToDrawingColor(expected));
+        }
+
         private static bool HasColorNear2D(Bitmap bmp, int x, int y, Color expected)
         {
             for (var dx = -PixelRadius; dx <= PixelRadius; dx++)
@@ -931,6 +936,16 @@ namespace Graphing.Tests
             }
 
             return false;
+        }
+
+        private static bool HasColorNear2D(Bitmap bmp, int x, int y, GraphColor expected)
+        {
+            return HasColorNear2D(bmp, x, y, ToDrawingColor(expected));
+        }
+
+        private static Color ToDrawingColor(GraphColor color)
+        {
+            return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
 
         private static bool BitmapsAreEqual(Bitmap first, Bitmap second)

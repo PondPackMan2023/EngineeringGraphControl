@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Drawing;
 using Graphing.Controls.Models;
 using Graphing.Controls.Snapshot;
 using UnitRegistry;
@@ -15,7 +14,7 @@ namespace Graphing.Controls.Presentation
     {
         public bool HasLabelOverride { get; set; }
         public string Label { get; set; }
-        public Color Color { get; set; }
+        public GraphColor Color { get; set; }
     }
 
     /// <summary>
@@ -37,24 +36,24 @@ namespace Graphing.Controls.Presentation
     /// </summary>
     public sealed class GraphPresentationOptions
     {
-        private static readonly Color[] DefaultSeriesColorPalette =
+        private static readonly GraphColor[] DefaultSeriesColorPalette =
         {
-            Color.FromArgb(0, 0, 255),
-            Color.FromArgb(255, 0, 0),
-            Color.FromArgb(0, 128, 0),
-            Color.FromArgb(255, 0, 255),
-            Color.FromArgb(0, 255, 255),
-            Color.FromArgb(128, 0, 0),
-            Color.FromArgb(0, 255, 0),
-            Color.FromArgb(128, 128, 0),
-            Color.FromArgb(128, 0, 128),
-            Color.FromArgb(0, 128, 128),
-            Color.FromArgb(255, 215, 0),
-            Color.FromArgb(64, 224, 208),
-            Color.FromArgb(160, 32, 240),
-            Color.FromArgb(154, 205, 50),
-            Color.FromArgb(255, 192, 203),
-            Color.FromArgb(255, 165, 0),
+            GraphColor.FromRgb(0, 0, 255),
+            GraphColor.FromRgb(255, 0, 0),
+            GraphColor.FromRgb(0, 128, 0),
+            GraphColor.FromRgb(255, 0, 255),
+            GraphColor.FromRgb(0, 255, 255),
+            GraphColor.FromRgb(128, 0, 0),
+            GraphColor.FromRgb(0, 255, 0),
+            GraphColor.FromRgb(128, 128, 0),
+            GraphColor.FromRgb(128, 0, 128),
+            GraphColor.FromRgb(0, 128, 128),
+            GraphColor.FromRgb(255, 215, 0),
+            GraphColor.FromRgb(64, 224, 208),
+            GraphColor.FromRgb(160, 32, 240),
+            GraphColor.FromRgb(154, 205, 50),
+            GraphColor.FromRgb(255, 192, 203),
+            GraphColor.FromRgb(255, 165, 0),
         };
 
         private static readonly ISet<Dimension> DefaultDenseNumericYAxisExcludedDimensionsSet =
@@ -189,7 +188,7 @@ namespace Graphing.Controls.Presentation
             return new HashSet<Dimension>(DefaultDenseNumericYAxisExcludedDimensionsSet);
         }
 
-        public static Color GetDefaultSeriesColor(int index)
+        public static GraphColor GetDefaultSeriesColor(int index)
         {
             return DefaultSeriesColorPalette[index % DefaultSeriesColorPalette.Length];
         }

@@ -14,7 +14,7 @@ using ModelAxisSide = Graphing.Controls.Models.AxisSide;
 using PresentationAxisOrientation = Graphing.Controls.Presentation.AxisOrientation;
 using PresentationAxisSide = Graphing.Controls.Presentation.AxisSide;
 
-namespace Graphing.Tests
+namespace Graphing.Core.Tests
 {
     [TestFixture]
     public class GraphPresentationFromNewModelTests
@@ -2045,7 +2045,7 @@ namespace Graphing.Tests
             Assert.That(legend, Is.Not.Null);
             Assert.That(legend.Entries.Count, Is.GreaterThan(0));
             var color = legend.Entries[0].SeriesColor;
-            Assert.That(color, Is.Not.EqualTo(System.Drawing.Color.Empty),
+            Assert.That(color, Is.Not.EqualTo(GraphColor.Empty),
                 "Legend entry should have an explicitly assigned color.");
             Assert.That(color.A, Is.GreaterThan(0), "Assigned series color must be fully opaque.");
         }
