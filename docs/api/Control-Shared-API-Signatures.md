@@ -1,7 +1,7 @@
 # Control Shared API Signatures (WinForms + WPF)
 
 Status: Living contract for cross-framework parity
-Date: 2026-07-01
+Date: 2026-07-02
 
 ## Purpose
 
@@ -50,7 +50,10 @@ public Color AnimationBarColor { get; set; }
 
 public bool ZoomEnabled { get; set; }
 
-public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null);
+public void SetGraphSource(
+	IGraphModel graphModel,
+	GraphPresentationOptions options = null,
+	IGraphSnapshotBuilderProvider graphSnapshotBuilderProvider = null);
 public void ZoomExtents();
 ```
 
@@ -59,6 +62,7 @@ WPF control contract (host-facing):
 ```csharp
 public IGraphModel GraphModel { get; set; }
 public GraphPresentationOptions GraphPresentationOptions { get; set; }
+public IGraphSnapshotBuilderProvider GraphSnapshotBuilderProvider { get; set; }
 public IGraphSnapshot ActiveSnapshot { get; }
 public GraphPresentationModel ActivePresentation { get; }
 public GraphPresentationOptions ActiveOptions { get; }
@@ -72,8 +76,23 @@ public void ZoomExtents();
 
 Notes:
 
-- WPF `GraphModel`, `GraphPresentationOptions`, `ZoomEnabled`, and `ZoomExtentsRequestVersion` are dependency-property backed to support strict binding-first hosts.
+- WPF `GraphModel`, `GraphPresentationOptions`, `GraphSnapshotBuilderProvider`, `ZoomEnabled`, and `ZoomExtentsRequestVersion` are dependency-property backed to support strict binding-first hosts.
 - `ZoomExtentsRequestVersion` is an idempotent trigger token for MVVM command flows where the host view model requests a zoom reset without invoking control methods from code-behind.
+- Snapshot builder injection contract is shared through:
+
+```csharp
+public interface IGraphSnapshotBuilder
+{
+	IGraphSnapshot Build(IGraphModel graphModel, GraphPresentationOptions options = null);
+}
+
+public interface IGraphSnapshotBuilderProvider
+{
+	IGraphSnapshotBuilder CreateGraphSnapshotBuilder();
+}
+```
+
+- If no provider is supplied/bound, controls use the default internal `GraphSnapshotBuilder` behavior.
 - Snapshot/presentation lifecycles must remain aligned with ADR-0002.
 
 ## Shared Interaction Events (Behavioral Contract)

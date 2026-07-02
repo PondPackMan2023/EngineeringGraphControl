@@ -186,11 +186,14 @@ namespace Graphing.Controls
             Invalidate();
         }
 
-        public void SetGraphSource(IGraphModel graphModel, GraphPresentationOptions options = null)
+        public void SetGraphSource(
+            IGraphModel graphModel,
+            GraphPresentationOptions options = null,
+            IGraphSnapshotBuilderProvider graphSnapshotBuilderProvider = null)
         {
             lock (_snapshotSync)
             {
-                var snapshotBuilder = new GraphSnapshotBuilder();
+                var snapshotBuilder = graphSnapshotBuilderProvider?.CreateGraphSnapshotBuilder() ?? new GraphSnapshotBuilder();
                 var isNewGraphLifecycle = !ReferenceEquals(_graphModel, graphModel);
                 _graphModel = graphModel;
                 options = GraphPresentationOptions.EnsureSeriesStyles(graphModel, options);
