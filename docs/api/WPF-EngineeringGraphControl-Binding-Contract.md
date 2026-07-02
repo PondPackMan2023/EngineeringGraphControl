@@ -1,7 +1,7 @@
 # WPF EngineeringGraphControl Binding Contract
 
 Status: Active
-Date: 2026-07-01
+Date: 2026-07-02
 
 ## Purpose
 
@@ -17,6 +17,7 @@ Primary host inputs:
 
 - `GraphModel` (`IGraphModel`)
 - `GraphPresentationOptions` (`GraphPresentationOptions`)
+- `GraphSnapshotBuilderProvider` (`IGraphSnapshotBuilderProvider`, optional)
 - `ZoomEnabled` (`bool`)
 - `ZoomExtentsRequestVersion` (`int` trigger token)
 
@@ -37,6 +38,15 @@ When `GraphModel` changes, the control rebuilds its internal snapshot/presentati
 
 When `GraphPresentationOptions` changes, the control rebuilds active presentation state for the current model.
 
+### GraphSnapshotBuilderProvider
+
+This optional provider enables host-supplied snapshot construction. When set (or changed), the control rebuilds snapshot/presentation state for the current model using:
+
+- `IGraphSnapshotBuilderProvider.CreateGraphSnapshotBuilder()`
+- `IGraphSnapshotBuilder.Build(IGraphModel graphModel, GraphPresentationOptions options = null)`
+
+If not bound, the control falls back to the default internal `GraphSnapshotBuilder`.
+
 ### ZoomEnabled
 
 Controls whether zoom drag interaction is active. Turning it off clears active drag state.
@@ -53,6 +63,7 @@ Typical usage: increment this property from a command in the view model.
 <g:EngineeringGraphControl
     GraphModel="{Binding GraphModel}"
     GraphPresentationOptions="{Binding GraphPresentationOptions}"
+    GraphSnapshotBuilderProvider="{Binding GraphSnapshotBuilderProvider}"
     ZoomEnabled="{Binding ZoomEnabled}"
     ZoomExtentsRequestVersion="{Binding ZoomExtentsRequestVersion}" />
 ```
@@ -91,4 +102,5 @@ private void RequestZoomExtents()
 ## Notes
 
 - `ActiveSnapshot`, `ActivePresentation`, and `ActiveOptions` are read-only runtime state accessors for diagnostics and advanced host inspection.
+- `GraphSnapshotBuilderProvider` is intended for advanced composition scenarios (custom snapshot policies, instrumentation, testing seams).
 - Options editor behavior is intentionally out of scope for the current WPF harness phase.

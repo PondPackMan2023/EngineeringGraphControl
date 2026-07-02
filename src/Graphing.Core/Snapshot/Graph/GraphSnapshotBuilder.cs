@@ -8,7 +8,7 @@ using UnitRegistry.Formatting;
 
 namespace Graphing.Controls.Snapshot
 {
-    internal sealed class GraphSnapshotBuilder
+    internal sealed class GraphSnapshotBuilder : IGraphSnapshotBuilder
     {
         private const int DefaultDesiredTickCount = 5;
         private const double MaxTemporalIntervals = 9d;

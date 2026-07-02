@@ -35,6 +35,12 @@ namespace Graphing.Controls
             typeof(EngineeringGraphControl),
             new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnGraphPresentationOptionsChanged));
 
+        public static readonly DependencyProperty GraphSnapshotBuilderProviderProperty = DependencyProperty.Register(
+            nameof(GraphSnapshotBuilderProvider),
+            typeof(IGraphSnapshotBuilderProvider),
+            typeof(EngineeringGraphControl),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnGraphSnapshotBuilderProviderChanged));
+
         public static readonly DependencyProperty ZoomEnabledProperty = DependencyProperty.Register(
             nameof(ZoomEnabled),
             typeof(bool),
@@ -78,6 +84,12 @@ namespace Graphing.Controls
                     return _activeSnapshot;
                 }
             }
+        }
+
+        public IGraphSnapshotBuilderProvider GraphSnapshotBuilderProvider
+        {
+            get => (IGraphSnapshotBuilderProvider)GetValue(GraphSnapshotBuilderProviderProperty);
+            set => SetValue(GraphSnapshotBuilderProviderProperty, value);
         }
 
         public GraphPresentationModel ActivePresentation
@@ -124,7 +136,7 @@ namespace Graphing.Controls
         {
             lock (_snapshotSync)
             {
-                var snapshotBuilder = new GraphSnapshotBuilder();
+                var snapshotBuilder = GraphSnapshotBuilderProvider?.CreateGraphSnapshotBuilder() ?? new GraphSnapshotBuilder();
                 var isNewGraphLifecycle = !ReferenceEquals(_graphModel, graphModel);
                 _graphModel = graphModel;
                 options = GraphPresentationOptions.EnsureSeriesStyles(graphModel, options);
@@ -549,6 +561,12 @@ namespace Graphing.Controls
         {
             var control = (EngineeringGraphControl)dependencyObject;
             control.ApplyGraphSource(control.GraphModel, (GraphPresentationOptions)eventArgs.NewValue);
+        }
+
+        private static void OnGraphSnapshotBuilderProviderChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs eventArgs)
+        {
+            var control = (EngineeringGraphControl)dependencyObject;
+            control.ApplyGraphSource(control.GraphModel, control.GraphPresentationOptions);
         }
 
         private static void OnZoomEnabledChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs eventArgs)

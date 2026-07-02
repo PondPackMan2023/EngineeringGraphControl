@@ -196,3 +196,75 @@ During implementation, project structure was expanded to preserve UI boundaries 
 - Continue parity work for deferred interactions (for example, animation bar parity where required).
 - Keep options editor parity deferred until explicitly prioritized.
 - Maintain shared API documentation as a living contract as parity evolves.
+
+---
+
+## Addendum B (2026-07-02): Optional Snapshot Builder Provider Extension Seam
+
+### Status
+
+Accepted
+
+### Context
+
+As control hosting scenarios expanded, consumers requested a supported seam for custom snapshot construction without replacing control ownership of snapshot/presentation lifecycle.
+
+The immediate requirement was to allow optional, host-supplied snapshot builder creation in both WinForms and WPF while preserving default behavior and existing lifecycle guarantees.
+
+### Decision
+
+1. **Introduce Snapshot Builder Extension Interfaces**
+
+   The shared snapshot contract now includes:
+
+   - `IGraphSnapshotBuilder`
+   - `IGraphSnapshotBuilderProvider`
+
+   with methods:
+
+   - `IGraphSnapshot Build(IGraphModel graphModel, GraphPresentationOptions options = null)`
+   - `IGraphSnapshotBuilder CreateGraphSnapshotBuilder()`
+
+2. **WinForms Host Surface Updated (Optional Parameter)**
+
+   `EngineeringGraphControl.SetGraphSource(...)` in WinForms now accepts an optional
+   `IGraphSnapshotBuilderProvider` parameter after `GraphPresentationOptions`.
+
+3. **WPF Host Surface Updated (Bindable Property)**
+
+   `EngineeringGraphControl` in WPF now exposes an optional dependency-property-backed
+   `GraphSnapshotBuilderProvider` host input of type `IGraphSnapshotBuilderProvider`.
+
+4. **Default Behavior Preserved**
+
+   If no provider is supplied (or bound), controls retain existing behavior by using the default internal `GraphSnapshotBuilder`.
+
+5. **Lifecycle and Layering Invariants Preserved**
+
+   This change does not alter the authoritative lifecycle:
+
+   - model -> snapshot -> presentation
+   - rebuild-oriented transitions
+   - control-owned install of active snapshot/presentation state
+
+6. **Dependency-Injection Boundary Clarification**
+
+   This seam is an explicit control API extension point and not a container-driven dependency-injection policy. The non-goal of control-managed DI remains unchanged.
+
+### Consequences
+
+#### Positive
+
+- Adds a stable, testable extension seam for snapshot construction policy.
+- Enables host-specific customization (for example, instrumentation or policy wrappers) without forking control behavior.
+- Keeps WinForms and WPF host contracts aligned on the same conceptual extension point.
+
+#### Trade-offs
+
+- Increases public control-facing contract surface.
+- Requires clear API documentation to avoid accidental misuse of provider lifetimes or null-return behavior.
+
+### Follow-on Work
+
+- Keep `docs/api/Control-Shared-API-Signatures.md` and `docs/api/WPF-EngineeringGraphControl-Binding-Contract.md` as normative host contract references.
+- Add targeted tests per host framework as infrastructure allows (WinForms implemented; WPF deferred to harness availability).
