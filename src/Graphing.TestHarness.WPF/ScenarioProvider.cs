@@ -16,6 +16,7 @@ internal sealed class ScenarioProvider : IGraphScenarioProvider
             GraphScenarioId.B => ScenarioDefinitions.BuildScenarioB(),
             GraphScenarioId.C => ScenarioDefinitions.BuildScenarioC(),
             GraphScenarioId.D => ScenarioDefinitions.BuildScenarioD(),
+            GraphScenarioId.E => ScenarioDefinitions.BuildScenarioE(),
             _ => ScenarioDefinitions.BuildScenarioA()
         };
     }

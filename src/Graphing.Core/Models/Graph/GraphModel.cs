@@ -76,7 +76,8 @@ namespace Graphing.Controls.Models
                     axis.Side,
                     unit,
                     newUnitLabel,
-                    formatter));
+                    formatter,
+                    axis.LabelValueConverter));
             }
 
             return new GraphModel(updatedAxes, Series);

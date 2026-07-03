@@ -5,5 +5,6 @@ public enum GraphScenarioId
     A,
     B,
     C,
-    D
+    D,
+    E
 }

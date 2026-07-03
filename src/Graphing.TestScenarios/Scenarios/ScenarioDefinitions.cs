@@ -3,6 +3,7 @@ using Graphing.Controls.Models.Series;
 using Graphing.TestScenarios.Fields;
 using Graphing.TestScenarios.Libraries;
 using System;
+using System.Globalization;
 using UnitRegistry;
 using UnitRegistry.Formatting;
 
@@ -223,6 +224,68 @@ namespace Graphing.TestScenarios.Scenarios
             var graph = new GraphModel(new[] { xAxis, lengthYAxis, pressureYAxis }, new[] { hglSeries, psiSeries });
 
             return graph;
+        }
+
+        internal static IGraphModel BuildScenarioE()
+        {
+            var dateConverter = new DateOnlyDayNumberAxisLabelValueConverter();
+            var balanceConverter = new DecimalAxisLabelValueConverter();
+            var dateFormatter = new DateOnlyFormatter("date-only", "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var balanceFormatter = new CurrencyFormatter("currency-usd", "C2", CultureInfo.GetCultureInfo("en-US"));
+
+            var dayNumbers = new double[]
+            {
+                738886d,
+                738887d,
+                738888d,
+                738889d,
+                738890d,
+                738891d,
+                738892d
+            };
+
+            var balances = new double[]
+            {
+                1025.25d,
+                1090.10d,
+                980.75d,
+                1215.40d,
+                1275.00d,
+                1199.50d,
+                1342.15d
+            };
+
+            var dayField = new GraphFieldDefinition("Day Number", "DayNumber", Units.Time.Days, dayNumbers);
+            var balanceField = new GraphFieldDefinition("Balance", "Balance", Units.Currency.Dollars, balances);
+
+            var xAxis = new AxisModel(
+                new AxisId("date-axis"),
+                AxisOrientation.X,
+                AxisSide.Bottom,
+                Units.Time.Days,
+                "day",
+                dateFormatter,
+                dateConverter);
+
+            var yAxis = new AxisModel(
+                new AxisId("balance-axis"),
+                AxisOrientation.Y,
+                AxisSide.Left,
+                Units.Currency.Dollars,
+                "$",
+                balanceFormatter,
+                balanceConverter);
+
+            var series = new GraphSeriesModel(
+                new SeriesId("balance-forecast"),
+                "Balance Forecast",
+                SeriesType.Line,
+                dayField,
+                balanceField,
+                xAxis,
+                yAxis);
+
+            return new GraphModel(new[] { xAxis, yAxis }, new[] { series });
         }
     }
 }

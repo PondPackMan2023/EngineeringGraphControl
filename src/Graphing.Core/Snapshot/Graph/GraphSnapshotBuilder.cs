@@ -293,6 +293,7 @@ namespace Graphing.Controls.Snapshot
                         axis.Orientation,
                         axis.Side,
                         sourceFormatter != null ? sourceFormatter.Id.ToString() : null,
+                        axis.LabelValueConverter,
                         axis.Unit,
                         axis.UnitLabel,
                         axis.ScaleType,

@@ -36,6 +36,7 @@ namespace Graphing.TestScenarios
             this.graphControl = new Graphing.Controls.EngineeringGraphControl();
             this.buttonScenarioC = new System.Windows.Forms.Button();
             this.buttonScenarioD = new System.Windows.Forms.Button();
+            this.buttonScenarioE = new System.Windows.Forms.Button();
             this.buttonOptions = new System.Windows.Forms.Button();
             this.buttonExportPng = new System.Windows.Forms.Button();
             this.buttonExportEmf = new System.Windows.Forms.Button();
@@ -122,11 +123,23 @@ namespace Graphing.TestScenarios
             this.buttonScenarioD.UseVisualStyleBackColor = true;
             this.buttonScenarioD.Click += new System.EventHandler(this.buttonScenarioD_Click);
             // 
+            // buttonScenarioE
+            // 
+            this.buttonScenarioE.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonScenarioE.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonScenarioE.Location = new System.Drawing.Point(689, 136);
+            this.buttonScenarioE.Name = "buttonScenarioE";
+            this.buttonScenarioE.Size = new System.Drawing.Size(67, 25);
+            this.buttonScenarioE.TabIndex = 5;
+            this.buttonScenarioE.Text = "Scenario E";
+            this.buttonScenarioE.UseVisualStyleBackColor = true;
+            this.buttonScenarioE.Click += new System.EventHandler(this.buttonScenarioE_Click);
+            // 
             // buttonOptions
             // 
             this.buttonOptions.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonOptions.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonOptions.Location = new System.Drawing.Point(689, 136);
+            this.buttonOptions.Location = new System.Drawing.Point(689, 177);
             this.buttonOptions.Name = "buttonOptions";
             this.buttonOptions.Size = new System.Drawing.Size(67, 25);
             this.buttonOptions.TabIndex = 12;
@@ -138,7 +151,7 @@ namespace Graphing.TestScenarios
             // 
             this.buttonExportPng.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonExportPng.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonExportPng.Location = new System.Drawing.Point(689, 209);
+            this.buttonExportPng.Location = new System.Drawing.Point(689, 218);
             this.buttonExportPng.Name = "buttonExportPng";
             this.buttonExportPng.Size = new System.Drawing.Size(67, 25);
             this.buttonExportPng.TabIndex = 13;
@@ -150,7 +163,7 @@ namespace Graphing.TestScenarios
             // 
             this.buttonExportEmf.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonExportEmf.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonExportEmf.Location = new System.Drawing.Point(689, 240);
+            this.buttonExportEmf.Location = new System.Drawing.Point(689, 249);
             this.buttonExportEmf.Name = "buttonExportEmf";
             this.buttonExportEmf.Size = new System.Drawing.Size(67, 25);
             this.buttonExportEmf.TabIndex = 14;
@@ -163,7 +176,7 @@ namespace Graphing.TestScenarios
             this.checkBoxAnimation.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.checkBoxAnimation.AutoSize = true;
             this.checkBoxAnimation.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxAnimation.Location = new System.Drawing.Point(680, 271);
+            this.checkBoxAnimation.Location = new System.Drawing.Point(680, 280);
             this.checkBoxAnimation.Name = "checkBoxAnimation";
             this.checkBoxAnimation.Size = new System.Drawing.Size(78, 18);
             this.checkBoxAnimation.TabIndex = 15;
@@ -205,6 +218,7 @@ namespace Graphing.TestScenarios
             this.Controls.Add(this.buttonExportEmf);
             this.Controls.Add(this.buttonExportPng);
             this.Controls.Add(this.buttonOptions);
+            this.Controls.Add(this.buttonScenarioE);
             this.Controls.Add(this.buttonScenarioD);
             this.Controls.Add(this.buttonScenarioC);
             this.Controls.Add(this.checkBoxResizeChart);
@@ -227,6 +241,7 @@ namespace Graphing.TestScenarios
         private System.Windows.Forms.CheckBox checkBoxResizeChart;
         private System.Windows.Forms.Button buttonScenarioC;
         private System.Windows.Forms.Button buttonScenarioD;
+        private System.Windows.Forms.Button buttonScenarioE;
         private System.Windows.Forms.Button buttonOptions;
         private System.Windows.Forms.Button buttonExportPng;
         private System.Windows.Forms.Button buttonExportEmf;

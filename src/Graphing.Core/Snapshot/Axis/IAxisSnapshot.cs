@@ -30,6 +30,11 @@ namespace Graphing.Controls.Snapshot
         string FormatterName { get; }
 
         /// <summary>
+        /// Optional converter that maps numeric axis coordinates to semantic label values.
+        /// </summary>
+        IAxisLabelValueConverter LabelValueConverter { get; }
+
+        /// <summary>
         /// Unit used for axis labeling.
         /// </summary>
         Unit Unit { get; }
