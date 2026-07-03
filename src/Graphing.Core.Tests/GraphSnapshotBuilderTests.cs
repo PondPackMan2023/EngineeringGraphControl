@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using Graphing.Controls.Models;
 using Graphing.Controls.Models.Series;
 using Graphing.Controls.Snapshot;
 using NUnit.Framework;
+using UnitRegistry.Formatting;
 using UnitRegistry;
 
 namespace Graphing.Core.Tests
@@ -131,6 +133,77 @@ namespace Graphing.Core.Tests
             Assert.That(series.LineRenderMode, Is.EqualTo(LineRenderMode.LineOnly));
         }
 
+        [Test]
+        public void Build_CopiesAxisLabelValueConverter_FromAxisModelToSnapshot()
+        {
+            var unit = Units.Length.Meter;
+            var converter = new TestAxisLabelValueConverter();
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", null, converter);
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
+            var series = new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new IGraphSeriesModel[] { series });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var ySnapshot = snapshot.Axes.Single(a => a.AxisId == "y-axis");
+
+            Assert.That(ySnapshot.LabelValueConverter, Is.SameAs(converter));
+        }
+
+        [Test]
+        public void Build_LeavesAxisLabelValueConverterNull_WhenAxisModelHasNoConverter()
+        {
+            var unit = Units.Length.Meter;
+            var xAxis = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", null);
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
+            var series = new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new IGraphSeriesModel[] { series });
+
+            var snapshot = new GraphSnapshotBuilder().Build(model);
+            var ySnapshot = snapshot.Axes.Single(a => a.AxisId == "y-axis");
+
+            Assert.That(ySnapshot.LabelValueConverter, Is.Null);
+        }
+
+        [Test]
+        public void Build_PreservesNumericSnapshotBehavior_WhenLabelValueConverterIsPresent()
+        {
+            var unit = Units.Length.Meter;
+            var registry = UnitsRegistry.Default;
+            var formatter = new NumericFormatter("fmt-y", registry, "Y", "F2");
+            var converter = new TestAxisLabelValueConverter();
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d, 3d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 40d, 60d });
+
+            var xAxisWithoutConverter = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxisWithoutConverter = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", formatter);
+            var seriesWithoutConverter = new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField, xAxisWithoutConverter, yAxisWithoutConverter);
+            var modelWithoutConverter = new GraphModel(new[] { xAxisWithoutConverter, yAxisWithoutConverter }, new IGraphSeriesModel[] { seriesWithoutConverter });
+
+            var xAxisWithConverter = new AxisModel(new AxisId("x-axis"), AxisOrientation.X, AxisSide.Bottom, unit, "m", null);
+            var yAxisWithConverter = new AxisModel(new AxisId("y-axis"), AxisOrientation.Y, AxisSide.Left, unit, "m", formatter, converter);
+            var seriesWithConverter = new GraphSeriesModel(new SeriesId("series-1"), "series-1", SeriesType.Line, xField, yField, xAxisWithConverter, yAxisWithConverter);
+            var modelWithConverter = new GraphModel(new[] { xAxisWithConverter, yAxisWithConverter }, new IGraphSeriesModel[] { seriesWithConverter });
+
+            var snapshotWithoutConverter = new GraphSnapshotBuilder().Build(modelWithoutConverter);
+            var snapshotWithConverter = new GraphSnapshotBuilder().Build(modelWithConverter);
+
+            var ySnapshotWithoutConverter = snapshotWithoutConverter.Axes.Single(a => a.AxisId == "y-axis");
+            var ySnapshotWithConverter = snapshotWithConverter.Axes.Single(a => a.AxisId == "y-axis");
+
+            Assert.That(ySnapshotWithoutConverter.MinimumValue, Is.EqualTo(ySnapshotWithConverter.MinimumValue));
+            Assert.That(ySnapshotWithoutConverter.MaximumValue, Is.EqualTo(ySnapshotWithConverter.MaximumValue));
+            Assert.That(ySnapshotWithoutConverter.Increment, Is.EqualTo(ySnapshotWithConverter.Increment));
+            Assert.That(ySnapshotWithoutConverter.IsAutoIncrement, Is.EqualTo(ySnapshotWithConverter.IsAutoIncrement));
+            Assert.That(ySnapshotWithoutConverter.MajorTickStride, Is.EqualTo(ySnapshotWithConverter.MajorTickStride));
+            Assert.That(ySnapshotWithoutConverter.FormatterName, Is.EqualTo(ySnapshotWithConverter.FormatterName));
+            Assert.That(ySnapshotWithoutConverter.LabelValueConverter, Is.Null);
+            Assert.That(ySnapshotWithConverter.LabelValueConverter, Is.SameAs(converter));
+        }
+
         private static IGraphModel CreateGraphModelWithMultipleSeries()
         {
             var unit = Units.Length.Meter;
@@ -196,6 +269,16 @@ namespace Graphing.Core.Tests
             public Array GetValues()
             {
                 return _values;
+            }
+        }
+
+        private sealed class TestAxisLabelValueConverter : IAxisLabelValueConverter
+        {
+            public Type TargetValueType => typeof(string);
+
+            public object Convert(double coordinateValue, IFormatProvider formatProvider = null)
+            {
+                return coordinateValue.ToString("G", formatProvider);
             }
         }
     }

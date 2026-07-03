@@ -17,6 +17,8 @@ namespace Graphing.Controls.Models
 
         IValueFormatter Formatter { get; }
 
+        IAxisLabelValueConverter LabelValueConverter { get; }
+
         AxisScaleType ScaleType { get; }
 
         bool IsAutoRange { get; }

@@ -42,6 +42,12 @@ namespace Graphing.TestScenarios
             graphControl.SetGraphSource(graph);
         }
 
+        private void buttonScenarioE_Click(object sender, EventArgs e)
+        {
+            var graph = ScenarioDefinitions.BuildScenarioE();
+            graphControl.SetGraphSource(graph);
+        }
+
         private void MainForm_Load(object sender, EventArgs e)
         {
             buttonScenarioA.PerformClick();

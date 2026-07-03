@@ -73,8 +73,34 @@ namespace Graphing.Core.Tests
                 propertyNames,
                 Is.EqualTo(new[]
                 {
-                    "Formatter", "Id", "IsAutoRange", "MaximumValue", "MinimumValue", "Orientation", "ScaleType", "Side", "Unit", "UnitLabel"
+                    "Formatter", "Id", "IsAutoRange", "LabelValueConverter", "MaximumValue", "MinimumValue", "Orientation", "ScaleType", "Side", "Unit", "UnitLabel"
                 }));
+        }
+
+        [Test]
+        public void AxisModel_DefaultsLabelValueConverter_ToNull()
+        {
+            var axis = new AxisModel(new AxisId("x"), AxisOrientation.X, AxisSide.Bottom, Units.Length.Meter, "m", null);
+
+            Assert.That(axis.LabelValueConverter, Is.Null);
+        }
+
+        [Test]
+        public void AxisModel_RetainsSuppliedLabelValueConverter()
+        {
+            var converter = new TestAxisLabelValueConverter();
+            var axis = new AxisModel(new AxisId("x"), AxisOrientation.X, AxisSide.Bottom, Units.Length.Meter, "m", null, converter);
+
+            Assert.That(axis.LabelValueConverter, Is.SameAs(converter));
+        }
+
+        [Test]
+        public void AxisLabelValueConverter_CanBeImplementedBySimpleConverter()
+        {
+            var converter = new TestAxisLabelValueConverter();
+
+            Assert.That(converter.TargetValueType, Is.EqualTo(typeof(string)));
+            Assert.That(converter.Convert(42.5), Is.EqualTo("42.5"));
         }
 
         [Test]
@@ -95,8 +121,8 @@ namespace Graphing.Core.Tests
             var noneField = new TestFieldDefinition("Point Count", "pointCount", unitNone, new[] { 1d, 2d, 3d });
             var unitlessField = new TestFieldDefinition("Efficiency", "efficiency", unitUnitless, new[] { 0.12, 0.34, 0.56 });
 
-            var xAxis = new TestAxisModel(new AxisId("x"), AxisOrientation.X, AxisSide.Bottom, unitNone, "", null, AxisScaleType.Linear, true, null, null);
-            var yAxis = new TestAxisModel(new AxisId("y"), AxisOrientation.Y, AxisSide.Left, unitUnitless, "ratio", formatter, AxisScaleType.Linear, true, null, null);
+            var xAxis = new TestAxisModel(new AxisId("x"), AxisOrientation.X, AxisSide.Bottom, unitNone, "", null, null, AxisScaleType.Linear, true, null, null);
+            var yAxis = new TestAxisModel(new AxisId("y"), AxisOrientation.Y, AxisSide.Left, unitUnitless, "ratio", formatter, null, AxisScaleType.Linear, true, null, null);
 
             var series = new TestSeriesModel(1, "series", SeriesType.Line, noneField, unitlessField, xAxis, yAxis);
             var graph = new TestGraphModel(new[] { xAxis, yAxis }, new[] { series });
@@ -207,6 +233,7 @@ namespace Graphing.Core.Tests
                             axis.Unit,
                             axis.UnitLabel,
                             formatter,
+                            axis.LabelValueConverter,
                             axis.ScaleType,
                             axis.IsAutoRange,
                             axis.MinimumValue,
@@ -245,6 +272,7 @@ namespace Graphing.Core.Tests
                             unit,
                             newUnitLabel,
                             formatter,
+                            axis.LabelValueConverter,
                             axis.ScaleType,
                             axis.IsAutoRange,
                             axis.MinimumValue,
@@ -285,6 +313,7 @@ namespace Graphing.Core.Tests
                             replacementUnit,
                             axis.UnitLabel,
                                 axis.Formatter,
+                            axis.LabelValueConverter,
                             axis.ScaleType,
                             axis.IsAutoRange,
                             axis.MinimumValue,
@@ -367,6 +396,7 @@ namespace Graphing.Core.Tests
                 Unit unit,
                 string unitLabel,
                    IValueFormatter formatter,
+                IAxisLabelValueConverter labelValueConverter,
                 AxisScaleType scaleType,
                 bool isAutoRange,
                 double? minimumValue,
@@ -378,6 +408,7 @@ namespace Graphing.Core.Tests
                 Unit = unit;
                 UnitLabel = unitLabel;
                    Formatter = formatter;
+                     LabelValueConverter = labelValueConverter;
                 ScaleType = scaleType;
                 IsAutoRange = isAutoRange;
                 MinimumValue = minimumValue;
@@ -396,6 +427,8 @@ namespace Graphing.Core.Tests
 
             public IValueFormatter Formatter { get; }
 
+            public IAxisLabelValueConverter LabelValueConverter { get; }
+
             public AxisScaleType ScaleType { get; }
 
             public bool IsAutoRange { get; }
@@ -413,6 +446,7 @@ namespace Graphing.Core.Tests
                     newUnit,
                     UnitLabel,
                        Formatter,
+                          LabelValueConverter,
                     ScaleType,
                     IsAutoRange,
                     MinimumValue,
@@ -428,10 +462,21 @@ namespace Graphing.Core.Tests
                     Unit,
                     UnitLabel,
                     newFormatter,
+                        LabelValueConverter,
                     ScaleType,
                     IsAutoRange,
                     MinimumValue,
                     MaximumValue);
+            }
+        }
+
+        private sealed class TestAxisLabelValueConverter : IAxisLabelValueConverter
+        {
+            public Type TargetValueType => typeof(string);
+
+            public object Convert(double coordinateValue, IFormatProvider formatProvider = null)
+            {
+                return coordinateValue.ToString("G", formatProvider);
             }
         }
     }

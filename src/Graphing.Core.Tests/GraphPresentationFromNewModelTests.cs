@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Graphing.Controls.Models;
@@ -355,6 +356,156 @@ namespace Graphing.Core.Tests
             var yAxisPresentation = presentation.Axes.First(a => a.AxisId == "y-axis");
             Assert.That(yAxisPresentation.Ticks.Count, Is.GreaterThan(0));
             Assert.That(yAxisPresentation.Ticks.All(t => t.Label != null), Is.True);
+        }
+
+        [Test]
+        public void AxisTickLabels_WithoutConverter_PassOriginalDoubleValuesToFormatter()
+        {
+            var unit = Units.Length.Meter;
+            var formatter = new RecordingValueFormatter("fmt-record-double", typeof(double));
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatter);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+            var yAxisPresentation = presentation.Axes.First(a => a.AxisId == "y-axis");
+
+            Assert.That(yAxisPresentation.Ticks.Count, Is.GreaterThan(0));
+            Assert.That(formatter.ReceivedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+
+            for (var index = 0; index < yAxisPresentation.Ticks.Count; index++)
+            {
+                var tick = yAxisPresentation.Ticks[index];
+                var received = formatter.ReceivedValues[index];
+
+                Assert.That(received, Is.TypeOf<double>());
+                Assert.That((double)received, Is.EqualTo(tick.Value).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisTickLabels_WithConverter_UseConvertedFormatterInput_AndPreserveNumericTickGeometry()
+        {
+            var unit = Units.Length.Meter;
+            var converter = new RecordingAxisLabelValueConverter(
+                coordinate => string.Format(System.Globalization.CultureInfo.InvariantCulture, "semantic:{0:F3}", coordinate),
+                typeof(string));
+            var formatter = new RecordingValueFormatter("fmt-record-semantic", typeof(string));
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatter, converter);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+            var yAxisPresentation = presentation.Axes.First(a => a.AxisId == "y-axis");
+
+            Assert.That(yAxisPresentation.Ticks.Count, Is.GreaterThan(0));
+            Assert.That(converter.ReceivedCoordinates.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+            Assert.That(formatter.ReceivedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+            Assert.That(converter.ProducedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+
+            for (var index = 0; index < yAxisPresentation.Ticks.Count; index++)
+            {
+                var tick = yAxisPresentation.Ticks[index];
+                var convertedValue = converter.ProducedValues[index];
+                var formatterInput = formatter.ReceivedValues[index];
+
+                Assert.That(converter.ReceivedCoordinates[index], Is.EqualTo(tick.Value).Within(1e-12));
+                Assert.That(formatterInput, Is.SameAs(convertedValue));
+                Assert.That(formatterInput, Is.TypeOf<string>());
+                Assert.That(tick.Label, Is.EqualTo(string.Format(System.Globalization.CultureInfo.InvariantCulture, "formatted:{0}", convertedValue)));
+
+                // Tick geometry remains numeric and bound to coordinate-domain value.
+                Assert.That(tick.Start.Y, Is.EqualTo(tick.Value).Within(1e-12));
+                Assert.That(tick.End.Y, Is.EqualTo(tick.Value).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisTickLabels_WithDateOnlyConverter_PassDateOnlyToFormatter_AndUseFormatterOutputLabel()
+        {
+            var unit = Units.Length.Meter;
+            var converter = new DateOnlyDayNumberAxisLabelValueConverter();
+            var formatter = new DateOnlyRecordingValueFormatter("fmt-date-only");
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatter, converter);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 738885d, 738886d, 738887d });
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+            var yAxisPresentation = presentation.Axes.First(a => a.AxisId == "y-axis");
+
+            Assert.That(yAxisPresentation.Ticks.Count, Is.GreaterThan(0));
+            Assert.That(converter.ReceivedCoordinates.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+            Assert.That(formatter.ReceivedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+            Assert.That(converter.ProducedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+
+            for (var index = 0; index < yAxisPresentation.Ticks.Count; index++)
+            {
+                var tick = yAxisPresentation.Ticks[index];
+                var convertedValue = converter.ProducedValues[index];
+                var formatterInput = formatter.ReceivedValues[index];
+
+                Assert.That(converter.ReceivedCoordinates[index], Is.EqualTo(tick.Value).Within(1e-12));
+                Assert.That(formatterInput, Is.TypeOf<DateOnly>());
+                Assert.That(formatterInput, Is.EqualTo(convertedValue));
+                Assert.That(formatterInput, Is.Not.TypeOf<double>());
+                Assert.That(tick.Label, Is.EqualTo(((DateOnly)formatterInput).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)));
+
+                // Tick geometry remains numeric and bound to coordinate-domain value.
+                Assert.That(tick.Start.Y, Is.EqualTo(tick.Value).Within(1e-12));
+                Assert.That(tick.End.Y, Is.EqualTo(tick.Value).Within(1e-12));
+            }
+        }
+
+        [Test]
+        public void AxisTickLabels_WithDecimalConverter_PassDecimalToFormatter_AndUseCurrencyStyleLabel()
+        {
+            var unit = Units.Length.Meter;
+            var converter = new DecimalAxisLabelValueConverter();
+            var formatter = new CurrencyRecordingValueFormatter("fmt-currency", System.Globalization.CultureInfo.GetCultureInfo("en-US"));
+
+            var xAxis = new AxisModel(new AxisId("x-axis"), ModelAxisOrientation.X, ModelAxisSide.Bottom, unit, "m", null);
+            var yAxis = new AxisModel(new AxisId("y-axis"), ModelAxisOrientation.Y, ModelAxisSide.Left, unit, "m", formatter, converter);
+
+            var xField = new TestFieldDefinition("X", "x", unit, new[] { 0d, 1d, 2d });
+            var yField = new TestFieldDefinition("Y", "y", unit, new[] { 10d, 20d, 30d });
+            var series = new GraphSeriesModel(new SeriesId("1"), "series-1", SeriesType.Line, xField, yField, xAxis, yAxis);
+            var model = new GraphModel(new[] { xAxis, yAxis }, new[] { series });
+
+            var presentation = new GraphPresentationModel(new GraphSnapshotBuilder().Build(model));
+            var yAxisPresentation = presentation.Axes.First(a => a.AxisId == "y-axis");
+
+            Assert.That(yAxisPresentation.Ticks.Count, Is.GreaterThan(0));
+            Assert.That(converter.ReceivedCoordinates.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+            Assert.That(formatter.ReceivedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+            Assert.That(converter.ProducedValues.Count, Is.EqualTo(yAxisPresentation.Ticks.Count));
+
+            for (var index = 0; index < yAxisPresentation.Ticks.Count; index++)
+            {
+                var tick = yAxisPresentation.Ticks[index];
+                var convertedValue = converter.ProducedValues[index];
+                var formatterInput = formatter.ReceivedValues[index];
+
+                Assert.That(converter.ReceivedCoordinates[index], Is.EqualTo(tick.Value).Within(1e-12));
+                Assert.That(formatterInput, Is.TypeOf<decimal>());
+                Assert.That(formatterInput, Is.EqualTo(convertedValue));
+                Assert.That(formatterInput, Is.Not.TypeOf<double>());
+                Assert.That(tick.Label, Is.EqualTo(((decimal)formatterInput).ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-US"))));
+            }
         }
 
         [Test]
@@ -3522,6 +3673,153 @@ namespace Graphing.Core.Tests
             public override Array GetValues()
             {
                 return _values;
+            }
+        }
+
+        private sealed class RecordingAxisLabelValueConverter : IAxisLabelValueConverter
+        {
+            private readonly Func<double, object> _projection;
+            private readonly List<double> _receivedCoordinates = new List<double>();
+            private readonly List<object> _producedValues = new List<object>();
+
+            public RecordingAxisLabelValueConverter(Func<double, object> projection, Type targetValueType)
+            {
+                _projection = projection ?? throw new ArgumentNullException(nameof(projection));
+                TargetValueType = targetValueType ?? typeof(object);
+            }
+
+            public Type TargetValueType { get; }
+
+            public IReadOnlyList<double> ReceivedCoordinates => _receivedCoordinates;
+
+            public IReadOnlyList<object> ProducedValues => _producedValues;
+
+            public object Convert(double coordinateValue, IFormatProvider formatProvider = null)
+            {
+                _receivedCoordinates.Add(coordinateValue);
+                var projected = _projection(coordinateValue);
+                _producedValues.Add(projected);
+                return projected;
+            }
+        }
+
+        private sealed class RecordingValueFormatter : IValueFormatter
+        {
+            private readonly List<object> _receivedValues = new List<object>();
+
+            public RecordingValueFormatter(string id, Type valueType)
+            {
+                Id = new FormatterId(id);
+                ValueType = valueType ?? typeof(object);
+            }
+
+            public FormatterId Id { get; }
+
+            public Type ValueType { get; }
+
+            public IReadOnlyList<object> ReceivedValues => _receivedValues;
+
+            public string Format(object value, IFormatProvider formatProvider = null)
+            {
+                _receivedValues.Add(value);
+                return string.Format(System.Globalization.CultureInfo.InvariantCulture, "formatted:{0}", value);
+            }
+        }
+
+        private sealed class DateOnlyDayNumberAxisLabelValueConverter : IAxisLabelValueConverter
+        {
+            private readonly List<double> _receivedCoordinates = new List<double>();
+            private readonly List<DateOnly> _producedValues = new List<DateOnly>();
+
+            public Type TargetValueType => typeof(DateOnly);
+
+            public IReadOnlyList<double> ReceivedCoordinates => _receivedCoordinates;
+
+            public IReadOnlyList<DateOnly> ProducedValues => _producedValues;
+
+            public object Convert(double coordinateValue, IFormatProvider formatProvider = null)
+            {
+                _receivedCoordinates.Add(coordinateValue);
+                var dayNumber = checked((int)Math.Round(coordinateValue, MidpointRounding.AwayFromZero));
+                var converted = DateOnly.FromDayNumber(dayNumber);
+                _producedValues.Add(converted);
+                return converted;
+            }
+        }
+
+        private sealed class DateOnlyRecordingValueFormatter : IValueFormatter
+        {
+            private readonly List<object> _receivedValues = new List<object>();
+
+            public DateOnlyRecordingValueFormatter(string id)
+            {
+                Id = new FormatterId(id);
+            }
+
+            public FormatterId Id { get; }
+
+            public Type ValueType => typeof(DateOnly);
+
+            public IReadOnlyList<object> ReceivedValues => _receivedValues;
+
+            public string Format(object value, IFormatProvider formatProvider = null)
+            {
+                if (!(value is DateOnly date))
+                {
+                    throw new ArgumentException("Value must be of type DateOnly.", nameof(value));
+                }
+
+                _receivedValues.Add(value);
+                return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        private sealed class DecimalAxisLabelValueConverter : IAxisLabelValueConverter
+        {
+            private readonly List<double> _receivedCoordinates = new List<double>();
+            private readonly List<decimal> _producedValues = new List<decimal>();
+
+            public Type TargetValueType => typeof(decimal);
+
+            public IReadOnlyList<double> ReceivedCoordinates => _receivedCoordinates;
+
+            public IReadOnlyList<decimal> ProducedValues => _producedValues;
+
+            public object Convert(double coordinateValue, IFormatProvider formatProvider = null)
+            {
+                _receivedCoordinates.Add(coordinateValue);
+                var converted = System.Convert.ToDecimal(coordinateValue, System.Globalization.CultureInfo.InvariantCulture);
+                _producedValues.Add(converted);
+                return converted;
+            }
+        }
+
+        private sealed class CurrencyRecordingValueFormatter : IValueFormatter
+        {
+            private readonly List<object> _receivedValues = new List<object>();
+            private readonly System.Globalization.CultureInfo _culture;
+
+            public CurrencyRecordingValueFormatter(string id, System.Globalization.CultureInfo culture)
+            {
+                Id = new FormatterId(id);
+                _culture = culture ?? throw new ArgumentNullException(nameof(culture));
+            }
+
+            public FormatterId Id { get; }
+
+            public Type ValueType => typeof(decimal);
+
+            public IReadOnlyList<object> ReceivedValues => _receivedValues;
+
+            public string Format(object value, IFormatProvider formatProvider = null)
+            {
+                if (!(value is decimal amount))
+                {
+                    throw new ArgumentException("Value must be of type decimal.", nameof(value));
+                }
+
+                _receivedValues.Add(value);
+                return amount.ToString("C2", _culture);
             }
         }
 

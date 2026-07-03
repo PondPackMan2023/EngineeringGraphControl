@@ -16,6 +16,7 @@ namespace Graphing.Controls.Snapshot
         private readonly AxisOrientation _orientation;
         private readonly AxisSide _side;
         private readonly string _formatterName;
+        private readonly IAxisLabelValueConverter _labelValueConverter;
         private readonly Unit _unit;
         private readonly string _displayUnitLabel;
         private readonly AxisScaleType _scaleType;
@@ -52,6 +53,14 @@ namespace Graphing.Controls.Snapshot
         public string FormatterName
         {
             get { return _formatterName; }
+        }
+
+        /// <summary>
+        /// Optional converter that maps numeric axis coordinates to semantic label values.
+        /// </summary>
+        public IAxisLabelValueConverter LabelValueConverter
+        {
+            get { return _labelValueConverter; }
         }
 
         /// <summary>
@@ -143,6 +152,7 @@ namespace Graphing.Controls.Snapshot
         /// <param name="orientation">Axis orientation.</param>
         /// <param name="side">Axis side placement.</param>
         /// <param name="formatterName">Formatter identity used to derive this axis.</param>
+        /// <param name="labelValueConverter">Optional converter for axis label semantic value projection.</param>
         /// <param name="unit">Axis unit.</param>
         /// <param name="displayUnitLabel">Optional display unit label.</param>
         /// <param name="scaleType">Axis scale type.</param>
@@ -158,6 +168,7 @@ namespace Graphing.Controls.Snapshot
             AxisOrientation orientation,
             AxisSide side,
             string formatterName,
+            IAxisLabelValueConverter labelValueConverter,
             Unit unit,
             string displayUnitLabel,
             AxisScaleType scaleType,
@@ -174,6 +185,7 @@ namespace Graphing.Controls.Snapshot
             _orientation = orientation;
             _side = side;
             _formatterName = formatterName;
+            _labelValueConverter = labelValueConverter;
             _unit = unit;
             _displayUnitLabel = displayUnitLabel;
             _scaleType = scaleType;

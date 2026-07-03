@@ -146,6 +146,7 @@ namespace Graphing.Controls.Presentation
                     axisSnapshot.MaximumValue,
                     axisSnapshot.Increment,
                     formatter,
+                    axisSnapshot.LabelValueConverter,
                     axisSnapshot.Unit,
                     side,
                     orientation,
@@ -299,6 +300,7 @@ namespace Graphing.Controls.Presentation
             double? maximumValue,
             double? increment,
                IValueFormatter formatter,
+            Graphing.Controls.Models.IAxisLabelValueConverter labelValueConverter,
             UnitRegistry.Unit unit,
             AxisSide side,
             AxisOrientation orientation,
@@ -332,10 +334,24 @@ namespace Graphing.Controls.Presentation
                 var value = tickValues[index];
                 var start = BuildTickStart(value, orientation);
                 var end = BuildTickEnd(value, side, orientation);
-                ticks.Add(new AxisTickPresentation(value, FormatAxisLabel(formatter, value), start, end));
+                var labelValue = ResolveAxisLabelValue(labelValueConverter, value);
+                ticks.Add(new AxisTickPresentation(value, FormatAxisLabel(formatter, labelValue), start, end));
             }
 
             return new ReadOnlyCollection<AxisTickPresentation>(ticks);
+        }
+
+        private static object ResolveAxisLabelValue(
+            Graphing.Controls.Models.IAxisLabelValueConverter labelValueConverter,
+            double coordinateValue,
+            IFormatProvider formatProvider = null)
+        {
+            if (labelValueConverter == null)
+            {
+                return coordinateValue;
+            }
+
+            return labelValueConverter.Convert(coordinateValue, formatProvider);
         }
 
         private static IReadOnlyList<double> BuildTickValues(double minimumValue, double maximumValue, double increment)
@@ -413,14 +429,14 @@ namespace Graphing.Controls.Presentation
             return new GeometryPoint3D(xExtent, value, 0d);
         }
 
-        private static string FormatAxisLabel(IValueFormatter formatter, double value)
+        private static string FormatAxisLabel(IValueFormatter formatter, object value, IFormatProvider formatProvider = null)
         {
             if (formatter != null)
             {
-            return formatter.Format(value);
+            return formatter.Format(value, formatProvider);
             }
 
-            return value.ToString(CultureInfo.InvariantCulture);
+            return Convert.ToString(value, CultureInfo.InvariantCulture);
         }
 
         private static double TryToDouble(object value)
