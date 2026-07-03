@@ -7,7 +7,11 @@
     {
       "name": "UnitRegistry",
       "path": "../UnitRegistry"
-    }
+		},
+		{
+      "name": "Dev.Core",
+			"path": "../wpf-app-framework"
+		}
   ],
   "settings": {
     "chat.tools.terminal.autoApprove": {

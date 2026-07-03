@@ -2,11 +2,15 @@
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
+  <Folder Name="/3rdParty/">
+    <Project Path="../wpf-app-framework/src/Dev.Core/Dev.Core.csproj" />
+    <Project Path="../wpf-app-framework/src/Dev.Wpf/Dev.Wpf.csproj" />
+  </Folder>
   <Folder Name="/Tests/">
-    <Project Path="src/Graphing.TestHarness/Graphing.TestHarness.csproj" Id="080b331c-5cf1-40f8-8a5f-b6494fc6a4dd">
+    <Project Path="src/Graphing.Core.Tests/Graphing.Core.Tests.csproj">
       <Platform Project="x64" />
     </Project>
-    <Project Path="src/Graphing.Core.Tests/Graphing.Core.Tests.csproj">
+    <Project Path="src/Graphing.TestHarness/Graphing.TestHarness.csproj" Id="080b331c-5cf1-40f8-8a5f-b6494fc6a4dd">
       <Platform Project="x64" />
     </Project>
     <Project Path="src/Graphing.Tests/Graphing.Tests.csproj">

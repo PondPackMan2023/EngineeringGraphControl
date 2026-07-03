@@ -9,8 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
+    <ProjectReference Include="..\..\..\wpf-app-framework\src\Dev.Core\Dev.Core.csproj" />
+    <ProjectReference Include="..\..\..\wpf-app-framework\src\Dev.Wpf\Dev.Wpf.csproj" />
     <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
     <ProjectReference Include="..\Graphing.Controls.WPF\Graphing.Controls.WPF.csproj" />

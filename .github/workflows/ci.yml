@@ -16,16 +16,28 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout (with submodules)
+      - name: PropertyTools
+        uses: actions/checkout@v4
+        with:
+          repository: PondPackMan2023/PropertyTools
+          path: PropertyTools
+
+      - name: EngineeringGraphControl
         uses: actions/checkout@v4
         with:
           path: EngineeringGraphControl
 
-      - name: Checkout
+      - name: UnitRegistry
         uses: actions/checkout@v4
         with:
           repository: PondPackMan2023/UnitRegistry
           path: UnitRegistry
+
+      - name: WpfAppFramework
+        uses: actions/checkout@v4
+        with:
+          repository: MrMontana1889/wpf-app-framework
+          path: wpf-app-framework
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
