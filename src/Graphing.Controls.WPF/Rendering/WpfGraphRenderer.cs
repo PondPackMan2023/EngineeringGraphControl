@@ -247,8 +247,10 @@ namespace Graphing.Controls.WPF.Rendering
             if (bandRect.HasValue)
             {
                 dc.PushClip(new RectangleGeometry(new WpfRect(
-                    double.NegativeInfinity, bandRect.Value.Top,
-                    double.PositiveInfinity, bandRect.Value.Height)));
+                    plotRect.Left - 1000.0,
+                    bandRect.Value.Top,
+                    plotRect.Width + 1000.0,
+                    bandRect.Value.Height)));
             }
 
             try
