@@ -1,0 +1,34 @@
+<UserControl
+    x:Class="Graphing.TestHarness.WPF.Views.ModeAView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Dev.Wpf.Controls;assembly=Dev.Wpf"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+        <Border
+            Margin="24"
+            Padding="24"
+            Background="{DynamicResource ControlBackgroundBrush}"
+            BorderBrush="{DynamicResource ControlBorderBrush}"
+            BorderThickness="1">
+            <StackPanel>
+                <TextBlock
+                    FontSize="22"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextBrush}"
+                    Text="ModeA" />
+                <TextBlock
+                    Margin="0,8,0,16"
+                    Foreground="{DynamicResource TextBrush}"
+                    Text="Navigate to ModeB to host EngineeringGraphControl through a mode transition." />
+                <controls:WinFormsButton
+                    Width="140"
+                    Height="34"
+                    Command="{Binding NavigateToModeBCommand}"
+                    Content="ModeB" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

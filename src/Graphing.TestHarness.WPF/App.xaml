@@ -1,5 +1,38 @@
-<Application x:Class="Graphing.TestHarness.WPF.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+<Application
+    x:Class="Graphing.TestHarness.WPF.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:Graphing.TestHarness.WPF.Core.ViewModels;assembly=Graphing.TestHarness.WPF.Core"
+    xmlns:views="clr-namespace:Graphing.TestHarness.WPF.Views">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Dev.Wpf;component/Themes/Generic.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/Dev.Wpf;component/Themes/Fluent.Density.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!--
+                Shell projection DataTemplates.
+                The shell's SidebarRegion and MainContentRegion each host a
+                ContentControl. WPF resolves these templates by DataType to
+                project the mode-owned view models into their respective views.
+            -->
+
+            <!-- ModeA sidebar: navigation button to ModeB -->
+            <DataTemplate DataType="{x:Type vm:ModeASidebarViewModel}">
+                <views:ModeASidebarView />
+            </DataTemplate>
+
+            <!-- ModeA main content: register-like surface -->
+            <DataTemplate DataType="{x:Type vm:ModeAMainContentViewModel}">
+                <views:ModeAMainContentView />
+            </DataTemplate>
+
+            <!-- ModeB main content: EngineeringGraphControl host -->
+            <DataTemplate DataType="{x:Type vm:ModeBMainContentViewModel}">
+                <views:ModeBMainContentView />
+            </DataTemplate>
+
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

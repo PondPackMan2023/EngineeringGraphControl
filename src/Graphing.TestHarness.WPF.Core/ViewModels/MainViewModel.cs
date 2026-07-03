@@ -1,116 +1,98 @@
-using Graphing.Controls.Models;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
+using Graphing.TestHarness.WPF.Core.Navigation;
 
 namespace Graphing.TestHarness.WPF.Core.ViewModels;
 
 public sealed class MainViewModel : INotifyPropertyChanged
 {
-    private readonly IGraphScenarioProvider _scenarioProvider;
-    private IGraphModel? _graphModel;
-    private bool _zoomEnabled;
-    private int _zoomExtentsRequestVersion;
+    private readonly ModeALayout _modeALayout;
+    private readonly ModeBLayout _modeBLayout;
+    private IHarnessModeLayout _currentLayout;
+    private int _toolbarRebuildVersion;
 
-    public MainViewModel(IGraphScenarioProvider scenarioProvider)
+    public MainViewModel(
+        ModeALayout modeALayout,
+        ModeBLayout modeBLayout,
+        ITestHarnessNavigationService navigationService,
+        ToolbarViewModel toolbar)
     {
-        _scenarioProvider = scenarioProvider;
-        LoadScenarioACommand = new RelayCommand(LoadScenarioA);
-        LoadScenarioBCommand = new RelayCommand(() => LoadScenario(GraphScenarioId.B));
-        LoadScenarioCCommand = new RelayCommand(() => LoadScenario(GraphScenarioId.C));
-        LoadScenarioDCommand = new RelayCommand(() => LoadScenario(GraphScenarioId.D));
-        ZoomExtentsCommand = new RelayCommand(RequestZoomExtents);
+        _modeALayout = modeALayout ?? throw new ArgumentNullException(nameof(modeALayout));
+        _modeBLayout = modeBLayout ?? throw new ArgumentNullException(nameof(modeBLayout));
+        NavigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        Toolbar = toolbar ?? throw new ArgumentNullException(nameof(toolbar));
 
-        LoadScenarioA();
-    }
+        _currentLayout = _modeALayout;
+        Toolbar.RebuildForMode(NavigationService.CurrentState);
 
-    public MainViewModel()
-        : this(new NullGraphScenarioProvider())
-    {
+        NavigationService.NavigationChanged += OnNavigationChanged;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public IGraphModel? GraphModel
+    /// <summary>
+    /// The mode-owned layout currently active. The shell projects
+    /// Sidebar and MainContent from this layout into their respective regions.
+    /// </summary>
+    public IHarnessModeLayout CurrentLayout
     {
-        get => _graphModel;
+        get => _currentLayout;
         private set
         {
-            if (ReferenceEquals(_graphModel, value))
+            if (ReferenceEquals(_currentLayout, value))
             {
                 return;
             }
 
-            _graphModel = value;
+            _currentLayout = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(SidebarViewModel));
+            OnPropertyChanged(nameof(MainContentViewModel));
         }
     }
 
-    public bool ZoomEnabled
-    {
-        get => _zoomEnabled;
-        set
-        {
-            if (_zoomEnabled == value)
-            {
-                return;
-            }
+    /// <summary>
+    /// The view model projected into the SidebarRegion. Null when the active
+    /// mode does not own a sidebar, causing the region to collapse.
+    /// </summary>
+    public IHarnessSidebarViewModel? SidebarViewModel => _currentLayout.Sidebar;
 
-            _zoomEnabled = value;
-            OnPropertyChanged();
-        }
-    }
+    /// <summary>
+    /// The view model projected into the MainContentRegion.
+    /// </summary>
+    public IHarnessMainContentViewModel MainContentViewModel => _currentLayout.MainContent;
 
-    public int ZoomExtentsRequestVersion
+    public int ToolbarRebuildVersion
     {
-        get => _zoomExtentsRequestVersion;
+        get => _toolbarRebuildVersion;
         private set
         {
-            if (_zoomExtentsRequestVersion == value)
+            if (_toolbarRebuildVersion == value)
             {
                 return;
             }
 
-            _zoomExtentsRequestVersion = value;
+            _toolbarRebuildVersion = value;
             OnPropertyChanged();
         }
     }
 
-    public ICommand LoadScenarioACommand { get; }
+    public ToolbarViewModel Toolbar { get; }
 
-    public ICommand LoadScenarioBCommand { get; }
+    public ITestHarnessNavigationService NavigationService { get; }
 
-    public ICommand LoadScenarioCCommand { get; }
-
-    public ICommand LoadScenarioDCommand { get; }
-
-    public ICommand ZoomExtentsCommand { get; }
-
-    private void LoadScenarioA()
+    private void OnNavigationChanged(object? sender, ModeNavigationChangedEventArgs e)
     {
-        LoadScenario(GraphScenarioId.A);
-    }
+        CurrentLayout = e.Current == ModeHostState.ModeA
+            ? _modeALayout
+            : _modeBLayout;
 
-    private void LoadScenario(GraphScenarioId scenarioId)
-    {
-        GraphModel = _scenarioProvider.BuildScenario(scenarioId);
-    }
-
-    private void RequestZoomExtents()
-    {
-        ZoomExtentsRequestVersion++;
+        Toolbar.RebuildForMode(e.Current);
+        ToolbarRebuildVersion++;
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-
-    private sealed class NullGraphScenarioProvider : IGraphScenarioProvider
-    {
-        public IGraphModel? BuildScenario(GraphScenarioId scenarioId)
-        {
-            return null;
-        }
     }
 }
