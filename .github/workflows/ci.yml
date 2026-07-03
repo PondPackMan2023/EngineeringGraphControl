@@ -27,6 +27,12 @@ jobs:
           repository: PondPackMan2023/UnitRegistry
           path: UnitRegistry
 
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: MrMontana1889/wpf-app-framework
+          path: wpf-app-framework
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
