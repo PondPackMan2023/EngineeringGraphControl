@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Platforms>x64</Platforms>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\wpf-app-framework\src\Dev.Core\Dev.Core.csproj" />
+    <ProjectReference Include="..\..\..\wpf-app-framework\src\Dev.Wpf\Dev.Wpf.csproj" />
+    <ProjectReference Include="..\Graphing.Controls.WPF\Graphing.Controls.WPF.csproj" />
+    <ProjectReference Include="..\Graphing.TestHarness.WPF.Core\Graphing.TestHarness.WPF.Core.csproj" />
+  </ItemGroup>
+
+</Project>

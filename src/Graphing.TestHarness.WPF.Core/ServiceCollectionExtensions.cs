@@ -27,6 +27,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ToolbarViewModel>();
         services.AddSingleton<MainViewModel>();
 
+        // Pie harness
+        services.AddSingleton<IPieGraphScenarioProvider, PieGraphScenarioProvider>();
+        services.AddSingleton<PieHarnessViewModel>();
+
         return services;
     }
 }
