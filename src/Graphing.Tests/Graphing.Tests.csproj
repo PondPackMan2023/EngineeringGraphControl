@@ -26,6 +26,7 @@
     <ProjectReference Include="..\Graphing.Controls.WinForms\Graphing.Controls.WinForms.csproj" />
     <ProjectReference Include="..\Graphing.Editors.WinForms\Graphing.Editors.WinForms.csproj" />
     <ProjectReference Include="..\Graphing.TestHarness\Graphing.TestHarness.csproj" />
+    <ProjectReference Include="..\Graphing.TestHarness.WPF.Core\Graphing.TestHarness.WPF.Core.csproj" />
   </ItemGroup>
 
 </Project>

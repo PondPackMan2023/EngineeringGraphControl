@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-windows</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <RootNamespace>Graphing.TestScenarios</RootNamespace>
     <AssemblyName>Graphing.TestScenarios</AssemblyName>
     <Nullable>disable</Nullable>
     <Platforms>x64</Platforms>
-    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Core\UnitRegistry.Core.csproj" />
     <ProjectReference Include="..\..\..\UnitRegistry\src\UnitRegistry.Formatting\UnitRegistry.Formatting.csproj" />
     <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
+    <ProjectReference Include="..\Graphing.Core.Pie\Graphing.Core.Pie.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
   </ItemGroup>
 

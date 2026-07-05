@@ -46,11 +46,17 @@
     <Project Path="src/Graphing.TestHarness.WPF/Graphing.TestHarness.WPF.csproj">
       <Platform Project="x64" />
     </Project>
+    <Project Path="src/Graphing.TestHarness.WPF.Pie/Graphing.TestHarness.WPF.Pie.csproj">
+      <Platform Project="x64" />
+    </Project>
   </Folder>
   <Project Path="src/Graphing.Controls/Graphing.Controls.csproj">
     <Platform Project="x64" />
   </Project>
   <Project Path="src/Graphing.Core/Graphing.Core.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="src/Graphing.Core.Pie/Graphing.Core.Pie.csproj">
     <Platform Project="x64" />
   </Project>
 </Solution>

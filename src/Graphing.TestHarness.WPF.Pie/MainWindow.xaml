@@ -1,0 +1,116 @@
+<Window
+    x:Class="Graphing.TestHarness.WPF.Pie.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Dev.Wpf.Controls;assembly=Dev.Wpf"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:graphing="clr-namespace:Graphing.Controls;assembly=Graphing.Controls.WPF"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:Graphing.TestHarness.WPF.Core.ViewModels;assembly=Graphing.TestHarness.WPF.Core"
+    Title="Engineering Pie Graph - WPF Test Harness"
+    Width="1280"
+    Height="760"
+    MinWidth="1024"
+    MinHeight="640"
+    d:DataContext="{d:DesignInstance Type=vm:PieHarnessViewModel,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+    <Window.Resources>
+        <Style x:Key="ScenarioComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Style.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SelectedItemBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource SelectedItemForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ScenarioComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ScenarioComboBoxItemStyle}" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="12" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal">
+            <TextBlock
+                Margin="0,0,8,0"
+                Foreground="{DynamicResource ControlForegroundBrush}"
+                VerticalAlignment="Center"
+                Text="Scenario:" />
+            <ComboBox
+                Style="{StaticResource ScenarioComboBoxStyle}"
+                Width="320"
+                DisplayMemberPath="DisplayName"
+                ItemsSource="{Binding AvailablePieScenarios}"
+                SelectedItem="{Binding SelectedPieScenario}">
+                <ComboBox.Resources>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+                    </Style>
+                </ComboBox.Resources>
+            </ComboBox>
+            <controls:WinFormsButton
+                MinWidth="84"
+                Margin="12,0,0,0"
+                Command="{Binding ApplyScenarioCommand}"
+                Content="Apply" />
+        </StackPanel>
+
+        <CheckBox
+            Grid.Row="1"
+            Margin="0,12,0,0"
+            Foreground="{DynamicResource ControlForegroundBrush}"
+            VerticalAlignment="Center"
+            IsChecked="{Binding UseShortLegend}"
+            Content="Use Short Legend" />
+
+        <CheckBox
+            Grid.Row="2"
+            Margin="0,8,0,0"
+            Foreground="{DynamicResource ControlForegroundBrush}"
+            VerticalAlignment="Center"
+            IsChecked="{Binding ShowLegendBorder}"
+            Content="Show Legend Border" />
+
+        <TextBlock
+            Grid.Row="3"
+            Margin="0,8,0,0"
+            Foreground="{DynamicResource ControlForegroundBrush}"
+            Text="{Binding LastDoubleClickLabel}" />
+
+        <Grid Grid.Row="4" />
+
+        <Border
+            Grid.Row="5"
+            Padding="16"
+            Background="{DynamicResource ControlBackgroundBrush}"
+            BorderBrush="{DynamicResource ControlBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="4">
+            <graphing:EngineeringPieGraphControl 
+                PieGraphModel="{Binding CurrentPieGraphModel}" 
+                PieGraphPresentationOptions="{Binding CurrentPieGraphPresentationOptions}"
+                PieSliceDoubleClickCommand="{Binding PieSliceDoubleClickCommand}" />
+        </Border>
+    </Grid>
+</Window>

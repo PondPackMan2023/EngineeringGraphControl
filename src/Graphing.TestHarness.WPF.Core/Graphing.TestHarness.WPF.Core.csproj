@@ -15,6 +15,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\wpf-app-framework\src\Dev.Core\Dev.Core.csproj" />
     <ProjectReference Include="..\Graphing.Controls\Graphing.Controls.csproj" />
+    <ProjectReference Include="..\Graphing.Core.Pie\Graphing.Core.Pie.csproj" />
+    <ProjectReference Include="..\Graphing.TestScenarios\Graphing.TestScenarios.csproj" />
   </ItemGroup>
 
 </Project>

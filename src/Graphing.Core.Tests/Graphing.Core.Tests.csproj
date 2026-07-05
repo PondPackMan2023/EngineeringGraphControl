@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Graphing.Core\Graphing.Core.csproj" />
+    <ProjectReference Include="..\Graphing.Core.Pie\Graphing.Core.Pie.csproj" />
     <ProjectReference Include="..\Graphing.TestHarness.WPF.Core\Graphing.TestHarness.WPF.Core.csproj" />
   </ItemGroup>
 
